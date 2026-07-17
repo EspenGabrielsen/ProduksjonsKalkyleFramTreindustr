@@ -89,6 +89,7 @@ def _(data):
     persistent_overrides = {
         "item_costs": {},
         "bom_scrap": {},
+        "bom_co_product": {},
         "work_centers": {},
         "routing": {},
     }
@@ -765,22 +766,26 @@ def _(mo):
 
 @app.cell
 def _(data, filtered_bom_lines, mo, pd, persistent_overrides):
-    # Redigerbar tabell for svinn-prosenter
+    # Redigerbar tabell for svinn-prosenter og co-prod %
     bom_scrap_df = None
     if data:
         _rows = []
         for _bl in filtered_bom_lines:
             _key = (_bl.parent_item_no, _bl.component_item_no)
             _ny_svinn = persistent_overrides["bom_scrap"].get(_key, _bl.scrap_pct)
+            _ny_co = persistent_overrides["bom_co_product"].get(_key, _bl.co_product_pct)
             _rows.append({
                 "Komponent": _bl.component_item_no,
                 "Produkt": _bl.parent_item_no,
                 "Org. svinn %": _bl.scrap_pct,
                 "Nytt svinn %": _ny_svinn,
+                "Org. co-prod %": _bl.co_product_pct,
+                "Ny co-prod %": _ny_co,
+                "Co-prod vare": _bl.co_product_item_no,
             })
         if _rows:
             _df = pd.DataFrame(_rows)
-            bom_scrap_df = mo.ui.data_editor(_df, editable_columns=["Nytt svinn %"])
+            bom_scrap_df = mo.ui.data_editor(_df, editable_columns=["Nytt svinn %", "Ny co-prod %"])
 
     bom_scrap_df
     return (bom_scrap_df,)
@@ -794,12 +799,22 @@ def _(bom_scrap_df, persistent_overrides):
             _komponent = _row["Komponent"]
             _produkt = _row["Produkt"]
             _key = (_produkt, _komponent)
-            _org = _row["Org. svinn %"]
-            _ny = _row["Nytt svinn %"]
-            if abs(_ny - _org) > 0.001:
-                persistent_overrides["bom_scrap"][_key] = _ny
+            
+            # Svinn
+            _org_svinn = _row["Org. svinn %"]
+            _ny_svinn = _row["Nytt svinn %"]
+            if abs(_ny_svinn - _org_svinn) > 0.001:
+                persistent_overrides["bom_scrap"][_key] = _ny_svinn
             elif _key in persistent_overrides["bom_scrap"]:
                 del persistent_overrides["bom_scrap"][_key]
+            
+            # Co-prod %
+            _org_co = _row["Org. co-prod %"]
+            _ny_co = _row["Ny co-prod %"]
+            if abs(_ny_co - _org_co) > 0.001:
+                persistent_overrides["bom_co_product"][_key] = _ny_co
+            elif _key in persistent_overrides["bom_co_product"]:
+                del persistent_overrides["bom_co_product"][_key]
     return
 
 
@@ -1036,6 +1051,10 @@ def _(
                 for _key, _rt_overrides in persistent_overrides["routing"].items():
                     _overrides.routing[_key] = _rt_overrides
 
+                # Co-prod %
+                for _key, _ny_co in persistent_overrides["bom_co_product"].items():
+                    _overrides.bom_co_product[_key] = _ny_co
+
                 _engine = SimulationEngine(data)
                 _comparisons = _engine.compare_all(_overrides)
 
@@ -1061,6 +1080,12 @@ def _(
                             "Org. setupkost": round(_c.original_setup_cost, 2),
                             "Sim. setupkost": round(_c.simulated_setup_cost, 2),
                             "Diff setup": round(_c.setup_diff, 2),
+                            "Org. brutto": round(_c.original_gross_cost, 2),
+                            "Sim. brutto": round(_c.simulated_gross_cost, 2),
+                            "Diff brutto": round(_c.gross_diff, 2),
+                            "Org. biprodukt": round(_c.original_byproduct_value, 2),
+                            "Sim. biprodukt": round(_c.simulated_byproduct_value, 2),
+                            "Diff biprodukt": round(_c.byproduct_diff, 2),
                             "Org. netto": round(_c.original_net_cost, 2),
                             "Sim. netto": round(_c.simulated_net_cost, 2),
                             "Diff netto": round(_c.net_diff, 2),
@@ -1471,7 +1496,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                 _ws1.title = "Sammenligning"
                 
                 # Tittel
-                _ws1.merge_cells('A1:N1')
+                _ws1.merge_cells('A1:U1')
                 _ws1.cell(row=1, column=1, value="Simuleringsresultater - Sammenligning Baseline vs Simulert").font = _title_font
                 _ws1.row_dimensions[1].height = 30
                 
@@ -1481,6 +1506,8 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                     "Org. materialkost", "Sim. materialkost", "Diff material",
                     "Org. operasjonskost", "Sim. operasjonskost", "Diff operasjon",
                     "Org. setupkost", "Sim. setupkost", "Diff setup",
+                    "Org. brutto", "Sim. brutto", "Diff brutto",
+                    "Org. biprodukt", "Sim. biprodukt", "Diff biprodukt",
                     "Org. netto", "Sim. netto", "Diff netto",
                 ]
                 _row_num = 3
@@ -1496,14 +1523,16 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                         round(_c.original_material_cost, 2), round(_c.simulated_material_cost, 2), round(_c.material_diff, 2),
                         round(_c.original_operation_cost, 2), round(_c.simulated_operation_cost, 2), round(_c.operation_diff, 2),
                         round(_c.original_setup_cost, 2), round(_c.simulated_setup_cost, 2), round(_c.setup_diff, 2),
+                        round(_c.original_gross_cost, 2), round(_c.simulated_gross_cost, 2), round(_c.gross_diff, 2),
+                        round(_c.original_byproduct_value, 2), round(_c.simulated_byproduct_value, 2), round(_c.byproduct_diff, 2),
                         round(_c.original_net_cost, 2), round(_c.simulated_net_cost, 2), round(_c.net_diff, 2),
                     ]
                     for col_idx, val in enumerate(_data, 1):
                         _is_num = col_idx >= 4  # kolonne 4+ er tall
                         cell = _style_data_cell(_ws1, _row_num, col_idx, is_number=_is_num)
                         cell.value = val
-                        # Fargelegg diff-kolonner (3, 6, 9, 12, 15)
-                        if col_idx in (6, 9, 12, 15) and isinstance(val, (int, float)):
+                        # Fargelegg diff-kolonner
+                        if col_idx in (6, 9, 12, 15, 18, 21) and isinstance(val, (int, float)):
                             if val > 0:
                                 cell.font = _red_font
                             elif val < 0:

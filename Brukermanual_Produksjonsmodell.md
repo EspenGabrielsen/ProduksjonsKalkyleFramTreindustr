@@ -18,8 +18,10 @@
 8. [BOM - Stykklisten (hva består produktet av)](#8-bom---stykklisten)
 9. [Routing - Produksjonsflyten](#9-routing---produksjonsflyten)
 10. [By Product Rules - Biprodukter](#10-by-product-rules---biprodukter)
-11. [Slik kommer du i gang](#11-slik-kommer-du-i-gang)
-12. [Vanlige feil og tips](#12-vanlige-feil-og-tips)
+11. [Capacity Calendar - Kapasitetskalender](#11-capacity-calendar---kapasitetskalender)
+12. [Production Scenario - Produksjonsscenario](#12-production-scenario---produksjonsscenario)
+13. [Slik kommer du i gang](#13-slik-kommer-du-i-gang)
+14. [Vanlige feil og tips](#14-vanlige-feil-og-tips)
 
 ---
 
@@ -45,7 +47,7 @@ produktene dine**. Den gjør tre ting:
 
 ## 2. Oversikt over arkene
 
-Excel-filen har **8 ark** som må fylles ut. Her er en kort forklaring:
+Excel-filen har **10 ark** som må fylles ut. Her er en kort forklaring:
 
 | Ark | Hva det er | Hvem fyller ut |
 |-----|------------|----------------|
@@ -57,6 +59,8 @@ Excel-filen har **8 ark** som må fylles ut. Her er en kort forklaring:
 | **BOM** | Stykkliste - hva består produktet av? | Produksjonsteknikk |
 | **Routing** | Produksjonsflyt - hvilke operasjoner, i hvilken rekkefølge, hvor lang tid? | Produksjonsleder |
 | **By Product Rules** | Biprodukter som oppstår (spon, flis, bark) og hva de er verdt | Økonomi |
+| **Capacity Calendar** | Kapasitetskalender per arbeidssenter | Produksjonsleder |
+| **Production Scenario** | Forhåndsdefinerte produksjonsscenarioer | Produksjonsleder + Økonomi |
 
 ---
 
@@ -71,7 +75,7 @@ virksomheten må være registrert her.
 |---------|-------------------|----------|
 | **Item No** | En unik kode for varen. Du bestemmer selv koden, men den må være unik. | `RM001` (råvare), `FG001` (ferdigvare), `BP001` (biprodukt) |
 | **Description** | Navnet på varen slik alle kjenner den | `Skrulast 48x198`, `Utvendig Panel 21x95` |
-| **Item Type** | Hva slags vare er dette? | `Raw Material` (råvare), `Finished Good` (ferdigvare), `By Product` (biprodukt) |
+| **Item Type** | Hva slags vare er dette? | `Raw Material` (råvare), `Semi Finished` (halvfabrikat), `Finished Good` (ferdigvare), `By Product` (biprodukt), `Trading Item` (handelsvare) |
 | **Product Group** | Hvilken gruppe tilhører varen? | `Skrulast`, `Panel`, `Kledning`, `Spon` |
 | **Base Unit of Measure** | Hva måler vi varen i? | `M3` (kubikkmeter), `LM` (løpemeter), `KG` (kilo), `PCS` (stykker) |
 | **Active** | Er varen fortsatt i bruk? | `Ja` eller `Nei` |
@@ -226,7 +230,26 @@ ERP-systemet.
 | **Quantity Per** | Hvor mange enheter får du ut av én enhet inn? | `400` (betyr: 400 LM panel per M3 skrulast) |
 | **Unit of Measure** | Måleenhet | `LM` |
 | **Scrap %** | Hvor mye går til spille? (svinn) | `5.0` (betyr 5% svinn) |
+| **Co-Prod %** | Andel av produksjonen som blir samprodukt (co-product). F.eks. 6% B-vare | `6.0` |
+| **Co-Prod Item No** | Varenummer for samproduktet (f.eks. B-vare) | `JD16073-B` |
 | **Valid From** | Fra hvilken dato gjelder dette? | `2026-01-01` |
+| **Valid To** | Til hvilken dato gjelder dette? | `2026-12-31` |
+
+### Co-Produkt (samprodukt / A- og B-vare)
+
+Co-Prod % brukes når en andel av produksjonen blir et sekundært produkt
+(f.eks. B-vare). B-varen har samme materialkost per enhet som A-varen, men
+får kun en forholdsmessig andel av operasjonskostnaden allokert.
+
+```
+Eksempel - Vare JD16073 (A-vare) med 0,5% B-vare (JD16073-B):
+  Teoretisk utbytte: 533,34 meter per M3
+  Co-Prod: 0,5%
+  A-vare kvantum: 533,34 x (1 - 0,005) = 530,67 LM
+  B-vare kvantum: 533,34 x 0,005 = 2,67 LM
+  Materialkost per LM: samme for A og B
+  Operasjonskost: B får 0,5% av A-varens operasjonskost
+```
 
 ### Slik fungerer Quantity Per
 
@@ -276,7 +299,9 @@ hvilken maskin, og hvor lang tid det tar.
 | **Setup Time Minutes** | Hvor lang tid tar det å rigge til? (omstilling, knivbytte, innkjøring) | Produksjonsleder | `15.0` |
 | **Run Time Minutes** | Hvor lang tid tar det å produsere ÉN enhet? | Produksjonsleder | `0.15` (minutter per LM) |
 | **Batch Size** | Hvor mange enheter lager dere per ordre? | Produksjonsleder | `500` |
-| **Changeover Time Minutes** | Hvor lang tid tar det å stille om til et annet produkt? | Produksjonsleder | `45.0` |
+| **Changeover Time Minutes** | Hvor lang tid tar det å stille om til et annet produkt? (valgfri, kun for scenario-simulering) | Produksjonsleder | `45.0` |
+| **Valid From** | Fra hvilken dato gjelder denne routingen? | Produksjonsleder | `2026-01-01` |
+| **Valid To** | Til hvilken dato gjelder denne routingen? | Produksjonsleder | `2026-12-31` |
 
 ### Slik finner du tidene
 
@@ -364,7 +389,54 @@ Eksempel - FG001 (Panel):
 
 ---
 
-## 11. Slik kommer du i gang
+## 11. Capacity Calendar - Kapasitetskalender
+
+**Dette arket er for produksjonslederen.** Her registrerer du tilgjengelig
+kapasitet per arbeidssenter per dag. Kalenderen brukes til å analysere
+flaskehalser og planlegge produksjon.
+
+### Kolonner du må fylle ut
+
+| Kolonne | Hva skal stå her? | Hvem fyller ut? | Eksempel |
+|---------|-------------------|-----------------|----------|
+| **Work Center** | Arbeidssenteret (samme som i Work Centers) | Produksjonsleder | `HOVEDHOVEL` |
+| **Date** | Dato | Produksjonsleder | `2026-01-05` |
+| **Available Hours** | Tilgjengelige timer denne dagen | Produksjonsleder | `16` |
+| **Planned Downtime** | Planlagte stopp (vedlikehold, ferie, ombygging) | Produksjonsleder | `0` |
+
+### Beregning
+
+```
+Available Production Hours = Available Hours - Planned Downtime
+```
+
+---
+
+## 12. Production Scenario - Produksjonsscenario
+
+**Dette arket er for produksjonslederen og økonomi.** Her definerer du
+forhåndsdefinerte produksjonsscenarioer med planlagt kvantum per produkt.
+Scenarioene brukes til å simulere produksjon og beregne totalt ressursbehov.
+
+### Kolonner du må fylle ut
+
+| Kolonne | Hva skal stå her? | Hvem fyller ut? | Eksempel |
+|---------|-------------------|-----------------|----------|
+| **Scenario Name** | Navn på scenario | Produksjonsleder | `Normal Produksjon` |
+| **Product** | Produkt som skal produseres (Item No) | Produksjonsleder | `FG001` |
+| **Planned Quantity** | Planlagt antall enheter | Produksjonsleder | `50000` |
+| **Start Date** | Startdato for produksjon | Produksjonsleder | `2026-01-01` |
+| **End Date** | Sluttdato for produksjon | Produksjonsleder | `2026-12-31` |
+
+### Tips
+
+- Scenarioer brukes i Marimo-appen til å simulere "what-if" analyser.
+- Du kan ha flere produkter per scenario (én rad per produkt).
+- Kvantumet påvirker hvor mye setupkost som fordeles per enhet.
+
+---
+
+## 13. Slik kommer du i gang
 
 ### Første gang - oppsett
 
@@ -373,6 +445,8 @@ Eksempel - FG001 (Panel):
    ser ut.
 2. **Erstatt testdataene** med dine egne produkter og priser.
 3. **Kjør beregningen** med Python-skriptet (se teknisk dokumentasjon).
+   - `python kostberegning.py --excel DittArk.xlsx` — full kalkyle
+   - `python kostberegning.py --excel DittArk.xlsx --product FG001` — kun ett produkt
 
 ### Fremgangsmåte for å legge til et nytt produkt
 
@@ -396,7 +470,7 @@ Når priser endrer seg (f.eks. ny innkjøpspris på skrulast):
 
 ---
 
-## 12. Vanlige feil og tips
+## 14. Vanlige feil og tips
 
 ### ❌ Vanlige feil
 
@@ -410,6 +484,21 @@ Når priser endrer seg (f.eks. ny innkjøpspris på skrulast):
 | **Manglende Routing** | Produktet har ingen produksjonsflyt | Legg til operasjoner i Routing |
 | **Feil Quantity Per** | Forbruket blir feil | Sjekk: Quantity Per = output per input. Hvis 1 M3 gir 400 LM, skriv 400 |
 | **Scrap % for høy/lav** | Materialkost blir feil | Sjekk faktisk svinn i produksjonen |
+
+### ⚠️ Kjente begrensninger i dagens kalkyle
+
+Følgende felt registreres i Excel-arket, men filtreres foreløpig ikke i
+Python-beregningen:
+
+| Felt | Status | Planlagt forbedring |
+|------|--------|---------------------|
+| **Active** (Product/Location/WC/Operation) | Visuell info kun — alle regnes som aktive | Filtrering kommer |
+| **Valid From** / **Valid To** (BOM og Routing) | Ignoreres — alle linjer inkluderes alltid | Datofiltrering kommer |
+| **Effective Date** (Item Costs) | Velger nyeste dato, ikke "gyldig per i dag" | Forbedres til å bruke en valgt analysedato |
+| **Start Date** / **End Date** (Scenario) | Ignoreres i simulering | Planlegges |
+
+Dette påvirker ikke standard bruk av modellen, men vær oppmerksom på det
+hvis du har inaktive produkter eller tidsbegrensede priser i datasettet ditt.
 
 ### ✅ Gode råd
 

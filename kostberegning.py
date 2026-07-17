@@ -475,6 +475,74 @@ class ExcelData:
         self._parse_byproduct_rules()
         self._parse_capacity()
         self._parse_scenarios()
+        # Valider alle kryss-referanser etter at alt er lastet
+        self._validate()
+
+    def _validate(self):
+        """Valider alle kryss-referanser i dataene.
+        
+        Kaster ValueError med detaljert feilmelding hvis noe ikke stemmer.
+        """
+        feil = []
+
+        # Hjelpesett for raskt oppslag
+        product_set = {p.item_no for p in self.products}
+        location_set = {l.code for l in self.locations}
+        wc_set = {w.code for w in self.work_centers}
+        op_set = {o.code for o in self.operations}
+
+        # 1. Work Centers -> Locations
+        for i, wc in enumerate(self.work_centers, 1):
+            if wc.location_code and wc.location_code not in location_set:
+                feil.append(f"Work Centers rad {i}: Location Code '{wc.location_code}' finnes ikke i Locations-arket")
+
+        # 2. Operation Master -> Work Centers
+        for i, op in enumerate(self.operations, 1):
+            if op.default_work_center and op.default_work_center not in wc_set:
+                feil.append(f"Operation Master rad {i}: Default Work Center '{op.default_work_center}' finnes ikke i Work Centers-arket")
+
+        # 3. Item Costs -> Product Master
+        for i, ic in enumerate(self.item_costs, 1):
+            if ic.item_no not in product_set:
+                feil.append(f"Item Costs rad {i}: Item No '{ic.item_no}' finnes ikke i Product Master-arket")
+
+        # 4. BOM -> Product Master (Parent og Component)
+        for i, bl in enumerate(self.bom_lines, 1):
+            if bl.parent_item_no not in product_set:
+                feil.append(f"BOM rad {i}: Parent Item No '{bl.parent_item_no}' finnes ikke i Product Master-arket")
+            if bl.component_item_no not in product_set:
+                feil.append(f"BOM rad {i}: Component Item No '{bl.component_item_no}' finnes ikke i Product Master-arket")
+            if bl.co_product_item_no and bl.co_product_item_no not in product_set:
+                feil.append(f"BOM rad {i}: Co-Prod Item No '{bl.co_product_item_no}' finnes ikke i Product Master-arket")
+
+        # 5. Routing -> Product Master, Operation Master, Work Centers
+        for i, rl in enumerate(self.routing_lines, 1):
+            if rl.item_no not in product_set:
+                feil.append(f"Routing rad {i}: Item No '{rl.item_no}' finnes ikke i Product Master-arket")
+            if rl.operation_code not in op_set:
+                feil.append(f"Routing rad {i}: Operation Code '{rl.operation_code}' finnes ikke i Operation Master-arket")
+            if rl.work_center_code not in wc_set:
+                feil.append(f"Routing rad {i}: Work Center Code '{rl.work_center_code}' finnes ikke i Work Centers-arket")
+
+        # 6. By Product Rules -> Product Master
+        for i, br in enumerate(self.byproduct_rules, 1):
+            if br.parent_item_no not in product_set:
+                feil.append(f"By Product Rules rad {i}: Parent Item No '{br.parent_item_no}' finnes ikke i Product Master-arket")
+            if br.by_product_item_no not in product_set:
+                feil.append(f"By Product Rules rad {i}: By Product Item No '{br.by_product_item_no}' finnes ikke i Product Master-arket")
+
+        # 7. Capacity Calendar -> Work Centers
+        for i, cd in enumerate(self.capacity_days, 1):
+            if cd.work_center not in wc_set:
+                feil.append(f"Capacity Calendar rad {i}: Work Center '{cd.work_center}' finnes ikke i Work Centers-arket")
+
+        # 8. Production Scenario -> Product Master
+        for i, sc in enumerate(self.scenarios, 1):
+            if sc.product not in product_set:
+                feil.append(f"Production Scenario rad {i}: Product '{sc.product}' finnes ikke i Product Master-arket")
+
+        if feil:
+            raise ValueError("Valideringsfeil i Excel-data:\n" + "\n".join(f"  - {f}" for f in feil))
 
     # ── Oppslagsverk ──────────────────────────────────────────────
 
@@ -1071,6 +1139,10 @@ class SimulationOverride:
     # key: (parent_item_no, component_item_no), value: ny scrap_pct
     bom_scrap: dict[tuple[str, str], float] = field(default_factory=dict)
     
+    # Overstyring av BOM (co-prod %)
+    # key: (parent_item_no, component_item_no), value: ny co_product_pct
+    bom_co_product: dict[tuple[str, str], float] = field(default_factory=dict)
+    
     # Overstyring av Routing (setup/run times, batch size)
     # key: (item_no, operation_no, work_center_code), value: dict med felter som skal overstyres
     # Støttede felter: setup_time_minutes, run_time_minutes, batch_size
@@ -1219,18 +1291,18 @@ class SimulationEngine:
             else:
                 sim_data.work_centers.append(wc)
         
-        # Kopier og overstyr BOM (scrap %)
+        # Kopier og overstyr BOM (scrap % og co-prod %)
         sim_data.bom_lines = []
         for bl in self.data.bom_lines:
             key = (bl.parent_item_no, bl.component_item_no)
-            if key in overrides.bom_scrap:
+            if key in overrides.bom_scrap or key in overrides.bom_co_product:
                 sim_data.bom_lines.append(BOMLine(
                     parent_item_no=bl.parent_item_no,
                     component_item_no=bl.component_item_no,
                     quantity_per=bl.quantity_per,
                     uom=bl.uom,
-                    scrap_pct=overrides.bom_scrap[key],
-                    co_product_pct=bl.co_product_pct,
+                    scrap_pct=overrides.bom_scrap.get(key, bl.scrap_pct),
+                    co_product_pct=overrides.bom_co_product.get(key, bl.co_product_pct),
                     co_product_item_no=bl.co_product_item_no,
                     valid_from=bl.valid_from,
                     valid_to=bl.valid_to,
