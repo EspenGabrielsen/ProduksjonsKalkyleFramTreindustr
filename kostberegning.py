@@ -271,6 +271,18 @@ class ExcelData:
         self.capacity_days: list[CapacityDay] = []
         self.scenarios: list[ProductionScenario] = []
 
+        # Indekser (dict) for raskt oppslag - bygges i _build_indexes()
+        self._product_index: dict[str, Product] = {}
+        self._location_index: dict[str, Location] = {}
+        self._wc_index: dict[str, WorkCenter] = {}
+        self._op_index: dict[str, Operation] = {}
+        self._bom_index: dict[str, list[BOMLine]] = {}
+        self._routing_index: dict[str, list[RoutingLine]] = {}
+        self._byproduct_index: dict[str, list[ByProductRule]] = {}
+        self._scenario_index: dict[str, ProductionScenario] = {}
+        self._routing_locations_index: dict[str, list[str]] = {}
+        self._item_cost_index: dict[str, list[ItemCost]] = {}
+
         self._parse_all()
 
     def _load_all(self):
@@ -324,7 +336,7 @@ class ExcelData:
         df = self.raw.get("Product Master")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.products.append(Product(
                 item_no=self._s(row.get("Item No", "")),
                 description=self._s(row.get("Description", "")),
@@ -338,7 +350,7 @@ class ExcelData:
         df = self.raw.get("Locations")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.locations.append(Location(
                 code=self._s(row.get("Location Code", "")),
                 name=self._s(row.get("Location Name", "")),
@@ -350,7 +362,7 @@ class ExcelData:
         df = self.raw.get("Work Centers")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.work_centers.append(WorkCenter(
                 code=self._s(row.get("Work Center Code", "")),
                 description=self._s(row.get("Description", "")),
@@ -367,7 +379,7 @@ class ExcelData:
         df = self.raw.get("Operation Master")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.operations.append(Operation(
                 code=self._s(row.get("Operation Code", "")),
                 description=self._s(row.get("Description", "")),
@@ -380,7 +392,7 @@ class ExcelData:
         df = self.raw.get("Item Costs")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.item_costs.append(ItemCost(
                 item_no=self._s(row.get("Item No", "")),
                 cost_type=self._s(row.get("Cost Type", "Standard Cost")),
@@ -393,7 +405,7 @@ class ExcelData:
         df = self.raw.get("BOM")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.bom_lines.append(BOMLine(
                 parent_item_no=self._s(row.get("Parent Item No", "")),
                 component_item_no=self._s(row.get("Component Item No", "")),
@@ -410,7 +422,7 @@ class ExcelData:
         df = self.raw.get("Routing")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.routing_lines.append(RoutingLine(
                 item_no=self._s(row.get("Item No", "")),
                 operation_no=int(self._f(row.get("Operation No", 0))),
@@ -424,12 +436,11 @@ class ExcelData:
                 valid_to=self._d(row.get("Valid To")),
             ))
 
-
     def _parse_byproduct_rules(self):
         df = self.raw.get("By Product Rules")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.byproduct_rules.append(ByProductRule(
                 parent_item_no=self._s(row.get("Parent Item No", "")),
                 by_product_item_no=self._s(row.get("By Product Item No", "")),
@@ -443,7 +454,7 @@ class ExcelData:
         df = self.raw.get("Capacity Calendar")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.capacity_days.append(CapacityDay(
                 work_center=self._s(row.get("Work Center", "")),
                 date=self._d(row.get("Date")),
@@ -455,7 +466,7 @@ class ExcelData:
         df = self.raw.get("Production Scenario")
         if df is None or df.empty:
             return
-        for _, row in df.iterrows():
+        for row in df.to_dict('records'):
             self.scenarios.append(ProductionScenario(
                 scenario_name=self._s(row.get("Scenario Name", "")),
                 product=self._s(row.get("Product", "")),
@@ -463,6 +474,48 @@ class ExcelData:
                 start_date=self._d(row.get("Start Date")),
                 end_date=self._d(row.get("End Date")),
             ))
+
+    def _build_indexes(self):
+        """Bygg dict-indekser for raskt oppslag."""
+        self._product_index = {p.item_no: p for p in self.products}
+        self._location_index = {l.code: l for l in self.locations}
+        self._wc_index = {w.code: w for w in self.work_centers}
+        self._op_index = {o.code: o for o in self.operations}
+        
+        # BOM: parent_item_no -> liste med BOMLine
+        self._bom_index = {}
+        for bl in self.bom_lines:
+            self._bom_index.setdefault(bl.parent_item_no, []).append(bl)
+        
+        # Routing: item_no -> liste med RoutingLine (sortert på operation_no)
+        self._routing_index = {}
+        for rl in self.routing_lines:
+            self._routing_index.setdefault(rl.item_no, []).append(rl)
+        for item_no in self._routing_index:
+            self._routing_index[item_no].sort(key=lambda r: r.operation_no)
+        
+        # Byproduct rules: parent_item_no -> liste med ByProductRule
+        self._byproduct_index = {}
+        for br in self.byproduct_rules:
+            self._byproduct_index.setdefault(br.parent_item_no, []).append(br)
+        
+        # Scenarios: scenario_name -> ProductionScenario
+        self._scenario_index = {s.scenario_name: s for s in self.scenarios}
+        
+        # Item costs: item_no -> liste med ItemCost
+        self._item_cost_index = {}
+        for ic in self.item_costs:
+            self._item_cost_index.setdefault(ic.item_no, []).append(ic)
+        
+        # Routing locations: item_no -> sortert liste med unike location codes
+        _temp_locs: dict[str, set[str]] = {}
+        for rl in self.routing_lines:
+            wc = self._wc_index.get(rl.work_center_code)
+            if wc and wc.location_code:
+                _temp_locs.setdefault(rl.item_no, set()).add(wc.location_code)
+        self._routing_locations_index = {
+            item_no: sorted(locs) for item_no, locs in _temp_locs.items()
+        }
 
     def _parse_all(self):
         self._parse_products()
@@ -477,6 +530,8 @@ class ExcelData:
         self._parse_scenarios()
         # Valider alle kryss-referanser etter at alt er lastet
         self._validate()
+        # Bygg indekser for raskt oppslag
+        self._build_indexes()
 
     def _validate(self):
         """Valider alle kryss-referanser i dataene.
@@ -544,73 +599,47 @@ class ExcelData:
         if feil:
             raise ValueError("Valideringsfeil i Excel-data:\n" + "\n".join(f"  - {f}" for f in feil))
 
-    # ── Oppslagsverk ──────────────────────────────────────────────
+    # ── Oppslagsverk (bruker dict-indekser) ──────────────────────
 
     def product(self, item_no: str) -> Optional[Product]:
-        for p in self.products:
-            if p.item_no == item_no:
-                return p
-        return None
+        return self._product_index.get(item_no)
 
     def work_center(self, code: str) -> Optional[WorkCenter]:
-        for wc in self.work_centers:
-            if wc.code == code:
-                return wc
-        return None
+        return self._wc_index.get(code)
 
     def operation(self, code: str) -> Optional[Operation]:
-        for op in self.operations:
-            if op.code == code:
-                return op
-        return None
+        return self._op_index.get(code)
 
     def item_cost(self, item_no: str, cost_type: str = "Standard Cost") -> Optional[ItemCost]:
         """Finn nyeste kost av angitt type for en vare."""
-        matches = [c for c in self.item_costs if c.item_no == item_no and c.cost_type == cost_type]
-        if not matches:
-            matches = [c for c in self.item_costs if c.item_no == item_no]
+        matches = self._item_cost_index.get(item_no, [])
         if not matches:
             return None
+        # Prøv først spesifikk cost_type
+        exact = [c for c in matches if c.cost_type == cost_type]
+        if exact:
+            matches = exact
         matches.sort(key=lambda c: c.effective_date if c.effective_date is not None else date.min, reverse=True)
         return matches[0]
 
     def bom_for(self, item_no: str) -> list[BOMLine]:
-        return [b for b in self.bom_lines if b.parent_item_no == item_no]
+        return self._bom_index.get(item_no, [])
 
     def routing_for(self, item_no: str) -> list[RoutingLine]:
-        return sorted(
-            [r for r in self.routing_lines if r.item_no == item_no],
-            key=lambda r: r.operation_no,
-        )
+        return self._routing_index.get(item_no, [])
 
     def byproduct_rules_for(self, parent_item_no: str) -> list[ByProductRule]:
-        return [b for b in self.byproduct_rules if b.parent_item_no == parent_item_no]
+        return self._byproduct_index.get(parent_item_no, [])
 
     def location(self, code: str) -> Optional[Location]:
-        """Finn lokasjon med angitt kode."""
-        for loc in self.locations:
-            if loc.code == code:
-                return loc
-        return None
+        return self._location_index.get(code)
 
     def routing_locations_for(self, item_no: str) -> list[str]:
-        """Hent unike location codes for et produkt basert pa routing.
-        
-        Utleder lokasjon via Work Center -> Location Code.
-        """
-        locations: set[str] = set()
-        for r in self.routing_lines:
-            if r.item_no == item_no:
-                wc = self.work_center(r.work_center_code)
-                if wc and wc.location_code:
-                    locations.add(wc.location_code)
-        return sorted(locations)
+        """Hent unike location codes for et produkt basert pa routing."""
+        return self._routing_locations_index.get(item_no, [])
 
     def scenario(self, name: str) -> Optional[ProductionScenario]:
-        for s in self.scenarios:
-            if s.scenario_name == name:
-                return s
-        return None
+        return self._scenario_index.get(name)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1347,6 +1376,41 @@ class SimulationEngine:
                 ))
             else:
                 sim_data.byproduct_rules.append(bpr)
+        
+        # Bygg indekser for det simulerte data-objektet
+        sim_data._product_index = {p.item_no: p for p in sim_data.products}
+        sim_data._location_index = {l.code: l for l in sim_data.locations}
+        sim_data._wc_index = {w.code: w for w in sim_data.work_centers}
+        sim_data._op_index = {o.code: o for o in sim_data.operations}
+        
+        sim_data._bom_index = {}
+        for bl in sim_data.bom_lines:
+            sim_data._bom_index.setdefault(bl.parent_item_no, []).append(bl)
+        
+        sim_data._routing_index = {}
+        for rl in sim_data.routing_lines:
+            sim_data._routing_index.setdefault(rl.item_no, []).append(rl)
+        for item_no in sim_data._routing_index:
+            sim_data._routing_index[item_no].sort(key=lambda r: r.operation_no)
+        
+        sim_data._byproduct_index = {}
+        for br in sim_data.byproduct_rules:
+            sim_data._byproduct_index.setdefault(br.parent_item_no, []).append(br)
+        
+        sim_data._scenario_index = {s.scenario_name: s for s in sim_data.scenarios}
+        
+        sim_data._item_cost_index = {}
+        for ic in sim_data.item_costs:
+            sim_data._item_cost_index.setdefault(ic.item_no, []).append(ic)
+        
+        _temp_locs: dict[str, set[str]] = {}
+        for rl in sim_data.routing_lines:
+            wc = sim_data._wc_index.get(rl.work_center_code)
+            if wc and wc.location_code:
+                _temp_locs.setdefault(rl.item_no, set()).add(wc.location_code)
+        sim_data._routing_locations_index = {
+            item_no: sorted(locs) for item_no, locs in _temp_locs.items()
+        }
         
         return sim_data
     
