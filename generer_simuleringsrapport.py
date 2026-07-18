@@ -12,13 +12,16 @@ import argparse
 import json
 import os
 import sys
+import urllib.request
+import tempfile
+from pathlib import Path
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor, white
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Preformatted, HRFlowable, Spacer, Table, TableStyle
+    SimpleDocTemplate, Paragraph, Preformatted, HRFlowable, Spacer, Table, TableStyle, Image
 )
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
@@ -96,8 +99,27 @@ def bygg_stiler():
     }
 
 
+# Last ned Fram Treindustri-logo og cache i temp-mappe
+_LOGO_URL = "https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png"
+_LOGO_PATH = None
+
+
+def _hent_logo():
+    """Last ned logo én gang, returner cachet sti."""
+    global _LOGO_PATH
+    if _LOGO_PATH is not None and os.path.exists(_LOGO_PATH):
+        return _LOGO_PATH
+    try:
+        _tmp = tempfile.mkdtemp()
+        _LOGO_PATH = os.path.join(_tmp, "framtre_logo.png")
+        urllib.request.urlretrieve(_LOGO_URL, _LOGO_PATH)
+    except Exception:
+        _LOGO_PATH = None
+    return _LOGO_PATH
+
+
 def lag_tittelside(canvas, doc, tittel, undertittel, dato):
-    """Tegn tittelsiden med myk gradientovergang."""
+    """Tegn tittelsiden med myk gradientovergang og logo."""
 
     # Myk gradient fra PRIMARY (topp) til DARK_BG (bunn) – 200 striper
     striper = 200
@@ -112,6 +134,24 @@ def lag_tittelside(canvas, doc, tittel, undertittel, dato):
         farge = HexColor(f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}")
         canvas.setFillColor(farge)
         canvas.rect(0, i * stripe_hoyde, A4[0], stripe_hoyde + 1, fill=1, stroke=0)
+
+    # Logo med hvit bakgrunnsstripe (slik at grønn logo synes mot grønn gradient)
+    logo_sti = _hent_logo()
+    if logo_sti:
+        logo_bredde = 200
+        logo_hoyde = 50  # 2048:512 = 4:1 forhold
+        logo_x = (A4[0] - logo_bredde) / 2
+        logo_y = A4[1] * 0.70
+        # Hvit bakgrunnsstripe bak logoen
+        canvas.setFillColor(HexColor("#F3F5F2"))
+        padding = 8
+        canvas.roundRect(
+            logo_x - padding, logo_y - padding,
+            logo_bredde + 2 * padding, logo_hoyde + 2 * padding,
+            6, fill=1, stroke=0
+        )
+        canvas.drawImage(logo_sti, logo_x, logo_y, width=logo_bredde, height=logo_hoyde,
+                         preserveAspectRatio=True, mask='auto')
 
     canvas.setStrokeColor(ACCENT)
     canvas.setLineWidth(1.5)

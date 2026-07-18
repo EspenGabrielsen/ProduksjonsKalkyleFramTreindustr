@@ -38,7 +38,7 @@ def _():
     )
 
     # Importer PDF-rapport-generator
-    from generer_simuleringsrapport import generer_rapport, registrer_fonter
+    from generer_simuleringsrapport import generer_rapport, registrer_fonter, _hent_logo
 
     return (
         CostCalculator,
@@ -51,6 +51,7 @@ def _():
         pd,
         registrer_fonter,
         tempfile,
+        _hent_logo,
     )
 
 
@@ -1361,8 +1362,12 @@ def _(export_excel_button, mo, os, sim_results, tempfile):
                 import openpyxl
                 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
                 from openpyxl.utils import get_column_letter
+                from openpyxl.drawing.image import Image as XLImage
+                from PIL import Image as PILImage
+                from generer_simuleringsrapport import _hent_logo
 
                 _wb = openpyxl.Workbook()
+                _logo = _hent_logo()
 
                 # ── Stiler ──────────────────────────────────────────
                 _header_font = Font(name='Calibri', bold=True, color='FFFFFF', size=11)
@@ -1420,16 +1425,31 @@ def _(export_excel_button, mo, os, sim_results, tempfile):
                                     max_len = max(max_len, min(len(str(cell.value)), max_width))
                         ws.column_dimensions[letter].width = max_len + 2
 
+                def _sett_logo(ws):
+                    """Sett inn Fram Treindustri-logo øverst til venstre i arket."""
+                    if _logo and os.path.exists(_logo):
+                        try:
+                            _img = XLImage(_logo)
+                            _img.width = 180
+                            _img.height = 45
+                            ws.add_image(_img, 'A1')
+                            ws.row_dimensions[1].height = 50
+                        except Exception:
+                            pass
+
                 # ════════════════════════════════════════════════════
                 #  ARK 1: SAMMENLIGNING
                 # ════════════════════════════════════════════════════
                 _ws1 = _wb.active
                 _ws1.title = "Sammenligning"
 
-                # Tittel
-                _ws1.merge_cells('A1:U1')
-                _ws1.cell(row=1, column=1, value="Simuleringsresultater - Sammenligning Baseline vs Simulert").font = _title_font
-                _ws1.row_dimensions[1].height = 30
+                # Sett inn logo
+                _sett_logo(_ws1)
+
+                # Tittel (flyttet til rad 2 pga. logo)
+                _ws1.merge_cells('A2:U2')
+                _ws1.cell(row=2, column=1, value="Simuleringsresultater - Sammenligning Baseline vs Simulert").font = _title_font
+                _ws1.row_dimensions[2].height = 30
 
                 # Overskrifter
                 _headers = [
@@ -1475,10 +1495,11 @@ def _(export_excel_button, mo, os, sim_results, tempfile):
                 #  ARK 2: SCENARIOTOTALER
                 # ════════════════════════════════════════════════════
                 _ws2 = _wb.create_sheet("Scenariototaler")
+                _sett_logo(_ws2)
 
-                _ws2.merge_cells('A1:G1')
-                _ws2.cell(row=1, column=1, value="Scenariototaler").font = _title_font
-                _ws2.row_dimensions[1].height = 30
+                _ws2.merge_cells('A2:G2')
+                _ws2.cell(row=2, column=1, value="Scenariototaler").font = _title_font
+                _ws2.row_dimensions[2].height = 30
 
                 _sc_headers = ["Lokasjon", "Produkt", "Kvantum", "Total netto kost", "Kost per enhet", "Timebehov"]
                 _row_num = 3
@@ -1507,10 +1528,11 @@ def _(export_excel_button, mo, os, sim_results, tempfile):
                 #  ARK 3: CO-PRODUKTER
                 # ════════════════════════════════════════════════════
                 _ws3 = _wb.create_sheet("Co-produkter")
+                _sett_logo(_ws3)
 
-                _ws3.merge_cells('A1:H1')
-                _ws3.cell(row=1, column=1, value="Co-produkter (B-vare)").font = _title_font
-                _ws3.row_dimensions[1].height = 30
+                _ws3.merge_cells('A2:H2')
+                _ws3.cell(row=2, column=1, value="Co-produkter (B-vare)").font = _title_font
+                _ws3.row_dimensions[2].height = 30
 
                 _co_headers = ["Hovedprodukt", "Co-produkt", "Beskrivelse", "Materialkost", "Operasjonskost", "Setupkost", "Brutto", "Biproduktverdi", "Netto"]
                 _row_num = 3
@@ -1539,10 +1561,11 @@ def _(export_excel_button, mo, os, sim_results, tempfile):
                 #  ARK 4: BIPRODUKTER
                 # ════════════════════════════════════════════════════
                 _ws4 = _wb.create_sheet("Biprodukter")
+                _sett_logo(_ws4)
 
-                _ws4.merge_cells('A1:F1')
-                _ws4.cell(row=1, column=1, value="Biprodukter").font = _title_font
-                _ws4.row_dimensions[1].height = 30
+                _ws4.merge_cells('A2:F2')
+                _ws4.cell(row=2, column=1, value="Biprodukter").font = _title_font
+                _ws4.row_dimensions[2].height = 30
 
                 _bp_headers = ["Produkt", "Biprodukt", "Beskrivelse", "Kvantum", "Markedsverdi", "Total verdi"]
                 _row_num = 3
@@ -1570,10 +1593,11 @@ def _(export_excel_button, mo, os, sim_results, tempfile):
                 #  ARK 5: DETALJER PER PRODUKT
                 # ════════════════════════════════════════════════════
                 _ws5 = _wb.create_sheet("Detaljer")
+                _sett_logo(_ws5)
 
-                _ws5.merge_cells('A1:J1')
-                _ws5.cell(row=1, column=1, value="Detaljer per produkt").font = _title_font
-                _ws5.row_dimensions[1].height = 30
+                _ws5.merge_cells('A2:J2')
+                _ws5.cell(row=2, column=1, value="Detaljer per produkt").font = _title_font
+                _ws5.row_dimensions[2].height = 30
 
                 _row_num = 3
                 for _c in sim_results:
