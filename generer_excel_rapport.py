@@ -13,7 +13,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image as XLImage
-from generer_simuleringsrapport import _hent_logo
+from generer_pdf_rapport import _hent_logo
 
 
 def generer_excel_rapport(sim_results, output_path):

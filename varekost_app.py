@@ -38,7 +38,7 @@ def _():
     )
 
     # Importer rapport-generatorer
-    from generer_simuleringsrapport import generer_rapport, registrer_fonter, _hent_logo
+    from generer_pdf_rapport import generer_rapport, registrer_fonter, _hent_logo
     from generer_excel_rapport import generer_excel_rapport
 
     return (
