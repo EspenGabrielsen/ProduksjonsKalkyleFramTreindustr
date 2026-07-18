@@ -1092,7 +1092,7 @@ def _(DataRepo, mo):
     _uploads = _db.get_last_uploads(limit=10)
 
     historikk_valg = None
-    _upload_id_map = {}
+    upload_id_map = {}
     if len(_uploads) > 0:
         _options = {}
         for _u in _uploads:
@@ -1103,9 +1103,8 @@ def _(DataRepo, mo):
                 _label = f"{_ts} – {_fn} ({_cm})"
             else:
                 _label = f"{_ts} – {_fn}"
-            _key = str(_u["id"])
-            _options[_key] = _label
-            _upload_id_map[_key] = _u["id"]
+            _options[_label] = _label  # label som key og value
+            upload_id_map[_label] = _u["id"]  # map label til faktisk database-ID
 
         historikk_valg = mo.ui.dropdown(
             options=_options,
@@ -1118,14 +1117,14 @@ def _(DataRepo, mo):
                 historikk_valg,
             ])
         )
-    return (historikk_valg, _upload_id_map)
+    return (historikk_valg, upload_id_map)
 
 
 @app.cell
 def _(
     DataRepo,
     historikk_valg,
-    _upload_id_map,
+    upload_id_map,
     import_excel_to_sqlite,
     mo,
     os,
@@ -1136,12 +1135,12 @@ def _(
             # Slå opp ID fra label (Marimo 0.23.14 returnerer label, ikke key)
             _label = historikk_valg.value
             _upload_id = None
-            for _key, _uid in _upload_id_map.items():
+            for _key, _uid in upload_id_map.items():
                 if _key == _label:
                     _upload_id = _uid
                     break
             if _upload_id is None:
-                _upload_id = _upload_id_map.get(_label)
+                _upload_id = upload_id_map.get(_label)
 
             if _upload_id is None:
                 mo.output.replace(mo.md(f"### ❌ Kunne ikke finne import-ID for '{_label}'"))
