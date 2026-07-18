@@ -76,15 +76,127 @@ def _(mo):
             color: #2C3E2B;
         }
         .marimo-app { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
+        
+        /* ===== FTI Header ===== */
+        .fti-header {
+            background: linear-gradient(135deg, #14532D 0%, #1B6E3D 100%);
+            border-radius: 12px;
+            padding: 20px 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(20, 83, 45, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .fti-header-title {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #FFFFFF;
+            line-height: 1.2;
+        }
+        .fti-header-subtitle {
+            font-size: 0.95em;
+            color: #C6E6D0;
+            line-height: 1.2;
+        }
+        
+        /* ===== FTI Cards ===== */
         .fti-card {
             background: #F9FBF8; border-radius: 12px; padding: 24px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(27, 89, 43, 0.04);
-            border-left: 5px solid #48BB78; 
+            box-shadow: 0 4px 12px rgba(27, 89, 43, 0.08);
+            border-left: 6px solid #48BB78; 
+            transition: box-shadow 0.2s ease;
+        }
+        .fti-card:hover {
+            box-shadow: 0 6px 20px rgba(27, 89, 43, 0.12);
         }
         .fti-card h2, .fti-card h3 { color: #14532D; margin-top: 0; margin-bottom: 12px; font-weight: 600; }
         .fti-highlight-green { color: #2F855A; background-color: #E6FFFA; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
         .fti-highlight-red { color: #C53030; background-color: #FFF5F5; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        
+        /* ===== FTI Footer ===== */
+        .fti-footer {
+            background: #14532D;
+            color: #C6E6D0;
+            font-size: 0.85em;
+            text-align: center;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-top: 32px;
+            margin-bottom: 16px;
+        }
+        
+        /* ===== FTI Sidebar ===== */
+        .fti-sidebar-logo {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            margin-bottom: 16px;
+        }
+        .fti-sidebar-section {
+            margin-bottom: 20px;
+        }
+        .fti-sidebar-section h3 {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #A3CBB0;
+            margin: 0 0 8px 0;
+            font-weight: 600;
+        }
+        
+        /* ===== Styling av Marimo radio-knapper ===== */
+        .marimo-radio {
+            background: #F9FBF8;
+            border-radius: 8px;
+            padding: 4px;
+            border: 1px solid #D1E0D4;
+        }
+        .marimo-radio label {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-weight: 500;
+            color: #2C3E2B;
+            transition: all 0.15s ease;
+        }
+        .marimo-radio input[type="radio"]:checked + label {
+            background: #14532D;
+            color: white;
+        }
+        .marimo-radio label:hover {
+            background: #E6FFFA;
+        }
+        
+        /* ===== Styling av dropdowns ===== */
+        .marimo-dropdown {
+            border-radius: 6px;
+            border: 1px solid #D1E0D4;
+            background: #F9FBF8;
+        }
+        
+        /* ===== Outline/TOC styling ===== */
+        .marimo-outline {
+            background: transparent;
+        }
+        .marimo-outline a {
+            color: #C6E6D0;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 4px 0;
+            display: block;
+            transition: color 0.15s ease;
+        }
+        .marimo-outline a:hover {
+            color: #FFFFFF;
+        }
+        
+        /* ===== Sidebar-specifikke overrides ===== */
+        [data-marimo-theme="dark"] .fti-header {
+            background: linear-gradient(135deg, #0B2819 0%, #14532D 100%);
+        }
+        [data-marimo-theme="dark"] .fti-footer {
+            background: #0B2819;
+        }
     </style>
     """)
     return
@@ -92,15 +204,21 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    mo.hstack([
-        mo.image(src="https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png", alt="Fram Treindustri", width=250),
-        mo.Html(
-            '<div style="text-align: right; line-height: 1.2;">'
-            '<div style="font-size: 1.8em; font-weight: 700; color: #1B3A5C;">Produksjonskost Simulator</div>'
-            '<div style="font-size: 0.95em; color: #2C5F8A;">Last opp Excel-modell, juster parametere — se kostnader i sanntid</div>'
-            '</div>'
-        ),
-    ], justify="space-between", align="center")
+    mo.Html("""
+    <div class="fti-header">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <img src="https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png"
+                 alt="Fram Treindustri" style="height: 48px;" />
+            <div>
+                <div class="fti-header-title">Produksjonskost Simulator</div>
+                <div class="fti-header-subtitle">Fram Treindustri — Standardkostkalkyle, simulering og analyse</div>
+            </div>
+        </div>
+        <div style="text-align: right; color: #C6E6D0; font-size: 0.85em;">
+            Last opp Excel-modell · Juster parametere · Se kostnader i sanntid
+        </div>
+    </div>
+    """)
     return
 
 
@@ -438,20 +556,7 @@ def _(export_excel_db_button, export_sqlite_to_excel, mo, os, tempfile):
     return
 
 
-# ═══ KAP 6: 🔍 Vare filter ══════════════════════════════════════════════
-
-
-@app.cell
-def _(mo):
-    mo.Html('<div class="fti-card"><h2>🔍 Vare filter</h2></div>')
-    return
-
-
-@app.cell
-def _(mo):
-    vareFilter = mo.ui.text(label="🔍 Søk på varenr eller beskrivelse")
-    vareFilter
-    return (vareFilter,)
+# ═══ KAP 6: 🔍 Filtrering (kaskade) ════════════════════════════════════
 
 
 @app.cell
@@ -1220,6 +1325,35 @@ def _(data, filtered_bom_lines, filtered_byproduct_rules, filtered_capacity_days
     return
 
 
+# ═══ SIDEBAR: Navigasjon og TOC ═══════════════════════════════════════
+
+
+@app.cell
+def _(mo):
+    vareFilter = mo.ui.text(label="🔍 Søk på varenr eller beskrivelse")
+    
+    mo.sidebar(
+        mo.vstack([
+            # Logo
+            mo.Html('<div class="fti-sidebar-logo"><img src="https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png" alt="Fram Treindustri" style="height: 36px; filter: brightness(0) invert(1);" /></div>'),
+            
+            # Filter
+            mo.Html('<div class="fti-sidebar-section"><h3>🔍 Filter</h3></div>'),
+            vareFilter,
+            
+            # Outline / TOC
+            mo.Html('<div class="fti-sidebar-section"><h3>📑 Innholdsfortegnelse</h3></div>'),
+            mo.outline(label=""),
+            
+            mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
+            mo.Html('Fram Treindustri © 2025'),
+            mo.Html('v0.23.14 · Marimo'),
+        ]),
+        width="260px",
+    )
+    return (vareFilter,)
+
+
 # ═══ KAP 12: 📋 Endringslogg ════════════════════════════════════════════
 
 
@@ -1248,6 +1382,15 @@ def _(DataRepo, mo, pd):
         mo.output.replace(mo.ui.table(_df, selection=None))
     else:
         mo.output.replace(mo.md("*(Ingen endringer logget)*"))
+    return
+
+
+# ═══ FOOTER ═════════════════════════════════════════════════════════════
+
+
+@app.cell
+def _(mo):
+    mo.Html('<div class="fti-footer">🌲 Fram Treindustri — Produksjonskost Simulator · Standardkostkalkyle & simulering</div>')
     return
 
 

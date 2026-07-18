@@ -101,6 +101,7 @@ def generer_excel_rapport(sim_results, output_path):
     _ws1 = _wb.active
     _ws1.title = "Sammenligning"
     _sett_logo(_ws1)
+    _ws1.freeze_panes = 'A4'
 
     _ws1.merge_cells('A2:U2')
     _ws1.cell(row=2, column=1, value="Simuleringsresultater - Sammenligning Baseline vs Simulert").font = _title_font
@@ -146,6 +147,7 @@ def generer_excel_rapport(sim_results, output_path):
     # ── ARK 2: SCENARIOTOTALER ────────────────────────────────────
     _ws2 = _wb.create_sheet("Scenariototaler")
     _sett_logo(_ws2)
+    _ws2.freeze_panes = 'A4'
 
     _ws2.merge_cells('A2:G2')
     _ws2.cell(row=2, column=1, value="Scenariototaler").font = _title_font
@@ -177,6 +179,7 @@ def generer_excel_rapport(sim_results, output_path):
     # ── ARK 3: CO-PRODUKTER ──────────────────────────────────────
     _ws3 = _wb.create_sheet("Co-produkter")
     _sett_logo(_ws3)
+    _ws3.freeze_panes = 'A4'
 
     _ws3.merge_cells('A2:H2')
     _ws3.cell(row=2, column=1, value="Co-produkter (B-vare)").font = _title_font
@@ -208,6 +211,7 @@ def generer_excel_rapport(sim_results, output_path):
     # ── ARK 4: BIPRODUKTER ───────────────────────────────────────
     _ws4 = _wb.create_sheet("Biprodukter")
     _sett_logo(_ws4)
+    _ws4.freeze_panes = 'A4'
 
     _ws4.merge_cells('A2:F2')
     _ws4.cell(row=2, column=1, value="Biprodukter").font = _title_font
@@ -238,6 +242,7 @@ def generer_excel_rapport(sim_results, output_path):
     # ── ARK 5: DETALJER PER PRODUKT ─────────────────────────────
     _ws5 = _wb.create_sheet("Detaljer")
     _sett_logo(_ws5)
+    _ws5.freeze_panes = 'A3'
 
     _ws5.merge_cells('A2:J2')
     _ws5.cell(row=2, column=1, value="Detaljer per produkt").font = _title_font
