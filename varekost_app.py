@@ -114,26 +114,23 @@ def _(mo):
 
 
 @app.cell
-def _(DataRepo):
-    _db = DataRepo()
-    _db.initialize()
-    _last_upload_id = 0
-    _uploads = _db.get_last_uploads(limit=1)
-    if _uploads:
-        _last_upload_id = _uploads[0]["id"]
-
-    persistent_overrides = {
+def _(mo):
+    overrides = {
         "item_costs": {},
         "bom_scrap": {},
         "bom_co_product": {},
         "work_centers": {},
         "routing": {},
     }
-    return (persistent_overrides,)
+    # get_reload / set_reload = Marimo state (trigger for reload)
+    # Når set_reload kalles i import-cellen, re-kjøres alle celler
+    # som leser get_reload() - inkludert data-loading-cellen.
+    get_reload, set_reload = mo.state(0)
+    return (overrides, get_reload, set_reload)
 
 
 @app.cell
-def _(CostCalculator, DataRepo, SqliteData, SimulationEngine, mo, os, pd, tempfile):
+def _(CostCalculator, DataRepo, SqliteData, SimulationEngine, get_reload, mo, os, overrides, pd, tempfile):
     _db = DataRepo()
     _db.initialize()
 
@@ -141,6 +138,11 @@ def _(CostCalculator, DataRepo, SqliteData, SimulationEngine, mo, os, pd, tempfi
     engine = None
     baseline = None
     db_stats = None
+
+    # Les trigger for a skape Marimo-avhengighet.
+    # Nar set_reload kalles i import-cellen, re-kjorer denne cellen
+    # og SqliteData() leser ferske data fra SQLite.
+    _reload_verdi = get_reload()
 
     if _db.is_empty():
         mo.output.replace(
@@ -230,7 +232,7 @@ def _(DataRepo, import_excel_to_sqlite, mo, os, tempfile, validate_excel):
 
 
 @app.cell
-def _(DataRepo, excel_import_file, excel_import_kommentar, import_excel_to_sqlite, mo, os, tempfile, validate_excel):
+def _(DataRepo, excel_import_file, excel_import_kommentar, import_excel_to_sqlite, mo, os, overrides, set_reload, tempfile, validate_excel):
     if excel_import_file.value and excel_import_kommentar.value.strip():
         try:
             _upload = excel_import_file.value[0]
@@ -274,13 +276,27 @@ def _(DataRepo, excel_import_file, excel_import_kommentar, import_excel_to_sqlit
                     _err_txt = "\n".join(f"  - {e}" for e in _stats["errors"])
                     _outputs.append(mo.md(f"**Import-advarsler:**\n{_err_txt}"))
 
+                # ═══════════════════════════════════════════════════
+                # Nullstill ALLE overstyringer.
+                # ═══════════════════════════════════════════════════
+                overrides["item_costs"].clear()
+                overrides["bom_scrap"].clear()
+                overrides["bom_co_product"].clear()
+                overrides["work_centers"].clear()
+                overrides["routing"].clear()
+
+                # ═══════════════════════════════════════════════════
+                # Trigger reload: data-loading-cellen re-kjores og
+                # SqliteData() leser ferske data fra SQLite.
+                # ═══════════════════════════════════════════════════
+                set_reload(lambda v: v + 1)
+
             mo.output.replace(mo.vstack(_outputs))
 
         except Exception as _e:
             mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
             import traceback as _traceback
             _traceback.print_exc()
-    return
 
 
 # ═══ KAP 4: 📜 Gå tilbake til tidligere versjon ════════════════════════
@@ -328,7 +344,7 @@ def _(DataRepo, mo):
 
 
 @app.cell
-def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, tempfile, upload_id_map):
+def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, overrides, set_reload, tempfile, upload_id_map):
     if historikk_valg is not None and historikk_valg.value:
         try:
             _label = historikk_valg.value
@@ -362,6 +378,15 @@ def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, tempfile, upload
                         _temp_path, excel_blob=_blob,
                         comment=f"Gjeninnlasting av versjon {_upload_id}",
                     )
+
+                    # Nullstill overstyringer + trigger reload
+                    overrides["item_costs"].clear()
+                    overrides["bom_scrap"].clear()
+                    overrides["bom_co_product"].clear()
+                    overrides["work_centers"].clear()
+                    overrides["routing"].clear()
+                    set_reload(lambda v: v + 1)
+
                     mo.output.replace(mo.md("### ✅ Forrige versjon er lastet inn!"))
                     for _sheet, _count in _stats["tables_updated"].items():
                         mo.output.append(mo.md(f"  - {_sheet}: {_count} rader"))
@@ -370,7 +395,6 @@ def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, tempfile, upload
             mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
             import traceback as _traceback
             _traceback.print_exc()
-    return
 
 
 # ═══ KAP 5: 📥 Last ned komplett datafil ════════════════════════════════
@@ -587,14 +611,14 @@ def _(mo):
 
 
 @app.cell
-def _(data, filtered_products, mo, pd, persistent_overrides):
+def _(data, filtered_products, mo, overrides, pd):
     rm_price_df = None
     if data:
         _rm_items = [p for p in filtered_products if p.item_type == 'Raw Material']
         _rows = []
         for _p in _rm_items:
             _cost = next((c.unit_cost for c in data.item_costs if c.item_no == _p.item_no), 0)
-            _ny_cost = persistent_overrides["item_costs"].get(_p.item_no, _cost)
+            _ny_cost = overrides["item_costs"].get(_p.item_no, _cost)
             _rows.append({
                 "Varenr": _p.item_no,
                 "Beskrivelse": f"{_p.description} · {_p.base_uom}",
@@ -610,7 +634,7 @@ def _(data, filtered_products, mo, pd, persistent_overrides):
 
 
 @app.cell
-def _(persistent_overrides, rm_price_df):
+def _(overrides, rm_price_df):
     if rm_price_df is not None and rm_price_df.value is not None:
         _df = rm_price_df.value
         for _, _row in _df.iterrows():
@@ -618,9 +642,9 @@ def _(persistent_overrides, rm_price_df):
             _org = _row["Org. pris"]
             _ny = _row["Ny pris"]
             if abs(_ny - _org) > 0.001:
-                persistent_overrides["item_costs"][_varenr] = _ny
-            elif _varenr in persistent_overrides["item_costs"]:
-                del persistent_overrides["item_costs"][_varenr]
+                overrides["item_costs"][_varenr] = _ny
+            elif _varenr in overrides["item_costs"]:
+                del overrides["item_costs"][_varenr]
     return
 
 
@@ -631,14 +655,14 @@ def _(mo):
 
 
 @app.cell
-def _(data, filtered_bom_lines, mo, pd, persistent_overrides):
+def _(data, filtered_bom_lines, mo, overrides, pd):
     bom_scrap_df = None
     if data:
         _rows = []
         for _bl in filtered_bom_lines:
             _key = (_bl.parent_item_no, _bl.component_item_no)
-            _ny_svinn = persistent_overrides["bom_scrap"].get(_key, _bl.scrap_pct)
-            _ny_co = persistent_overrides["bom_co_product"].get(_key, _bl.co_product_pct)
+            _ny_svinn = overrides["bom_scrap"].get(_key, _bl.scrap_pct)
+            _ny_co = overrides["bom_co_product"].get(_key, _bl.co_product_pct)
             _komp_desc = next((p.description for p in data.products if p.item_no == _bl.component_item_no), _bl.component_item_no)
             _prod_desc = next((p.description for p in data.products if p.item_no == _bl.parent_item_no), _bl.parent_item_no)
             _rows.append({
@@ -659,7 +683,7 @@ def _(data, filtered_bom_lines, mo, pd, persistent_overrides):
 
 
 @app.cell
-def _(bom_scrap_df, persistent_overrides):
+def _(bom_scrap_df, overrides):
     if bom_scrap_df is not None and bom_scrap_df.value is not None:
         _df = bom_scrap_df.value
         for _, _row in _df.iterrows():
@@ -670,16 +694,16 @@ def _(bom_scrap_df, persistent_overrides):
             _org_svinn = _row["Org. svinn %"]
             _ny_svinn = _row["Nytt svinn %"]
             if abs(_ny_svinn - _org_svinn) > 0.001:
-                persistent_overrides["bom_scrap"][_key] = _ny_svinn
-            elif _key in persistent_overrides["bom_scrap"]:
-                del persistent_overrides["bom_scrap"][_key]
+                overrides["bom_scrap"][_key] = _ny_svinn
+            elif _key in overrides["bom_scrap"]:
+                del overrides["bom_scrap"][_key]
 
             _org_co = _row["Org. co-prod %"]
             _ny_co = _row["Ny co-prod %"]
             if abs(_ny_co - _org_co) > 0.001:
-                persistent_overrides["bom_co_product"][_key] = _ny_co
-            elif _key in persistent_overrides["bom_co_product"]:
-                del persistent_overrides["bom_co_product"][_key]
+                overrides["bom_co_product"][_key] = _ny_co
+            elif _key in overrides["bom_co_product"]:
+                del overrides["bom_co_product"][_key]
     return
 
 
@@ -690,12 +714,12 @@ def _(mo):
 
 
 @app.cell
-def _(data, filtered_work_centers, mo, pd, persistent_overrides):
+def _(data, filtered_work_centers, mo, overrides, pd):
     wc_cost_df = None
     if data:
         _rows = []
         for _wc in filtered_work_centers:
-            _saved = persistent_overrides["work_centers"].get(_wc.code, {})
+            _saved = overrides["work_centers"].get(_wc.code, {})
             _ny_lønn = _saved.get("labor_cost_hour", _wc.labor_cost_hour)
             _ny_maskin = _saved.get("machine_cost_hour", _wc.machine_cost_hour)
             _ny_overhead = _saved.get("overhead_cost_hour", _wc.overhead_cost_hour)
@@ -721,7 +745,7 @@ def _(data, filtered_work_centers, mo, pd, persistent_overrides):
 
 
 @app.cell
-def _(persistent_overrides, wc_cost_df):
+def _(overrides, wc_cost_df):
     if wc_cost_df is not None and wc_cost_df.value is not None:
         _df = wc_cost_df.value
         for _, _row in _df.iterrows():
@@ -737,9 +761,9 @@ def _(persistent_overrides, wc_cost_df):
                 _wc_overrides["effective_capacity_pct"] = _row["Ny eff. %"]
 
             if _wc_overrides:
-                persistent_overrides["work_centers"][_kode] = _wc_overrides
-            elif _kode in persistent_overrides["work_centers"]:
-                del persistent_overrides["work_centers"][_kode]
+                overrides["work_centers"][_kode] = _wc_overrides
+            elif _kode in overrides["work_centers"]:
+                del overrides["work_centers"][_kode]
     return
 
 
@@ -750,7 +774,7 @@ def _(mo):
 
 
 @app.cell
-def _(data, filtered_operations, filtered_routing_lines, filtered_work_centers, mo, pd, persistent_overrides):
+def _(data, filtered_operations, filtered_routing_lines, filtered_work_centers, mo, overrides, pd):
     routing_df = None
     if data:
         _rows = []
@@ -761,7 +785,7 @@ def _(data, filtered_operations, filtered_routing_lines, filtered_work_centers, 
             _loc = _wc.location_code if _wc else ""
 
             _key = (_rl.item_no, _rl.operation_no, _rl.work_center_code)
-            _saved = persistent_overrides["routing"].get(_key, {})
+            _saved = overrides["routing"].get(_key, {})
             _ny_run_time = _saved.get("run_time_minutes", _rl.run_time_minutes)
             _ny_batch = _saved.get("batch_size", _rl.batch_size)
             _ny_setup = _saved.get("setup_time_minutes", _rl.setup_time_minutes)
@@ -788,7 +812,7 @@ def _(data, filtered_operations, filtered_routing_lines, filtered_work_centers, 
 
 
 @app.cell
-def _(persistent_overrides, routing_df):
+def _(overrides, routing_df):
     if routing_df is not None and routing_df.value is not None:
         _df = routing_df.value
         for _, _row in _df.iterrows():
@@ -806,9 +830,9 @@ def _(persistent_overrides, routing_df):
                 _rt_overrides["batch_size"] = _row["Ny batch"]
 
             if _rt_overrides:
-                persistent_overrides["routing"][_key] = _rt_overrides
-            elif _key in persistent_overrides["routing"]:
-                del persistent_overrides["routing"][_key]
+                overrides["routing"][_key] = _rt_overrides
+            elif _key in overrides["routing"]:
+                del overrides["routing"][_key]
     return
 
 
@@ -860,7 +884,7 @@ def _(mo):
 
 
 @app.cell
-def _(SimulationEngine, SimulationOverride, data, mo, pd, persistent_overrides, planned_qty, run_button):
+def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty, run_button):
     sim_results = None
     sim_overrides = None
 
@@ -871,19 +895,19 @@ def _(SimulationEngine, SimulationOverride, data, mo, pd, persistent_overrides, 
             try:
                 _overrides = SimulationOverride(planned_quantity=planned_qty.value)
 
-                for _varenr, _ny_pris in persistent_overrides["item_costs"].items():
+                for _varenr, _ny_pris in overrides["item_costs"].items():
                     _overrides.item_costs[_varenr] = _ny_pris
 
-                for _key, _ny_svinn in persistent_overrides["bom_scrap"].items():
+                for _key, _ny_svinn in overrides["bom_scrap"].items():
                     _overrides.bom_scrap[_key] = _ny_svinn
 
-                for _kode, _wc_overrides in persistent_overrides["work_centers"].items():
+                for _kode, _wc_overrides in overrides["work_centers"].items():
                     _overrides.work_centers[_kode] = _wc_overrides
 
-                for _key, _rt_overrides in persistent_overrides["routing"].items():
+                for _key, _rt_overrides in overrides["routing"].items():
                     _overrides.routing[_key] = _rt_overrides
 
-                for _key, _ny_co in persistent_overrides["bom_co_product"].items():
+                for _key, _ny_co in overrides["bom_co_product"].items():
                     _overrides.bom_co_product[_key] = _ny_co
 
                 _engine = SimulationEngine(data)

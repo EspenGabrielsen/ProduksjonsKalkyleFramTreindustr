@@ -187,3 +187,9 @@ python excel_bridge.py --export utdata.xlsx
 
 # Start Marimo-app
 marimo run varekost_app.py
+```
+
+## Marimo-dokumentasjon
+
+- [Marimo API-dokumentasjon (LLM-vennlig)](https://docs.marimo.io/llms.txt) — `llms.txt`-fil med Marimos API, komponenter og beste praksis for AI-assistenter
+- [Marimo offisiell dokumentasjon](https://docs.marimo.io)
