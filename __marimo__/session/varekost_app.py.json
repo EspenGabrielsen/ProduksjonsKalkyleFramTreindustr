@@ -1,0 +1,516 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.23.14",
+    "script_metadata_hash": null
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "6b14c5da20e0a596f0651ad0a4a78223",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "91e187884f3afef5019f1db4987de4f6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "\n<style>\n    body { \n        /* En veldig lys, behagelig gr\u00e5gr\u00f8nn/varm hvit bakgrunn */\n        background-color: #F3F5F2; \n        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n        color: #2C3E2B; /* M\u00f8rk skoggr\u00f8nn i stedet for svart tekst for et mykere uttrykk */\n    }\n    \n    .marimo-app { \n        max-width: 1200px; \n        margin: 40px auto; \n        padding: 0 24px;\n    }\n    \n    .fti-card {\n        /* Hvite kort med en \u00f8rliten nyanse av lysegr\u00f8nt, som gir fin dybde mot bakgrunnen */\n        background: #F9FBF8; \n        border-radius: 12px; \n        padding: 24px;\n        margin-bottom: 20px;\n        \n        /* En myk skygge som gj\u00f8r at kortene \"svever\" lett */\n        box-shadow: 0 4px 12px rgba(27, 89, 43, 0.04);\n        \n        /* Den friske, lysegr\u00f8nne FramTre-aksenten p\u00e5 venstre side */\n        border-left: 5px solid #48BB78; \n    }\n    \n    .fti-card h2, .fti-card h3 {\n        /* Dyp skogsgr\u00f8nn p\u00e5 overskrifter for god lesbarhet og kontrast */\n        color: #14532D; \n        margin-top: 0;\n        margin-bottom: 12px;\n        font-weight: 600;\n    }\n    \n    /* Highlight-farger tilpasset den nye lysegr\u00f8nne profilen: */\n    .fti-highlight-green { \n        color: #2F855A; \n        background-color: #E6FFFA; /* Subtil gr\u00f8nn merking bak teksten */\n        padding: 2px 6px;\n        border-radius: 4px;\n        font-weight: 600; \n    }\n    \n    .fti-highlight-red { \n        color: #C53030; \n        background-color: #FFF5F5; /* Subtil r\u00f8d merking bak teksten */\n        padding: 2px 6px;\n        border-radius: 4px;\n        font-weight: 600; \n    }\n</style>\n"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "425d31573fb0889a1ae45fdd4d412c5c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: center;flex-wrap: nowrap;gap: 0.5rem'><img src='https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png' alt='Fram Treindustri' style='width: 250px' /><div style=\"text-align: right; line-height: 1.2;\"><div style=\"font-size: 1.8em; font-weight: 700; color: #1B3A5C;\">Produksjonskost Simulator</div><div style=\"font-size: 0.95em; color: #2C5F8A;\">Last opp Excel-modell, juster parametere \u2014 se kostnader i sanntid</div></div></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "93ced60048919ec86a716a1253f8f542",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udcc2 Last data</h2></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "e9eb1e0a47732137137bac96eb2be792",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='lEQa-0' random-id='478c3e0b-e33a-262d-d8f0-7011a4f5db0f'><marimo-file data-initial-value='[]' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eVelg Excel-fil (Produksjonsmodell)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-filetypes='[&quot;.xlsx&quot;]' data-multiple='false' data-kind='&quot;button&quot;' data-max_size='100000000'></marimo-file></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "fe0a879100c6422d8da7038379af7ff7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "15d1387a7a92aebf03beb88b3ae754cf",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "962c3fe997676b86e6fe9af2afc8729e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udd0d Vare filter</h2></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "0dc9fb97360c2c3f87e63257043890b7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='BYtC-0' random-id='542ae191-f384-5731-8724-1b1cddc0d9eb'><marimo-text data-initial-value='&quot;&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udd0d Vare filter (Last inn Excel f\u00f8rst)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;&quot;' data-kind='&quot;text&quot;' data-full-width='false' data-disabled='true' data-debounce='true'></marimo-text></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "1e4798fa89b4074988fd3aa0e1c6c6c4",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "1bffba36ad632433aacaa7f499afc1d9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udcca Baseline kostnader</h2><p style=\"color:#2C5F8A;\">Original kalkylestruktur (f\u00f8r simulering)</p></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "emfo",
+      "code_hash": "4a64b9310b406ea34daafaee7d0923cf",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "0ad35ea0d2df8426d8d025c036fa27c1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udccb Originale data fra modellen</h2></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "0e35ec070d45e50a2164d21025147010",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udccb Dataark - oversikt</strong></span>\n<span class=\"paragraph\">Modellen best\u00e5r av <strong>10 ark</strong> i Excel. Hvert ark har en spesifikk rolle:</span>\n<table>\n<thead>\n<tr>\n<th>#</th>\n<th>Arknavn</th>\n<th>Innhold</th>\n<th>N\u00f8kkelkolonner</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td><strong>Product Master</strong></td>\n<td>Vareregister</td>\n<td>Item No, Description, Item Type</td>\n</tr>\n<tr>\n<td>2</td>\n<td><strong>Locations</strong></td>\n<td>Fabrikker og lagre</td>\n<td>Location Code, Location Name</td>\n</tr>\n<tr>\n<td>3</td>\n<td><strong>Work Centers</strong></td>\n<td>Arbeidssentre med kostsatser</td>\n<td>Work Center Code, Labor/Machine/Overhead Cost</td>\n</tr>\n<tr>\n<td>4</td>\n<td><strong>Operation Master</strong></td>\n<td>Standardoperasjoner</td>\n<td>Operation Code, Description</td>\n</tr>\n<tr>\n<td>5</td>\n<td><strong>Item Costs</strong></td>\n<td>Kostpriser per vare</td>\n<td>Item No, Unit Cost, Currency</td>\n</tr>\n<tr>\n<td>6</td>\n<td><strong>BOM</strong></td>\n<td>Stykkliste (hva best\u00e5r produktet av)</td>\n<td>Parent Item, Component, Quantity Per</td>\n</tr>\n<tr>\n<td>7</td>\n<td><strong>Routing</strong></td>\n<td>Produksjonsflyt (operasjoner, tider)</td>\n<td>Item No, Operation No, Setup/Run Time</td>\n</tr>\n<tr>\n<td>8</td>\n<td><strong>By Product Rules</strong></td>\n<td>Biprodukter og verdsetting</td>\n<td>Parent Item, By Product, Market Value</td>\n</tr>\n<tr>\n<td>9</td>\n<td><strong>Capacity Calendar</strong></td>\n<td>Kapasitetskalender per arbeidssenter</td>\n<td>Work Center, Date, Available Hours</td>\n</tr>\n<tr>\n<td>10</td>\n<td><strong>Production Scenario</strong></td>\n<td>Produksjonsscenarioer</td>\n<td>Scenario Name, Product, Planned Quantity</td>\n</tr>\n</tbody>\n</table></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "iLit",
+      "code_hash": "54c73c80812a0741e71b9bbe4e2f6011",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "f6b194edb83e4ac641d9ba017b605ae8",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udd27 Juster parametere</h2></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "1162427167e2bb0f5594c57f010c3254",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83e\udeb5 R\u00e5varer</strong></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "1c389c25278b9fc3fcfd6c95eb5741fc",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "d5921eead2d6897cc455af950637dd1b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Vxnm",
+      "code_hash": "d3837803002127f1ddc25716b65a145f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\uddd1\ufe0f Svinn- og kapp-prosenter</strong></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "DnEU",
+      "code_hash": "e8651c587cf8a3adb31b7a581167bc0c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ulZA",
+      "code_hash": "c0ca51a2e34cdfb3c16c552d9dde0408",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "bbb541fb8772e3e09da6af5e15f894f9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83c\udfed Arbeidssentre (timekostnad)</strong></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "28f043d71ba63057c967c8d0d7d3dda6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZBYS",
+      "code_hash": "ac472b5deb453858166899d94f95b807",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "ea36d05620fc99206bdfce666cc84436",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udccb Routing (stykkpris)</strong></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nHfw",
+      "code_hash": "5bf53450625d9ea294337357c3007b5f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "xXTn",
+      "code_hash": "ee154b6f2b042854b85f46620722b138",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "AjVT",
+      "code_hash": "06d2b3825ab4258702fe67e39cbe3c20",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udce6 Planlagt kvantum</strong></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "pHFh",
+      "code_hash": "76f21a64be869a48450dc99ccdb70293",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>Planlagt kvantum</strong> bestemmer hvor mye setupkost som fordeles per enhet.</span>\n<span class=\"paragraph\">Formel: <code>Setupkost per enhet = Setup-tid (timer) \u00d7 timekostnad / kvantum</code></span>\n<span class=\"paragraph\">Jo h\u00f8yere kvantum, desto lavere blir setupkostnaden per produsert enhet.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "NCOB",
+      "code_hash": "22b27ea2d37f5a8bc6bb32c14c4a8913",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='NCOB-0' random-id='9321cdb9-08cb-804b-27f9-714508f4ea8b'><marimo-number data-initial-value='1000' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003ePlanlagt kvantum (stk)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-start='1' data-stop='100000' data-step='1' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aqbW",
+      "code_hash": "4748bd811d9fdcb2160ccc76831da17c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-card\"><h2>\ud83d\ude80 Kj\u00f8r simulering</h2></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TRpd",
+      "code_hash": "a11afb80780c70ab5cfe02675fd7e2c2",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='TRpd-0' random-id='9f6eded2-2421-935d-6598-8a37dee8c5f0'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\u25b6\ufe0f Kj\u00f8r simulering&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TXez",
+      "code_hash": "ae9fcb4526ed1b667dfe95ca66426153",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dNNg",
+      "code_hash": "7d3573ad2b15bcd01f37e3cd0766647f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udcbe Eksporter resultater</h2><p style=\"color:#2C5F8A;\">Last ned simuleringsresultatene som PDF-rapport eller Excel-fil</p></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "yCnT",
+      "code_hash": "e43f21b5de6aa6da383a7570cc7e9079",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"tilpass-pdf-rapport-for-ledelsen\">\ud83d\udcca Tilpass PDF-rapport for ledelsen</h3></span><marimo-ui-element object-id='yCnT-1' random-id='82f16049-d1bf-823a-a9d1-74afd768131b'><marimo-text-area data-initial-value='&quot;&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eLedelsessammendrag / Kommentar (vises \u00f8verst i PDF)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;Skriv f.eks. anbefalinger eller en kort analyse av simuleringen her...&quot;' data-disabled='false' data-debounce='true' data-full-width='false' data-rows='4'></marimo-text-area></marimo-ui-element><marimo-ui-element object-id='yCnT-2' random-id='47183e4e-a55d-a71f-e9d3-5af9a9dc0639'><marimo-checkbox data-initial-value='false' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eInkluder tekniske detaljer (Material- og operasjonsdetaljer per produkt) i PDF-en&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='yCnT-0' random-id='df5b13d6-31f4-969d-0aa6-63de3c4af61d'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcc4 Eksporter til PDF&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wlCL",
+      "code_hash": "cb0a03c2258ce33b9539a398f6e2bedf",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "kqZH",
+      "code_hash": "7dc8e924109b1b8e5517bf04003305d5",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='kqZH-0' random-id='8c665ec8-9036-6c59-daea-802c3523a087'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcbe Lagre til Excel&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wAgl",
+      "code_hash": "74f45bc6f3efa8dccb70395164db136a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    }
+  ]
+}

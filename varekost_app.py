@@ -56,20 +56,86 @@ def _():
 
 @app.cell
 def _(mo):
-    mo.md("""
-    # 🏭 Produksjonskost Simulator
-
-    Last opp en Excel-fil (Produksjonsmodell), juster parametere, og se
-    hvordan kostnadene endrer seg i sanntid.
+    # Global CSS for Fram Treindustri-profil
+    mo.Html("""
+    <style>
+        body { 
+            /* En veldig lys, behagelig grågrønn/varm hvit bakgrunn */
+            background-color: #F3F5F2; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2C3E2B; /* Mørk skoggrønn i stedet for svart tekst for et mykere uttrykk */
+        }
+    
+        .marimo-app { 
+            max-width: 1200px; 
+            margin: 40px auto; 
+            padding: 0 24px;
+        }
+    
+        .fti-card {
+            /* Hvite kort med en ørliten nyanse av lysegrønt, som gir fin dybde mot bakgrunnen */
+            background: #F9FBF8; 
+            border-radius: 12px; 
+            padding: 24px;
+            margin-bottom: 20px;
+        
+            /* En myk skygge som gjør at kortene "svever" lett */
+            box-shadow: 0 4px 12px rgba(27, 89, 43, 0.04);
+        
+            /* Den friske, lysegrønne FramTre-aksenten på venstre side */
+            border-left: 5px solid #48BB78; 
+        }
+    
+        .fti-card h2, .fti-card h3 {
+            /* Dyp skogsgrønn på overskrifter for god lesbarhet og kontrast */
+            color: #14532D; 
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+    
+        /* Highlight-farger tilpasset den nye lysegrønne profilen: */
+        .fti-highlight-green { 
+            color: #2F855A; 
+            background-color: #E6FFFA; /* Subtil grønn merking bak teksten */
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600; 
+        }
+    
+        .fti-highlight-red { 
+            color: #C53030; 
+            background-color: #FFF5F5; /* Subtil rød merking bak teksten */
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600; 
+        }
+    </style>
     """)
     return
 
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 📂 Last data
-    """)
+    mo.hstack([
+        mo.image(
+            src="https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png",
+            alt="Fram Treindustri",
+            width=250,
+        ),
+    mo.Html(
+            '<div style="text-align: right; line-height: 1.2;">'
+            '<div style="font-size: 1.8em; font-weight: 700; color: #1B3A5C;">Produksjonskost Simulator</div>'
+            '<div style="font-size: 0.95em; color: #2C5F8A;">Last opp Excel-modell, juster parametere — se kostnader i sanntid</div>'
+            '</div>'
+        ),
+    ], justify="space-between", align="center")
+    return
+
+
+@app.cell
+def _(mo):
+    mo.Html('<div class="fti-card"><h2>📂 Last data</h2></div>')
     return
 
 
@@ -85,7 +151,7 @@ def _(mo):
 
 
 @app.cell
-def _(data):
+def _():
     persistent_overrides = {
         "item_costs": {},
         "bom_scrap": {},
@@ -159,9 +225,7 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 🔍 Vare filter
-    """)
+    mo.Html('<div class="fti-card"><h2>🔍 Vare filter</h2></div>')
     return
 
 
@@ -306,9 +370,7 @@ def _(data, vareFilter):
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 📊 Baseline kostnader (original kalkylestruktur)
-    """)
+    mo.Html('<div class="fti-card"><h2>📊 Baseline kostnader</h2><p style="color:#2C5F8A;">Original kalkylestruktur (før simulering)</p></div>')
     return
 
 
@@ -335,9 +397,7 @@ def _(baseline, mo, pd):
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 📋 Originale data fra modellen
-    """)
+    mo.Html('<div class="fti-card"><h2>📋 Originale data fra modellen</h2></div>')
     return
 
 
@@ -703,9 +763,7 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 🔧 Juster parametere
-    """)
+    mo.Html('<div class="fti-card"><h2>🔧 Juster parametere</h2></div>')
     return
 
 
@@ -742,7 +800,7 @@ def _(data, filtered_products, mo, pd, persistent_overrides):
 
 
 @app.cell
-def _(rm_price_df, persistent_overrides):
+def _(persistent_overrides, rm_price_df):
     if rm_price_df is not None and rm_price_df.value is not None:
         _df = rm_price_df.value
         for _, _row in _df.iterrows():
@@ -799,7 +857,7 @@ def _(bom_scrap_df, persistent_overrides):
             _komponent = _row["Komponent"]
             _produkt = _row["Produkt"]
             _key = (_produkt, _komponent)
-            
+
             # Svinn
             _org_svinn = _row["Org. svinn %"]
             _ny_svinn = _row["Nytt svinn %"]
@@ -807,7 +865,7 @@ def _(bom_scrap_df, persistent_overrides):
                 persistent_overrides["bom_scrap"][_key] = _ny_svinn
             elif _key in persistent_overrides["bom_scrap"]:
                 del persistent_overrides["bom_scrap"][_key]
-            
+
             # Co-prod %
             _org_co = _row["Org. co-prod %"]
             _ny_co = _row["Ny co-prod %"]
@@ -859,7 +917,7 @@ def _(data, filtered_work_centers, mo, pd, persistent_overrides):
 
 
 @app.cell
-def _(wc_cost_df, persistent_overrides):
+def _(persistent_overrides, wc_cost_df):
     if wc_cost_df is not None and wc_cost_df.value is not None:
         _df = wc_cost_df.value
         for _, _row in _df.iterrows():
@@ -873,7 +931,7 @@ def _(wc_cost_df, persistent_overrides):
                 _wc_overrides["overhead_cost_hour"] = _row["Ny overhead"]
             if abs(_row["Ny eff. %"] - _row["Org. eff. %"]) > 0.001:
                 _wc_overrides["effective_capacity_pct"] = _row["Ny eff. %"]
-            
+
             if _wc_overrides:
                 persistent_overrides["work_centers"][_kode] = _wc_overrides
             elif _kode in persistent_overrides["work_centers"]:
@@ -908,14 +966,14 @@ def _(
             _op_desc = _op.description if _op else _rl.operation_code
             _wc = next((w for w in filtered_work_centers if w.code == _rl.work_center_code), None)
             _loc = _wc.location_code if _wc else ""
-            
+
             # Use persistent overrides if exists
             _key = (_rl.item_no, _rl.operation_no, _rl.work_center_code)
             _saved = persistent_overrides["routing"].get(_key, {})
             _ny_run_time = _saved.get("run_time_minutes", _rl.run_time_minutes)
             _ny_batch = _saved.get("batch_size", _rl.batch_size)
             _ny_setup = _saved.get("setup_time_minutes", _rl.setup_time_minutes)
-            
+
             _rows.append({
                 "Produkt": _rl.item_no,
                 "Operasjon": f"{_rl.operation_code} ({_op_desc})",
@@ -938,7 +996,7 @@ def _(
 
 
 @app.cell
-def _(routing_df, persistent_overrides):
+def _(persistent_overrides, routing_df):
     if routing_df is not None and routing_df.value is not None:
         _df = routing_df.value
         for _, _row in _df.iterrows():
@@ -946,7 +1004,7 @@ def _(routing_df, persistent_overrides):
             _wc = _row["Arb.senter"]
             _op_no = _row["_operation_no"]
             _key = (_produkt, _op_no, _wc)
-            
+
             _rt_overrides = {}
             if abs(_row["Ny run time"] - _row["Org. run time"]) > 0.001:
                 _rt_overrides["run_time_minutes"] = _row["Ny run time"]
@@ -954,7 +1012,7 @@ def _(routing_df, persistent_overrides):
                 _rt_overrides["setup_time_minutes"] = _row["Ny setup (min)"]
             if abs(_row["Ny batch"] - _row["Org. batch"]) > 0.001:
                 _rt_overrides["batch_size"] = _row["Ny batch"]
-                
+
             if _rt_overrides:
                 persistent_overrides["routing"][_key] = _rt_overrides
             elif _key in persistent_overrides["routing"]:
@@ -997,9 +1055,7 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 🚀 Kjør simulering
-    """)
+    mo.Html('<div class="fti-card"><h2>🚀 Kjør simulering</h2></div>')
     return
 
 
@@ -1017,9 +1073,9 @@ def _(
     data,
     mo,
     pd,
+    persistent_overrides,
     planned_qty,
     run_button,
-    persistent_overrides,
 ):
     # Initialiser returverdier
     sim_results = None
@@ -1125,11 +1181,7 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 💾 Eksporter resultater
-
-    Du kan eksportere simuleringsresultatene til en PDF-rapport eller til Excel.
-    """)
+    mo.Html('<div class="fti-card"><h2>💾 Eksporter resultater</h2><p style="color:#2C5F8A;">Last ned simuleringsresultatene som PDF-rapport eller Excel-fil</p></div>')
     return
 
 
@@ -1151,7 +1203,7 @@ def _(mo):
         pdf_inkluder_detaljer,
         export_pdf_button,
     ])
-    return (export_pdf_button, pdf_kommentar, pdf_inkluder_detaljer)
+    return export_pdf_button, pdf_inkluder_detaljer, pdf_kommentar
 
 
 @app.cell
@@ -1160,12 +1212,12 @@ def _(
     generer_rapport,
     mo,
     os,
+    pdf_inkluder_detaljer,
+    pdf_kommentar,
     registrer_fonter,
     sim_overrides,
     sim_results,
     tempfile,
-    pdf_kommentar,
-    pdf_inkluder_detaljer,
 ):
     if export_pdf_button.value:
         try:
@@ -1297,7 +1349,7 @@ def _(mo):
 
 
 @app.cell
-def _(export_excel_button, sim_results, mo, pd, os, tempfile):
+def _(export_excel_button, mo, os, sim_results, tempfile):
     if export_excel_button.value:
         if not sim_results:
             mo.output.replace(mo.md("### ❌ Ingen simuleringsresultater tilgjengelig. Kjør en simulering først."))
@@ -1306,31 +1358,31 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                 import openpyxl
                 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
                 from openpyxl.utils import get_column_letter
-                
+
                 _wb = openpyxl.Workbook()
-                
+
                 # ── Stiler ──────────────────────────────────────────
                 _header_font = Font(name='Calibri', bold=True, color='FFFFFF', size=11)
-                _header_fill = PatternFill(start_color='1B3A5C', end_color='1B3A5C', fill_type='solid')
-                _subheader_fill = PatternFill(start_color='2C5F8A', end_color='2C5F8A', fill_type='solid')
-                _title_font = Font(name='Calibri', bold=True, size=14, color='1B3A5C')
-                _section_font = Font(name='Calibri', bold=True, size=12, color='2C5F8A')
+                _header_fill = PatternFill(start_color='14532D', end_color='14532D', fill_type='solid')
+                _subheader_fill = PatternFill(start_color='2F855A', end_color='2F855A', fill_type='solid')
+                _title_font = Font(name='Calibri', bold=True, size=14, color='14532D')
+                _section_font = Font(name='Calibri', bold=True, size=12, color='2F855A')
                 _data_font = Font(name='Calibri', size=10)
                 _bold_font = Font(name='Calibri', bold=True, size=10)
-                _green_font = Font(name='Calibri', size=10, color='1B8A3C')
-                _red_font = Font(name='Calibri', size=10, color='C0392B')
+                _green_font = Font(name='Calibri', size=10, color='2F855A')
+                _red_font = Font(name='Calibri', size=10, color='C53030')
                 _thin_border = Border(
-                    left=Side(style='thin', color='4A90D9'),
-                    right=Side(style='thin', color='4A90D9'),
-                    top=Side(style='thin', color='4A90D9'),
-                    bottom=Side(style='thin', color='4A90D9'),
+                    left=Side(style='thin', color='48BB78'),
+                    right=Side(style='thin', color='48BB78'),
+                    top=Side(style='thin', color='48BB78'),
+                    bottom=Side(style='thin', color='48BB78'),
                 )
                 _center_align = Alignment(horizontal='center', vertical='center')
                 _left_align = Alignment(horizontal='left', vertical='center')
                 _right_align = Alignment(horizontal='right', vertical='center')
                 _num_fmt = '#,##0.00'
                 _pct_fmt = '0.0%'
-                
+
                 def _style_header_row(ws, row, max_col, fill=None):
                     if fill is None:
                         fill = _header_fill
@@ -1340,7 +1392,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                         cell.fill = fill
                         cell.alignment = _center_align
                         cell.border = _thin_border
-                
+
                 def _style_data_cell(ws, row, col, is_number=False, is_pct=False):
                     cell = ws.cell(row=row, column=col)
                     cell.font = _data_font
@@ -1354,7 +1406,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                     else:
                         cell.alignment = _left_align
                     return cell
-                
+
                 def _auto_width(ws, max_col, min_width=10, max_width=40):
                     for col in range(1, max_col + 1):
                         letter = get_column_letter(col)
@@ -1364,18 +1416,18 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                                 if cell.value:
                                     max_len = max(max_len, min(len(str(cell.value)), max_width))
                         ws.column_dimensions[letter].width = max_len + 2
-                
+
                 # ════════════════════════════════════════════════════
                 #  ARK 1: SAMMENLIGNING
                 # ════════════════════════════════════════════════════
                 _ws1 = _wb.active
                 _ws1.title = "Sammenligning"
-                
+
                 # Tittel
                 _ws1.merge_cells('A1:U1')
                 _ws1.cell(row=1, column=1, value="Simuleringsresultater - Sammenligning Baseline vs Simulert").font = _title_font
                 _ws1.row_dimensions[1].height = 30
-                
+
                 # Overskrifter
                 _headers = [
                     "Lokasjon", "Produkt", "Beskrivelse",
@@ -1390,7 +1442,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                 for col_idx, h in enumerate(_headers, 1):
                     _ws1.cell(row=_row_num, column=col_idx, value=h)
                 _style_header_row(_ws1, _row_num, len(_headers))
-                
+
                 # Data
                 for _c in sim_results:
                     _row_num += 1
@@ -1413,24 +1465,24 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                                 cell.font = _red_font
                             elif val < 0:
                                 cell.font = _green_font
-                
+
                 _auto_width(_ws1, len(_headers))
-                
+
                 # ════════════════════════════════════════════════════
                 #  ARK 2: SCENARIOTOTALER
                 # ════════════════════════════════════════════════════
                 _ws2 = _wb.create_sheet("Scenariototaler")
-                
+
                 _ws2.merge_cells('A1:G1')
                 _ws2.cell(row=1, column=1, value="Scenariototaler").font = _title_font
                 _ws2.row_dimensions[1].height = 30
-                
+
                 _sc_headers = ["Lokasjon", "Produkt", "Kvantum", "Total netto kost", "Kost per enhet", "Timebehov"]
                 _row_num = 3
                 for col_idx, h in enumerate(_sc_headers, 1):
                     _ws2.cell(row=_row_num, column=col_idx, value=h)
                 _style_header_row(_ws2, _row_num, len(_sc_headers))
-                
+
                 for _c in sim_results:
                     if _c.planned_quantity:
                         _row_num += 1
@@ -1445,24 +1497,24 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                             _is_num = col_idx >= 3
                             cell = _style_data_cell(_ws2, _row_num, col_idx, is_number=_is_num)
                             cell.value = val
-                
+
                 _auto_width(_ws2, len(_sc_headers))
-                
+
                 # ════════════════════════════════════════════════════
                 #  ARK 3: CO-PRODUKTER
                 # ════════════════════════════════════════════════════
                 _ws3 = _wb.create_sheet("Co-produkter")
-                
+
                 _ws3.merge_cells('A1:H1')
                 _ws3.cell(row=1, column=1, value="Co-produkter (B-vare)").font = _title_font
                 _ws3.row_dimensions[1].height = 30
-                
+
                 _co_headers = ["Hovedprodukt", "Co-produkt", "Beskrivelse", "Materialkost", "Operasjonskost", "Setupkost", "Brutto", "Biproduktverdi", "Netto"]
                 _row_num = 3
                 for col_idx, h in enumerate(_co_headers, 1):
                     _ws3.cell(row=_row_num, column=col_idx, value=h)
                 _style_header_row(_ws3, _row_num, len(_co_headers))
-                
+
                 for _c in sim_results:
                     if _c.simulated_co_product_results:
                         for _co in _c.simulated_co_product_results:
@@ -1477,24 +1529,24 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                                 _is_num = col_idx >= 4
                                 cell = _style_data_cell(_ws3, _row_num, col_idx, is_number=_is_num)
                                 cell.value = val
-                
+
                 _auto_width(_ws3, len(_co_headers))
-                
+
                 # ════════════════════════════════════════════════════
                 #  ARK 4: BIPRODUKTER
                 # ════════════════════════════════════════════════════
                 _ws4 = _wb.create_sheet("Biprodukter")
-                
+
                 _ws4.merge_cells('A1:F1')
                 _ws4.cell(row=1, column=1, value="Biprodukter").font = _title_font
                 _ws4.row_dimensions[1].height = 30
-                
+
                 _bp_headers = ["Produkt", "Biprodukt", "Beskrivelse", "Kvantum", "Markedsverdi", "Total verdi"]
                 _row_num = 3
                 for col_idx, h in enumerate(_bp_headers, 1):
                     _ws4.cell(row=_row_num, column=col_idx, value=h)
                 _style_header_row(_ws4, _row_num, len(_bp_headers))
-                
+
                 for _c in sim_results:
                     if _c.simulated_byproduct_details:
                         for _bd in _c.simulated_byproduct_details:
@@ -1508,18 +1560,18 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                                 _is_num = col_idx >= 4
                                 cell = _style_data_cell(_ws4, _row_num, col_idx, is_number=_is_num)
                                 cell.value = val
-                
+
                 _auto_width(_ws4, len(_bp_headers))
-                
+
                 # ════════════════════════════════════════════════════
                 #  ARK 5: DETALJER PER PRODUKT
                 # ════════════════════════════════════════════════════
                 _ws5 = _wb.create_sheet("Detaljer")
-                
+
                 _ws5.merge_cells('A1:J1')
                 _ws5.cell(row=1, column=1, value="Detaljer per produkt").font = _title_font
                 _ws5.row_dimensions[1].height = 30
-                
+
                 _row_num = 3
                 for _c in sim_results:
                     # Produktoverskrift
@@ -1527,7 +1579,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                     _ws5.cell(row=_row_num, column=1, value=f"{_c.product_no} - {_c.product_desc} ({_c.location_code})").font = _section_font
                     _ws5.row_dimensions[_row_num].height = 22
                     _row_num += 1
-                    
+
                     # Materialdetaljer
                     if _c.simulated_material_details:
                         _mat_headers = ["Komponent", "Beskrivelse", "Qty per", "Svinn %", "Enhetskost", "Total kost"]
@@ -1535,7 +1587,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                             _ws5.cell(row=_row_num, column=col_idx, value=h)
                         _style_header_row(_ws5, _row_num, len(_mat_headers), fill=_subheader_fill)
                         _row_num += 1
-                        
+
                         for _md in _c.simulated_material_details:
                             _data = [
                                 _md.component, _md.component_desc,
@@ -1548,7 +1600,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                                 cell = _style_data_cell(_ws5, _row_num, col_idx, is_number=_is_num, is_pct=_is_pct)
                                 cell.value = val
                             _row_num += 1
-                    
+
                     # Operasjonsdetaljer
                     if _c.simulated_operation_details:
                         _op_headers = ["Op.nr", "Beskrivelse", "Arbeidssenter", "Run time (min)", "Setup (min)", "Batch", "Kost/time", "Run kost", "Setup/unit", "Total"]
@@ -1556,7 +1608,7 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                             _ws5.cell(row=_row_num, column=col_idx, value=h)
                         _style_header_row(_ws5, _row_num, len(_op_headers), fill=_subheader_fill)
                         _row_num += 1
-                        
+
                         for _od in _c.simulated_operation_details:
                             _data = [
                                 _od.operation_no, _od.operation_desc, _od.work_center,
@@ -1568,18 +1620,18 @@ def _(export_excel_button, sim_results, mo, pd, os, tempfile):
                                 cell = _style_data_cell(_ws5, _row_num, col_idx, is_number=_is_num)
                                 cell.value = val
                             _row_num += 1
-                    
+
                     _row_num += 1  # Tom rad mellom produkter
-                
+
                 _auto_width(_ws5, 10)
-                
+
                 # ── Lagre til temp-fil ──────────────────────────────
                 _temp_path = os.path.join(tempfile.gettempdir(), "simuleringsresultater.xlsx")
                 _wb.save(_temp_path)
-                
+
                 with open(_temp_path, "rb") as _f:
                     _excel_data = _f.read()
-                
+
                 mo.output.replace(
                     mo.vstack([
                         mo.md("### ✅ Excel-rapport generert!"),

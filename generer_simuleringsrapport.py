@@ -24,17 +24,18 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# --- Farger ---
-PRIMARY = HexColor("#1B3A5C")
-SECONDARY = HexColor("#2C5F8A")
-ACCENT = HexColor("#4A90D9")
-TEXT_COLOR = HexColor("#2D2D2D")
-LIGHT_BG = HexColor("#F5F8FC")
-DARK_BG = HexColor("#0F2440")
-LIGHT_TEXT = HexColor("#C8D7EB")
-MUTED_TEXT = HexColor("#96AFC8")
-GREEN = HexColor("#1B8A3C")
-RED = HexColor("#C0392B")
+# --- Farger (Fram Treindustri-profil) ---
+PRIMARY = HexColor("#14532D")          # Dyp skogsgrønn - overskrifter
+SECONDARY = HexColor("#2F855A")        # Lysegrønn - highlight-tekst
+ACCENT = HexColor("#48BB78")           # Frisk lysegrønn - aksenter/kant
+TEXT_COLOR = HexColor("#2C3E2B")       # Mørk skoggrønn - brødtekst
+LIGHT_BG = HexColor("#F3F5F2")         # Veldig lys grågrønn - bakgrunn
+DARK_BG = HexColor("#0B2819")          # Mørkeste grønn - tittelside bakgrunn
+LIGHT_TEXT = HexColor("#E6FFFA")       # Subtil grønn - highlight-bakgrunn
+MUTED_TEXT = HexColor("#6B8F7D")       # Dempet grønn - småtekst
+GREEN = HexColor("#2F855A")            # Grønn highlight (samme som SECONDARY)
+RED = HexColor("#C53030")              # Rød (fra .fti-highlight-red)
+CARD_BG = HexColor("#F9FBF8")          # Kortbakgrunn (.fti-card background)
 
 
 def registrer_fonter():
@@ -91,7 +92,7 @@ def bygg_stiler():
                                            textColor=TEXT_COLOR, alignment=TA_LEFT),
         'comment_box': ParagraphStyle('CommentBox', fontName=body_font, fontSize=9.5, leading=14,
                                       textColor=TEXT_COLOR, spaceAfter=4*mm,
-                                      backColor=HexColor("#F5F8FC"), borderPadding=8, borderWidth=0.5, borderColor=HexColor("#1B3A5C")),
+                                      backColor=CARD_BG, borderPadding=8, borderWidth=0.5, borderColor=ACCENT),
     }
 
 
@@ -100,7 +101,7 @@ def lag_tittelside(canvas, doc, tittel, undertittel, dato):
     canvas.setFillColor(PRIMARY)
     canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
 
-    canvas.setFillColor(DARK_BG)
+    canvas.setFillColor(PRIMARY)
     canvas.rect(0, 0, A4[0], A4[1] * 0.4, fill=1, stroke=0)
 
     canvas.setStrokeColor(ACCENT)
@@ -150,7 +151,7 @@ def lag_header_footer(canvas, doc, header_tekst):
         canvas.line(20*mm, A4[1] - 18*mm, A4[0] - 20*mm, A4[1] - 18*mm)
         canvas.line(20*mm, 18*mm, A4[0] - 20*mm, 18*mm)
         canvas.setFont('Helvetica-Oblique', 8)
-        canvas.setFillColor(HexColor("#888888"))
+        canvas.setFillColor(MUTED_TEXT)
         canvas.drawCentredString(A4[0] / 2, 12*mm, f'Side {doc.page}')
     canvas.restoreState()
 
@@ -194,6 +195,103 @@ def lag_tabell(data, styles, kolonnebredder=None):
     return tbl
 
 
+def lag_ledelsessammendrag(sammenligninger, styles):
+    """
+    Generer et automatisert ledelsessammendrag basert på simuleringsresultater.
+
+    Identifiserer topp 5 produkter med størst endring (i kroner og prosent),
+    samt eventuelle kostnadsreduksjoner.
+    """
+    if not sammenligninger:
+        return []
+
+    story = []
+
+    # Beregn totaler
+    total_org = sum(c.get('org_netto', 0) for c in sammenligninger)
+    total_sim = sum(c.get('sim_netto', 0) for c in sammenligninger)
+    total_diff = total_sim - total_org
+    total_pct = (total_diff / total_org * 100) if total_org != 0 else 0.0
+
+    # Sorter for å finne topp/bunn
+    sortert_kr = sorted(sammenligninger, key=lambda c: abs(c.get('diff_netto', 0)), reverse=True)
+    sortert_pct = sorted(
+        [c for c in sammenligninger if c.get('org_netto', 0) > 0],
+        key=lambda c: abs(c.get('diff_netto', 0) / c['org_netto'] * 100),
+        reverse=True
+    )
+
+    antall_produkter = len(sammenligninger)
+    antall_okning = sum(1 for c in sammenligninger if c.get('diff_netto', 0) > 0.001)
+    antall_reduksjon = sum(1 for c in sammenligninger if c.get('diff_netto', 0) < -0.001)
+    antall_uendret = antall_produkter - antall_okning - antall_reduksjon
+
+    # Seksjon: Hovedfunn
+    retning = "kostnadsøkning" if total_diff >= 0 else "besparelse"
+    story.append(Paragraph("Hovedfunn", styles['h2']))
+
+    sammendrag_tekst = (
+        f"Simuleringen viser en samlet {retning} på <b>{abs(total_diff):+,.2f}</b> "
+        f"(<b>{total_pct:+.2f} %</b>) for porteføljen på {antall_produkter} produkter. "
+    )
+    if antall_okning > 0:
+        sammendrag_tekst += f"{antall_okning} produkter har økt i kostnad. "
+    if antall_reduksjon > 0:
+        sammendrag_tekst += f"{antall_reduksjon} produkter har redusert kostnad. "
+    if antall_uendret > 0:
+        sammendrag_tekst += f"{antall_uendret} produkter er uendret."
+
+    story.append(Paragraph(sammendrag_tekst, styles['comment_box']))
+    story.append(Spacer(1, 3*mm))
+
+    # Seksjon: Mest berørt (størst økning i kroner) – topp 5
+    _top_kr = [c for c in sortert_kr if c.get('diff_netto', 0) > 0.001]
+    if _top_kr:
+        story.append(Paragraph("Mest berørt (størst økning i kroner)", styles['h3']))
+        for i, c in enumerate(_top_kr[:5], 1):
+            diff_netto = c.get('diff_netto', 0)
+            org_netto = c.get('org_netto', 0)
+            pct = (diff_netto / org_netto * 100) if org_netto > 0 else 0.0
+            prod = f"{c.get('produkt', '')} – {c.get('beskrivelse', '')}"
+            story.append(Paragraph(
+                f"{i}. {prod}: <b>+{diff_netto:+,.2f}</b> (+{pct:.1f} %)",
+                styles['bullet']
+            ))
+        story.append(Spacer(1, 2*mm))
+
+    # Seksjon: Størst relativ økning (topp 5)
+    _top_pct = [c for c in sortert_pct if c.get('diff_netto', 0) > 0.001]
+    if _top_pct:
+        story.append(Paragraph("Størst relativ økning", styles['h3']))
+        for i, c in enumerate(_top_pct[:5], 1):
+            diff_netto = c.get('diff_netto', 0)
+            org_netto = c.get('org_netto', 0)
+            pct = (diff_netto / org_netto * 100) if org_netto > 0 else 0.0
+            prod = f"{c.get('produkt', '')} – {c.get('beskrivelse', '')}"
+            story.append(Paragraph(
+                f"{i}. {prod}: <b>+{pct:.1f} %</b> (+{diff_netto:+,.2f})",
+                styles['bullet']
+            ))
+        story.append(Spacer(1, 2*mm))
+
+    # Seksjon: Kostnadsreduksjoner (hvis noen)
+    _reduksjoner = [c for c in sortert_kr if c.get('diff_netto', 0) < -0.001]
+    if _reduksjoner:
+        story.append(Paragraph("Kostnadsreduksjoner", styles['h3']))
+        for i, c in enumerate(_reduksjoner[:5], 1):
+            diff_netto = c.get('diff_netto', 0)
+            org_netto = c.get('org_netto', 0)
+            pct = (diff_netto / org_netto * 100) if org_netto > 0 else 0.0
+            prod = f"{c.get('produkt', '')} – {c.get('beskrivelse', '')}"
+            story.append(Paragraph(
+                f"{i}. {prod}: <b>{diff_netto:+,.2f}</b> ({pct:+.1f} %)",
+                styles['bullet']
+            ))
+
+    story.append(Spacer(1, 4*mm))
+    return story
+
+
 def generer_rapport(sammenligninger, overrides, output_path, tittel="Simuleringsrapport", kommentar=None, inkluder_detaljer=False, kapasitet_data=None):
     """
     Generer en PDF-rapport fra simuleringsresultater.
@@ -223,11 +321,15 @@ def generer_rapport(sammenligninger, overrides, output_path, tittel="Simulerings
     story.append(Paragraph(f"Generert: {dato_str}", styles['small']))
     story.append(HRFlowable(width="100%", thickness=0.5, color=ACCENT, spaceAfter=4*mm))
 
-    # ── Ledelsessammendrag / Kommentar ────────────────────────────
+    # ── Manuell ledelseskommentar ─────────────────────────────────
     if kommentar:
         story.append(Paragraph("Sammendrag / Ledelseskommentar", styles['h2']))
         story.append(Paragraph(kommentar.replace("\n", "<br/>"), styles['comment_box']))
         story.append(Spacer(1, 4*mm))
+
+    # ── Automatisk ledelsessammendrag ─────────────────────────────
+    if sammenligninger:
+        story.extend(lag_ledelsessammendrag(sammenligninger, styles))
 
     # ── Oppsummering av endringer ─────────────────────────────────
     story.append(Paragraph("Endringer som er simulert", styles['h2']))
@@ -275,19 +377,24 @@ def generer_rapport(sammenligninger, overrides, output_path, tittel="Simulerings
     story.append(Paragraph("Sammenligning: Baseline vs Simulert", styles['h2']))
 
     if sammenligninger:
+        # Sorter etter absolutt differanse (størst først)
+        sorterte = sorted(sammenligninger, key=lambda c: abs(c.get('diff_netto', 0)), reverse=True)
+
         tabell_data = []
-        for c in sammenligninger:
+        for c in sorterte:
             diff_netto = c.get('diff_netto', 0)
-            diff_str = f"{diff_netto:+,.2f}"
+            org_netto = c.get('org_netto', 0)
+            endring_pct = (diff_netto / org_netto * 100) if org_netto != 0 else 0.0
             tabell_data.append({
                 "Produkt": c.get('produkt', ''),
                 "Beskrivelse": c.get('beskrivelse', ''),
-                "Org. netto": c.get('org_netto', 0),
+                "Org. netto": org_netto,
                 "Sim. netto": c.get('sim_netto', 0),
-                "Diff": diff_str,
+                "Diff (kr)": diff_netto,
+                "Endring %": endring_pct,
             })
 
-        kol_bredder = [30*mm, 50*mm, 35*mm, 35*mm, 30*mm]
+        kol_bredder = [28*mm, 45*mm, 30*mm, 30*mm, 27*mm, 25*mm]
         tbl = lag_tabell(tabell_data, styles, kol_bredder)
         story.append(tbl)
         story.append(Spacer(1, 4*mm))
@@ -296,14 +403,15 @@ def generer_rapport(sammenligninger, overrides, output_path, tittel="Simulerings
         total_org = sum(c.get('org_netto', 0) for c in sammenligninger)
         total_sim = sum(c.get('sim_netto', 0) for c in sammenligninger)
         total_diff = total_sim - total_org
+        total_pct = (total_diff / total_org * 100) if total_org != 0 else 0.0
 
         story.append(Paragraph("Total effekt", styles['h3']))
         story.append(Paragraph(f"<b>Opprinnelig total netto kostnad:</b> {total_org:,.2f}", styles['body']))
         story.append(Paragraph(f"<b>Simulert total netto kostnad:</b> {total_sim:,.2f}", styles['body']))
         if total_diff >= 0:
-            story.append(Paragraph(f"<b>Økning:</b> {total_diff:+,.2f} (kostnadsøkning)", styles['body']))
+            story.append(Paragraph(f"<b>Økning:</b> {total_diff:+,.2f} (kostnadsøkning, {total_pct:+.2f} %)", styles['body']))
         else:
-            story.append(Paragraph(f"<b>Reduksjon:</b> {total_diff:+,.2f} (besparelse)", styles['body']))
+            story.append(Paragraph(f"<b>Reduksjon:</b> {total_diff:+,.2f} (besparelse, {total_pct:+.2f} %)", styles['body']))
 
         # ── Kapasitetsutnyttelse ──────────────────────────────────
         if kapasitet_data:
