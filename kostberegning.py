@@ -643,6 +643,305 @@ class ExcelData:
 
 
 # ──────────────────────────────────────────────────────────────────────
+#  3B. SQLite-LASTER (parallell med ExcelData)
+# ──────────────────────────────────────────────────────────────────────
+
+class SqliteData:
+    """Laster data fra SQLite i stedet for Excel.
+    
+    Har samme interface som ExcelData, slik at CostCalculator og
+    SimulationEngine kan bruke begge kilder uten endringer.
+    """
+
+    def __init__(self, db_path: Optional[str] = None):
+        # Importer DataRepo her for å unngå sirkulære imports
+        from data_repo import DataRepo
+        
+        self.db = DataRepo(db_path)
+        self.db.initialize()
+        self.filepath = Path(self.db.db_path)
+        self.raw: dict[str, pd.DataFrame] = {}
+
+        # Strukturerte lister (samme som ExcelData)
+        self.products: list[Product] = []
+        self.locations: list[Location] = []
+        self.work_centers: list[WorkCenter] = []
+        self.operations: list[Operation] = []
+        self.item_costs: list[ItemCost] = []
+        self.bom_lines: list[BOMLine] = []
+        self.routing_lines: list[RoutingLine] = []
+        self.byproduct_rules: list[ByProductRule] = []
+        self.capacity_days: list[CapacityDay] = []
+        self.scenarios: list[ProductionScenario] = []
+
+        # Indekser (samme som ExcelData)
+        self._product_index: dict[str, Product] = {}
+        self._location_index: dict[str, Location] = {}
+        self._wc_index: dict[str, WorkCenter] = {}
+        self._op_index: dict[str, Operation] = {}
+        self._bom_index: dict[str, list[BOMLine]] = {}
+        self._routing_index: dict[str, list[RoutingLine]] = {}
+        self._byproduct_index: dict[str, list[ByProductRule]] = {}
+        self._scenario_index: dict[str, ProductionScenario] = {}
+        self._routing_locations_index: dict[str, list[str]] = {}
+        self._item_cost_index: dict[str, list[ItemCost]] = {}
+
+        self._load_all()
+
+    def _load_all(self):
+        """Les alle data fra SQLite."""
+        self._load_products()
+        self._load_locations()
+        self._load_work_centers()
+        self._load_operations()
+        self._load_item_costs()
+        self._load_bom()
+        self._load_routing()
+        self._load_byproduct_rules()
+        self._load_capacity()
+        self._load_scenarios()
+        self._build_indexes()
+
+    def _load_products(self):
+        rows = self.db.conn.execute(
+            "SELECT item_no, description, item_type, product_group, base_uom FROM products ORDER BY item_no"
+        ).fetchall()
+        for r in rows:
+            self.products.append(Product(
+                item_no=r["item_no"],
+                description=r["description"],
+                item_type=r["item_type"],
+                product_group=r["product_group"],
+                base_uom=r["base_uom"],
+            ))
+
+    def _load_locations(self):
+        rows = self.db.conn.execute(
+            "SELECT code, name, location_type FROM locations ORDER BY code"
+        ).fetchall()
+        for r in rows:
+            self.locations.append(Location(
+                code=r["code"],
+                name=r["name"],
+                location_type=r["location_type"],
+            ))
+
+    def _load_work_centers(self):
+        rows = self.db.conn.execute(
+            """SELECT code, description, location_code, labor_cost_hour,
+                      machine_cost_hour, overhead_cost_hour, capacity_hours_day,
+                      effective_capacity_pct
+               FROM work_centers ORDER BY code"""
+        ).fetchall()
+        for r in rows:
+            self.work_centers.append(WorkCenter(
+                code=r["code"],
+                description=r["description"],
+                location_code=r["location_code"],
+                labor_cost_hour=r["labor_cost_hour"],
+                machine_cost_hour=r["machine_cost_hour"],
+                overhead_cost_hour=r["overhead_cost_hour"],
+                capacity_hours_day=r["capacity_hours_day"],
+                effective_capacity_pct=r["effective_capacity_pct"],
+            ))
+
+    def _load_operations(self):
+        rows = self.db.conn.execute(
+            "SELECT code, description, default_work_center, standard_unit FROM operations ORDER BY code"
+        ).fetchall()
+        for r in rows:
+            self.operations.append(Operation(
+                code=r["code"],
+                description=r["description"],
+                default_work_center=r["default_work_center"],
+                standard_unit=r["standard_unit"],
+            ))
+
+    def _load_item_costs(self):
+        rows = self.db.conn.execute(
+            "SELECT item_no, cost_type, unit_cost, currency, effective_date FROM item_costs ORDER BY item_no"
+        ).fetchall()
+        for r in rows:
+            ed = None
+            if r["effective_date"]:
+                try:
+                    ed = date.fromisoformat(r["effective_date"])
+                except (ValueError, TypeError):
+                    ed = None
+            self.item_costs.append(ItemCost(
+                item_no=r["item_no"],
+                cost_type=r["cost_type"],
+                unit_cost=r["unit_cost"],
+                currency=r["currency"],
+                effective_date=ed,
+            ))
+
+    def _load_bom(self):
+        rows = self.db.conn.execute(
+            """SELECT parent_item_no, component_item_no, quantity_per, uom,
+                      scrap_pct, co_product_pct, co_product_item_no
+               FROM bom_lines ORDER BY parent_item_no, component_item_no"""
+        ).fetchall()
+        for r in rows:
+            self.bom_lines.append(BOMLine(
+                parent_item_no=r["parent_item_no"],
+                component_item_no=r["component_item_no"],
+                quantity_per=r["quantity_per"],
+                uom=r["uom"],
+                scrap_pct=r["scrap_pct"],
+                co_product_pct=r["co_product_pct"],
+                co_product_item_no=r["co_product_item_no"],
+            ))
+
+    def _load_routing(self):
+        rows = self.db.conn.execute(
+            """SELECT item_no, operation_no, operation_code, work_center_code,
+                      setup_time_minutes, run_time_minutes, batch_size,
+                      changeover_time_minutes
+               FROM routing_lines ORDER BY item_no, operation_no"""
+        ).fetchall()
+        for r in rows:
+            self.routing_lines.append(RoutingLine(
+                item_no=r["item_no"],
+                operation_no=r["operation_no"],
+                operation_code=r["operation_code"],
+                work_center_code=r["work_center_code"],
+                setup_time_minutes=r["setup_time_minutes"],
+                run_time_minutes=r["run_time_minutes"],
+                batch_size=r["batch_size"],
+                changeover_time_minutes=r["changeover_time_minutes"],
+            ))
+
+    def _load_byproduct_rules(self):
+        rows = self.db.conn.execute(
+            """SELECT parent_item_no, by_product_item_no, expected_quantity, uom,
+                      market_value, allocation_method
+               FROM byproduct_rules ORDER BY parent_item_no, by_product_item_no"""
+        ).fetchall()
+        for r in rows:
+            self.byproduct_rules.append(ByProductRule(
+                parent_item_no=r["parent_item_no"],
+                by_product_item_no=r["by_product_item_no"],
+                expected_quantity=r["expected_quantity"],
+                uom=r["uom"],
+                market_value=r["market_value"],
+                allocation_method=r["allocation_method"],
+            ))
+
+    def _load_capacity(self):
+        rows = self.db.conn.execute(
+            """SELECT work_center, date, available_hours, planned_downtime
+               FROM capacity_days ORDER BY work_center, date"""
+        ).fetchall()
+        for r in rows:
+            d = None
+            if r["date"]:
+                try:
+                    d = date.fromisoformat(r["date"])
+                except (ValueError, TypeError):
+                    d = None
+            self.capacity_days.append(CapacityDay(
+                work_center=r["work_center"],
+                date=d,
+                available_hours=r["available_hours"],
+                planned_downtime=r["planned_downtime"],
+            ))
+
+    def _load_scenarios(self):
+        rows = self.db.conn.execute(
+            "SELECT scenario_name, product, planned_quantity FROM production_scenarios ORDER BY scenario_name"
+        ).fetchall()
+        for r in rows:
+            self.scenarios.append(ProductionScenario(
+                scenario_name=r["scenario_name"],
+                product=r["product"],
+                planned_quantity=r["planned_quantity"],
+            ))
+
+    def _build_indexes(self):
+        """Bygg dict-indekser for raskt oppslag (samme som ExcelData)."""
+        self._product_index = {p.item_no: p for p in self.products}
+        self._location_index = {l.code: l for l in self.locations}
+        self._wc_index = {w.code: w for w in self.work_centers}
+        self._op_index = {o.code: o for o in self.operations}
+
+        # BOM: parent_item_no -> liste med BOMLine
+        self._bom_index = {}
+        for bl in self.bom_lines:
+            self._bom_index.setdefault(bl.parent_item_no, []).append(bl)
+
+        # Routing: item_no -> liste med RoutingLine (sortert på operation_no)
+        self._routing_index = {}
+        for rl in self.routing_lines:
+            self._routing_index.setdefault(rl.item_no, []).append(rl)
+        for item_no in self._routing_index:
+            self._routing_index[item_no].sort(key=lambda r: r.operation_no)
+
+        # Byproduct rules: parent_item_no -> liste med ByProductRule
+        self._byproduct_index = {}
+        for br in self.byproduct_rules:
+            self._byproduct_index.setdefault(br.parent_item_no, []).append(br)
+
+        # Scenarios: scenario_name -> ProductionScenario
+        self._scenario_index = {s.scenario_name: s for s in self.scenarios}
+
+        # Item costs: item_no -> liste med ItemCost
+        self._item_cost_index = {}
+        for ic in self.item_costs:
+            self._item_cost_index.setdefault(ic.item_no, []).append(ic)
+
+        # Routing locations: item_no -> sortert liste med unike location codes
+        _temp_locs: dict[str, set[str]] = {}
+        for rl in self.routing_lines:
+            wc = self._wc_index.get(rl.work_center_code)
+            if wc and wc.location_code:
+                _temp_locs.setdefault(rl.item_no, set()).add(wc.location_code)
+        self._routing_locations_index = {
+            item_no: sorted(locs) for item_no, locs in _temp_locs.items()
+        }
+
+    # ── Oppslagsverk (samme interface som ExcelData) ─────────────
+
+    def product(self, item_no: str) -> Optional[Product]:
+        return self._product_index.get(item_no)
+
+    def work_center(self, code: str) -> Optional[WorkCenter]:
+        return self._wc_index.get(code)
+
+    def operation(self, code: str) -> Optional[Operation]:
+        return self._op_index.get(code)
+
+    def item_cost(self, item_no: str, cost_type: str = "Standard Cost") -> Optional[ItemCost]:
+        """Finn nyeste kost av angitt type for en vare."""
+        matches = self._item_cost_index.get(item_no, [])
+        if not matches:
+            return None
+        exact = [c for c in matches if c.cost_type == cost_type]
+        if exact:
+            matches = exact
+        matches.sort(key=lambda c: c.effective_date if c.effective_date is not None else date.min, reverse=True)
+        return matches[0]
+
+    def bom_for(self, item_no: str) -> list[BOMLine]:
+        return self._bom_index.get(item_no, [])
+
+    def routing_for(self, item_no: str) -> list[RoutingLine]:
+        return self._routing_index.get(item_no, [])
+
+    def byproduct_rules_for(self, parent_item_no: str) -> list[ByProductRule]:
+        return self._byproduct_index.get(parent_item_no, [])
+
+    def location(self, code: str) -> Optional[Location]:
+        return self._location_index.get(code)
+
+    def routing_locations_for(self, item_no: str) -> list[str]:
+        return self._routing_locations_index.get(item_no, [])
+
+    def scenario(self, name: str) -> Optional[ProductionScenario]:
+        return self._scenario_index.get(name)
+
+
+# ──────────────────────────────────────────────────────────────────────
 #  4. KOSTNADSBEREGNER
 # ──────────────────────────────────────────────────────────────────────
 
