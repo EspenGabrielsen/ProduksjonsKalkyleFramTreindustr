@@ -526,8 +526,7 @@ def _(
             for _wc in filtered_work_centers:
                 _wc_rows.append({
                     "Arbeidssenter": _wc.code,
-                    "Beskrivelse": _wc.description,
-                    "Lokasjon": _wc.location_code,
+                    "Beskrivelse": f"{_wc.description} · {_wc.location_code}",
                     "Lønn/time": _wc.labor_cost_hour,
                     "Maskin/time": _wc.machine_cost_hour,
                     "Overhead/time": _wc.overhead_cost_hour,
@@ -787,7 +786,7 @@ def _(data, filtered_products, mo, pd, persistent_overrides):
             _ny_cost = persistent_overrides["item_costs"].get(_p.item_no, _cost)
             _rows.append({
                 "Varenr": _p.item_no,
-                "Beskrivelse": _p.description,
+                "Beskrivelse": f"{_p.description} · {_p.base_uom}",
                 "Org. pris": _cost,
                 "Ny pris": _ny_cost,
             })
@@ -832,9 +831,12 @@ def _(data, filtered_bom_lines, mo, pd, persistent_overrides):
             _key = (_bl.parent_item_no, _bl.component_item_no)
             _ny_svinn = persistent_overrides["bom_scrap"].get(_key, _bl.scrap_pct)
             _ny_co = persistent_overrides["bom_co_product"].get(_key, _bl.co_product_pct)
+            # Slå opp beskrivelser for komponent og produkt
+            _komp_desc = next((p.description for p in data.products if p.item_no == _bl.component_item_no), _bl.component_item_no)
+            _prod_desc = next((p.description for p in data.products if p.item_no == _bl.parent_item_no), _bl.parent_item_no)
             _rows.append({
-                "Komponent": _bl.component_item_no,
-                "Produkt": _bl.parent_item_no,
+                "Komponent": f"{_bl.component_item_no} · {_komp_desc}",
+                "Produkt": f"{_bl.parent_item_no} · {_prod_desc}",
                 "Org. svinn %": _bl.scrap_pct,
                 "Nytt svinn %": _ny_svinn,
                 "Org. co-prod %": _bl.co_product_pct,
@@ -854,8 +856,9 @@ def _(bom_scrap_df, persistent_overrides):
     if bom_scrap_df is not None and bom_scrap_df.value is not None:
         _df = bom_scrap_df.value
         for _, _row in _df.iterrows():
-            _komponent = _row["Komponent"]
-            _produkt = _row["Produkt"]
+            # Strip beskrivelse fra concat-verdier for å gjenopprette original nøkkel
+            _komponent = str(_row["Komponent"]).split(" · ")[0]
+            _produkt = str(_row["Produkt"]).split(" · ")[0]
             _key = (_produkt, _komponent)
 
             # Svinn
@@ -898,7 +901,7 @@ def _(data, filtered_work_centers, mo, pd, persistent_overrides):
             _ny_eff = _saved.get("effective_capacity_pct", _wc.effective_capacity_pct)
             _rows.append({
                 "Kode": _wc.code,
-                "Beskrivelse": _wc.description,
+                "Beskrivelse": f"{_wc.description} · {_wc.location_code}",
                 "Org. lønn": _wc.labor_cost_hour,
                 "Ny lønn": _ny_lønn,
                 "Org. maskin": _wc.machine_cost_hour,

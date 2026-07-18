@@ -97,12 +97,21 @@ def bygg_stiler():
 
 
 def lag_tittelside(canvas, doc, tittel, undertittel, dato):
-    """Tegn tittelsiden."""
-    canvas.setFillColor(PRIMARY)
-    canvas.rect(0, 0, A4[0], A4[1], fill=1, stroke=0)
+    """Tegn tittelsiden med myk gradientovergang."""
 
-    canvas.setFillColor(PRIMARY)
-    canvas.rect(0, 0, A4[0], A4[1] * 0.4, fill=1, stroke=0)
+    # Myk gradient fra PRIMARY (topp) til DARK_BG (bunn) – 200 striper
+    striper = 200
+    stripe_hoyde = A4[1] / striper
+    r1, g1, b1 = PRIMARY.red, PRIMARY.green, PRIMARY.blue
+    r2, g2, b2 = DARK_BG.red, DARK_BG.green, DARK_BG.blue
+    for i in range(striper):
+        t = i / striper
+        r = r1 + (r2 - r1) * t
+        g = g1 + (g2 - g1) * t
+        b = b1 + (b2 - b1) * t
+        farge = HexColor(f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}")
+        canvas.setFillColor(farge)
+        canvas.rect(0, i * stripe_hoyde, A4[0], stripe_hoyde + 1, fill=1, stroke=0)
 
     canvas.setStrokeColor(ACCENT)
     canvas.setLineWidth(1.5)
@@ -128,7 +137,7 @@ def lag_tittelside(canvas, doc, tittel, undertittel, dato):
         canvas.drawCentredString(A4[0]/2, y - 28, undertittel)
 
     if dato:
-        canvas.setFillColor(MUTED_TEXT)
+        canvas.setFillColor(LIGHT_TEXT)
         canvas.setFont('Helvetica-Oblique', 9)
         canvas.drawCentredString(A4[0]/2, y - 48, dato)
 
