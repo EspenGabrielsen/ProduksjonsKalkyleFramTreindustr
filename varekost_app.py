@@ -140,7 +140,7 @@ def _(mo):
             font-size: 0.85em;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #A3CBB0;
+            color: #48BB78;
             margin: 0 0 8px 0;
             font-weight: 600;
         }
@@ -222,12 +222,12 @@ def _(mo):
     return
 
 
-# ═══ KAP 2: 📂 Last data ════════════════════════════════════════════════
+# ═══ 📂 Datagrunnlag ═══════════════════════════════════════════════════
 
 
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>📂 Last data</h2></div>')
+    mo.md("## 📂 Datagrunnlag")
     return
 
 
@@ -325,7 +325,7 @@ def _(CostCalculator, DataRepo, SqliteData, SimulationEngine, get_reload, mo, os
 
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>📤 Last opp ny Excel-fil</h2></div>')
+    mo.md("### 📤 Last opp Excel")
     return
 
 
@@ -422,7 +422,7 @@ def _(DataRepo, excel_import_file, excel_import_kommentar, import_excel_to_sqlit
 
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>📜 Gå tilbake til tidligere versjon</h2></div>')
+    mo.md("### 📜 Versjonshistorikk")
     return
 
 
@@ -520,7 +520,7 @@ def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, overrides, set_r
 
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>📥 Last ned komplett datafil</h2><p style="color:#2C5F8A;">Hele datagrunnlaget — klar for SharePoint</p></div>')
+    mo.md("### 📥 Eksporter data")
     return
 
 
@@ -670,12 +670,18 @@ def _(data, vareFilter):
     )
 
 
-# ═══ KAP 7: 📊 Baseline kostnader ════════════════════════════════════════
+# ═══ 📊 Kalkyle & Simulering ═══════════════════════════════════════════
 
 
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>📊 Baseline kostnader</h2><p style="color:#2C5F8A;">Opprinnelig kalkyle (før simulering)</p></div>')
+    mo.md("## 📊 Kalkyle & Simulering")
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("### 📊 Baseline kostnader")
     return
 
 
@@ -700,12 +706,9 @@ def _(baseline, mo, pd):
     return
 
 
-# ═══ KAP 8: 🔧 Juster parametere ════════════════════════════════════════
-
-
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>🔧 Juster parametere</h2></div>')
+    mo.md("### 🔧 Parametere")
     return
 
 
@@ -972,20 +975,10 @@ def _(mo):
     return (planned_qty,)
 
 
-# ═══ KAP 9: 🚀 Kjør simulering ══════════════════════════════════════════
-
-
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>🚀 Kjør simulering</h2></div>')
+    mo.md("### 🚀 Resultater")
     return
-
-
-@app.cell
-def _(mo):
-    run_button = mo.ui.run_button(label="▶️ Kjør simulering", kind="neutral")
-    run_button
-    return (run_button,)
 
 
 @app.cell
@@ -1079,12 +1072,9 @@ def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty
     return sim_overrides, sim_results
 
 
-# ═══ KAP 10: 💾 Eksporter resultater ════════════════════════════════════
-
-
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>💾 Eksporter resultater</h2><p style="color:#2C5F8A;">Last ned simuleringsresultater</p></div>')
+    mo.md("### 💾 Eksport")
     return
 
 
@@ -1209,12 +1199,12 @@ def _(export_excel_button, generer_excel_rapport, mo, os, sim_results, tempfile)
     return
 
 
-# ═══ KAP 11: 📋 Datamodell — detaljer ════════════════════════════════════
+# ═══ 📋 Datamodell ═══════════════════════════════════════════════════
 
 
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-card"><h2>📋 Datamodell — oversikt</h2></div>')
+    mo.md("## 📋 Datamodell")
     return
 
 
@@ -1330,15 +1320,14 @@ def _(data, filtered_bom_lines, filtered_byproduct_rules, filtered_capacity_days
 
 @app.cell
 def _(mo):
-    vareFilter = mo.ui.text(label="🔍 Søk på varenr eller beskrivelse")
+    vareFilter = mo.ui.text(label="🔍 Filtrer på varenr eller beskrivelse")
+    run_button = mo.ui.run_button(label="⚡Start simulering", kind="neutral")
     
     mo.sidebar(
         mo.vstack([
-            # Logo
-            mo.Html('<div class="fti-sidebar-logo"><img src="https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png" alt="Fram Treindustri" style="height: 36px; filter: brightness(0) invert(1);" /></div>'),
-            
-            # Filter
-            mo.Html('<div class="fti-sidebar-section"><h3>🔍 Filter</h3></div>'),
+            # Handlinger
+            mo.Html('<div class="fti-sidebar-section"><h3>Handlinger</h3></div>'),
+            run_button,
             vareFilter,
             
             # Outline / TOC
@@ -1346,23 +1335,27 @@ def _(mo):
             mo.outline(label=""),
             
             mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
-            mo.Html('Fram Treindustri © 2025'),
+            mo.Html('Fram Treindustri -'),
             mo.Html('v0.23.14 · Marimo'),
         ]),
         width="260px",
     )
-    return (vareFilter,)
+    return (vareFilter, run_button)
 
 
-# ═══ KAP 12: 📋 Endringslogg ════════════════════════════════════════════
+# ═══ 📋 Endringslogg ════════════════════════════════════════════════
+
+
+@app.cell
+def _(mo):
+    mo.md("### 📋 Endringslogg")
+    return
 
 
 @app.cell
 def _(DataRepo, mo, pd):
     _db = DataRepo()
     _db.initialize()
-
-    mo.Html('<div class="fti-card"><h2>📋 Endringslogg</h2><p style="color:#2C5F8A;">Siste endringer</p></div>')
 
     _changes = _db.get_changes(limit=50)
     if _changes:
