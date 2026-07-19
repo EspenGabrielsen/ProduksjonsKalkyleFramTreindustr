@@ -7,7 +7,7 @@
   "cells": [
     {
       "id": "Hbol",
-      "code_hash": "6b14c5da20e0a596f0651ad0a4a78223",
+      "code_hash": "8d5053a940c8dabed58a23e8846fd199",
       "outputs": [
         {
           "type": "data",
@@ -20,12 +20,12 @@
     },
     {
       "id": "MJUe",
-      "code_hash": "91e187884f3afef5019f1db4987de4f6",
+      "code_hash": "a537488ec5d8251231dce63a459204e5",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "\n<style>\n    body { \n        /* En veldig lys, behagelig gr\u00e5gr\u00f8nn/varm hvit bakgrunn */\n        background-color: #F3F5F2; \n        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n        color: #2C3E2B; /* M\u00f8rk skoggr\u00f8nn i stedet for svart tekst for et mykere uttrykk */\n    }\n    \n    .marimo-app { \n        max-width: 1200px; \n        margin: 40px auto; \n        padding: 0 24px;\n    }\n    \n    .fti-card {\n        /* Hvite kort med en \u00f8rliten nyanse av lysegr\u00f8nt, som gir fin dybde mot bakgrunnen */\n        background: #F9FBF8; \n        border-radius: 12px; \n        padding: 24px;\n        margin-bottom: 20px;\n        \n        /* En myk skygge som gj\u00f8r at kortene \"svever\" lett */\n        box-shadow: 0 4px 12px rgba(27, 89, 43, 0.04);\n        \n        /* Den friske, lysegr\u00f8nne FramTre-aksenten p\u00e5 venstre side */\n        border-left: 5px solid #48BB78; \n    }\n    \n    .fti-card h2, .fti-card h3 {\n        /* Dyp skogsgr\u00f8nn p\u00e5 overskrifter for god lesbarhet og kontrast */\n        color: #14532D; \n        margin-top: 0;\n        margin-bottom: 12px;\n        font-weight: 600;\n    }\n    \n    /* Highlight-farger tilpasset den nye lysegr\u00f8nne profilen: */\n    .fti-highlight-green { \n        color: #2F855A; \n        background-color: #E6FFFA; /* Subtil gr\u00f8nn merking bak teksten */\n        padding: 2px 6px;\n        border-radius: 4px;\n        font-weight: 600; \n    }\n    \n    .fti-highlight-red { \n        color: #C53030; \n        background-color: #FFF5F5; /* Subtil r\u00f8d merking bak teksten */\n        padding: 2px 6px;\n        border-radius: 4px;\n        font-weight: 600; \n    }\n</style>\n"
+            "text/html": "\n<style>\n    body { \n        background-color: #F3F5F2; \n        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n        color: #2C3E2B;\n    }\n    .marimo-app { max-width: 1200px; margin: 40px auto; padding: 0 24px; }\n\n    /* ===== FTI Header ===== */\n    .fti-header {\n        background: linear-gradient(135deg, #14532D 0%, #1B6E3D 100%);\n        border-radius: 12px;\n        padding: 20px 28px;\n        margin-bottom: 20px;\n        box-shadow: 0 4px 16px rgba(20, 83, 45, 0.15);\n        display: flex;\n        align-items: center;\n        justify-content: space-between;\n    }\n\n    .fti-header-title {\n        font-size: 1.8em;\n        font-weight: 700;\n        color: #FFFFFF;\n        line-height: 1.2;\n    }\n    .fti-header-subtitle {\n        font-size: 0.95em;\n        color: #C6E6D0;\n        line-height: 1.2;\n    }\n\n    /* ===== FTI Cards ===== */\n    .fti-card {\n        background: #F9FBF8; border-radius: 12px; padding: 24px;\n        margin-bottom: 20px;\n        box-shadow: 0 4px 12px rgba(27, 89, 43, 0.08);\n        border-left: 6px solid #48BB78; \n        transition: box-shadow 0.2s ease;\n    }\n    .fti-card:hover {\n        box-shadow: 0 6px 20px rgba(27, 89, 43, 0.12);\n    }\n    .fti-card h2, .fti-card h3 { color: #14532D; margin-top: 0; margin-bottom: 12px; font-weight: 600; }\n    .fti-highlight-green { color: #2F855A; background-color: #E6FFFA; padding: 2px 6px; border-radius: 4px; font-weight: 600; }\n    .fti-highlight-red { color: #C53030; background-color: #FFF5F5; padding: 2px 6px; border-radius: 4px; font-weight: 600; }\n\n    /* ===== FTI Footer ===== */\n    .fti-footer {\n        background: #14532D;\n        color: #C6E6D0;\n        font-size: 0.85em;\n        text-align: center;\n        padding: 12px 24px;\n        border-radius: 8px;\n        margin-top: 32px;\n        margin-bottom: 16px;\n    }\n\n    /* ===== FTI Sidebar ===== */\n    .fti-sidebar-logo {\n        padding: 8px 0;\n        border-bottom: 1px solid rgba(255,255,255,0.15);\n        margin-bottom: 16px;\n    }\n    .fti-sidebar-section {\n        margin-bottom: 20px;\n    }\n    .fti-sidebar-section h3 {\n        font-size: 0.85em;\n        text-transform: uppercase;\n        letter-spacing: 1px;\n        color: #48BB78;\n        margin: 0 0 8px 0;\n        font-weight: 600;\n    }\n\n    /* ===== Styling av Marimo radio-knapper ===== */\n    .marimo-radio {\n        background: #F9FBF8;\n        border-radius: 8px;\n        padding: 4px;\n        border: 1px solid #D1E0D4;\n    }\n    .marimo-radio label {\n        padding: 8px 14px;\n        border-radius: 6px;\n        font-weight: 500;\n        color: #2C3E2B;\n        transition: all 0.15s ease;\n    }\n    .marimo-radio input[type=\"radio\"]:checked + label {\n        background: #14532D;\n        color: white;\n    }\n    .marimo-radio label:hover {\n        background: #E6FFFA;\n    }\n\n    /* ===== Styling av dropdowns ===== */\n    .marimo-dropdown {\n        border-radius: 6px;\n        border: 1px solid #D1E0D4;\n        background: #F9FBF8;\n    }\n\n    /* ===== Outline/TOC styling ===== */\n    .marimo-outline {\n        background: transparent;\n    }\n    .marimo-outline a {\n        color: #C6E6D0;\n        text-decoration: none;\n        font-size: 0.9em;\n        padding: 4px 0;\n        display: block;\n        transition: color 0.15s ease;\n    }\n    .marimo-outline a:hover {\n        color: #FFFFFF;\n    }\n\n    /* ===== Sidebar-specifikke overrides ===== */\n    [data-marimo-theme=\"dark\"] .fti-header {\n        background: linear-gradient(135deg, #0B2819 0%, #14532D 100%);\n    }\n    [data-marimo-theme=\"dark\"] .fti-footer {\n        background: #0B2819;\n    }\n</style>\n"
           }
         }
       ],
@@ -33,12 +33,12 @@
     },
     {
       "id": "vblA",
-      "code_hash": "425d31573fb0889a1ae45fdd4d412c5c",
+      "code_hash": "afab5b5693dfa2e60266102774eabd52",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div style='display: flex;flex: 1;flex-direction: row;justify-content: space-between;align-items: center;flex-wrap: nowrap;gap: 0.5rem'><img src='https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png' alt='Fram Treindustri' style='width: 250px' /><div style=\"text-align: right; line-height: 1.2;\"><div style=\"font-size: 1.8em; font-weight: 700; color: #1B3A5C;\">Produksjonskost Simulator</div><div style=\"font-size: 0.95em; color: #2C5F8A;\">Last opp Excel-modell, juster parametere \u2014 se kostnader i sanntid</div></div></div>"
+            "text/html": "\n<div class=\"fti-header\" id=\"fti-header\">\n    <div style=\"display: flex; align-items: center; gap: 16px;\">\n        <img src=\"https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png\"\n             alt=\"Fram Treindustri\" style=\"height: 48px;\" />\n        <div>\n            <div class=\"fti-header-title\">Produksjonskost Simulator</div>\n            <div class=\"fti-header-subtitle\">Fram Treindustri \u2014 Standardkostkalkyle, simulering og analyse</div>\n        </div>\n    </div>\n    <div style=\"text-align: right; color: #C6E6D0; font-size: 0.85em;\">\n        Last opp Excel-modell \u00b7 Juster parametere \u00b7 Se kostnader i sanntid\n    </div>\n</div>\n"
           }
         }
       ],
@@ -46,12 +46,12 @@
     },
     {
       "id": "bkHC",
-      "code_hash": "93ced60048919ec86a716a1253f8f542",
+      "code_hash": "fe8a230ab851f1b3a2fed59cb88ed1ce",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udcc2 Last data</h2></div>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"datagrunnlag\">\ud83d\udcc2 Datagrunnlag</h2></span>"
           }
         }
       ],
@@ -59,12 +59,12 @@
     },
     {
       "id": "lEQa",
-      "code_hash": "e9eb1e0a47732137137bac96eb2be792",
+      "code_hash": "cd0e4636d1a5710dc6d3927692f0a47e",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<marimo-ui-element object-id='lEQa-0' random-id='478c3e0b-e33a-262d-d8f0-7011a4f5db0f'><marimo-file data-initial-value='[]' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eVelg Excel-fil (Produksjonsmodell)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-filetypes='[&quot;.xlsx&quot;]' data-multiple='false' data-kind='&quot;button&quot;' data-max_size='100000000'></marimo-file></marimo-ui-element>"
+            "text/plain": ""
           }
         }
       ],
@@ -72,12 +72,12 @@
     },
     {
       "id": "PKri",
-      "code_hash": "fe0a879100c6422d8da7038379af7ff7",
+      "code_hash": "bee24bf1e3ee19f408b657f79668a0fe",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/plain": ""
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\u2705 Data lastet!</strong></span>\n<table>\n<thead>\n<tr>\n<th>Data</th>\n<th>Antall</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Produkter</td>\n<td>189</td>\n</tr>\n<tr>\n<td>Ferdigvarer/Halvfabrikata</td>\n<td>149</td>\n</tr>\n<tr>\n<td>R\u00e5varer</td>\n<td>37</td>\n</tr>\n<tr>\n<td>Biprodukter</td>\n<td>3</td>\n</tr>\n<tr>\n<td>Arbeidssentre</td>\n<td>5</td>\n</tr>\n<tr>\n<td>BOM-linjer</td>\n<td>143</td>\n</tr>\n<tr>\n<td>Routing-linjer</td>\n<td>143</td>\n</tr>\n<tr>\n<td>Biprodukt-regler</td>\n<td>141</td>\n</tr>\n<tr>\n<td>Scenarioer</td>\n<td>15</td>\n</tr>\n<tr>\n<td>Endringer logget</td>\n<td>856</td>\n</tr>\n</tbody>\n</table></span>"
           }
         }
       ],
@@ -85,12 +85,12 @@
     },
     {
       "id": "Xref",
-      "code_hash": "15d1387a7a92aebf03beb88b3ae754cf",
+      "code_hash": "48ff1030319eae5ae40eb99d27544869",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/plain": ""
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udce4 Last opp Excel</strong></span></span>"
           }
         }
       ],
@@ -98,12 +98,12 @@
     },
     {
       "id": "SFPL",
-      "code_hash": "962c3fe997676b86e6fe9af2afc8729e",
+      "code_hash": "a124ae56b446f6b60278a7243ac1c2b5",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udd0d Vare filter</h2></div>"
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Last opp en redigert Excel-fil. Den valideres og importeres automatisk.</span></span><marimo-ui-element object-id='SFPL-0' random-id='87044b40-522d-75d4-897c-af1dc7be6682'><marimo-file data-initial-value='[]' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcc4 Velg Excel-fil&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-filetypes='[&quot;.xlsx&quot;]' data-multiple='false' data-kind='&quot;button&quot;' data-max_size='100000000'></marimo-file></marimo-ui-element><marimo-ui-element object-id='SFPL-1' random-id='3b6f3936-0a65-6b28-aba8-636fe5bda771'><marimo-text data-initial-value='&quot;&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eHva er endret? (valgfri kommentar)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;f.eks. &#x27;Oppdaterte r\u00e5varepriser Q3&#x27; eller &#x27;Ny BOM for Panel&#x27;&quot;' data-kind='&quot;text&quot;' data-full-width='false' data-disabled='false' data-debounce='true'></marimo-text></marimo-ui-element></div>"
           }
         }
       ],
@@ -111,20 +111,7 @@
     },
     {
       "id": "BYtC",
-      "code_hash": "0dc9fb97360c2c3f87e63257043890b7",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/html": "<marimo-ui-element object-id='BYtC-0' random-id='542ae191-f384-5731-8724-1b1cddc0d9eb'><marimo-text data-initial-value='&quot;&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udd0d Vare filter (Last inn Excel f\u00f8rst)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;&quot;' data-kind='&quot;text&quot;' data-full-width='false' data-disabled='true' data-debounce='true'></marimo-text></marimo-ui-element>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "RGSE",
-      "code_hash": "1e4798fa89b4074988fd3aa0e1c6c6c4",
+      "code_hash": "404de1f11730e5eec96e1dce7fb28d4a",
       "outputs": [
         {
           "type": "data",
@@ -136,13 +123,26 @@
       "console": []
     },
     {
-      "id": "Kclp",
-      "code_hash": "1bffba36ad632433aacaa7f499afc1d9",
+      "id": "RGSE",
+      "code_hash": "f95573a9bcb614df07501ac81c726a52",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udcca Baseline kostnader</h2><p style=\"color:#2C5F8A;\">Original kalkylestruktur (f\u00f8r simulering)</p></div>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udcdc Versjonshistorikk</strong></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "d6a8f0aa5b700378d29beae620054127",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Velg en tidligere import for \u00e5 laste den inn p\u00e5 nytt.</span></span><marimo-ui-element object-id='Kclp-0' random-id='891a03de-5e97-4feb-332c-f9d9c707494e'><marimo-dropdown data-initial-value='[]' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcdc Velg tidligere versjon&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-options='[&quot;2026-07-19 18:32 \u2013 produksjonsmodell_eksport (6).xlsx (Endret setup cost for 50709237)&quot;,&quot;2026-07-19 09:17 \u2013 produksjonsmodell_eksport (4).xlsx (La til en ny vare malt med Visir)&quot;,&quot;2026-07-19 09:08 \u2013 produksjonsmodell_eksport (3).xlsx (La til maling p\u00e5 en vare)&quot;,&quot;2026-07-18 22:08 \u2013 produksjonsmodell_eksport (2).xlsx (la til ny B vare gang 6)&quot;,&quot;2026-07-18 21:42 \u2013 produksjonsmodell_eksport (1).xlsx (La til B vare 4 gang)&quot;,&quot;2026-07-18 21:40 \u2013 produksjonsmodell_eksport (1).xlsx (La til ny B vare 3 gangen)&quot;,&quot;2026-07-18 21:37 \u2013 produksjonsmodell_eksport.xlsx (La til en ekstra B vare)&quot;,&quot;2026-07-18 21:05 \u2013 produksjonsmodell_eksport (7).xlsx (la til et B produkt)&quot;,&quot;2026-07-18 20:44 \u2013 produksjonsmodell_eksport (5).xlsx (la til et Co-Product endring)&quot;,&quot;2026-07-18 20:44 \u2013 produksjonsmodell_eksport (5).xlsx (la til et Co-Product)&quot;]' data-allow-select-none='true' data-searchable='false' data-full-width='false' data-disabled='false'></marimo-dropdown></marimo-ui-element></div>"
           }
         }
       ],
@@ -150,7 +150,7 @@
     },
     {
       "id": "emfo",
-      "code_hash": "4a64b9310b406ea34daafaee7d0923cf",
+      "code_hash": "228ac319b5638766c20a410030bb6595",
       "outputs": [
         {
           "type": "data",
@@ -163,12 +163,12 @@
     },
     {
       "id": "Hstk",
-      "code_hash": "0ad35ea0d2df8426d8d025c036fa27c1",
+      "code_hash": "e61f8abc820e4d5a69335a75f8b93f5f",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udccb Originale data fra modellen</h2></div>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udce5 Eksporter komplett datafil</strong></span></span>"
           }
         }
       ],
@@ -176,12 +176,12 @@
     },
     {
       "id": "nWHF",
-      "code_hash": "0e35ec070d45e50a2164d21025147010",
+      "code_hash": "b9afdfc484a475f7366eafb24c8df85a",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udccb Dataark - oversikt</strong></span>\n<span class=\"paragraph\">Modellen best\u00e5r av <strong>10 ark</strong> i Excel. Hvert ark har en spesifikk rolle:</span>\n<table>\n<thead>\n<tr>\n<th>#</th>\n<th>Arknavn</th>\n<th>Innhold</th>\n<th>N\u00f8kkelkolonner</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td><strong>Product Master</strong></td>\n<td>Vareregister</td>\n<td>Item No, Description, Item Type</td>\n</tr>\n<tr>\n<td>2</td>\n<td><strong>Locations</strong></td>\n<td>Fabrikker og lagre</td>\n<td>Location Code, Location Name</td>\n</tr>\n<tr>\n<td>3</td>\n<td><strong>Work Centers</strong></td>\n<td>Arbeidssentre med kostsatser</td>\n<td>Work Center Code, Labor/Machine/Overhead Cost</td>\n</tr>\n<tr>\n<td>4</td>\n<td><strong>Operation Master</strong></td>\n<td>Standardoperasjoner</td>\n<td>Operation Code, Description</td>\n</tr>\n<tr>\n<td>5</td>\n<td><strong>Item Costs</strong></td>\n<td>Kostpriser per vare</td>\n<td>Item No, Unit Cost, Currency</td>\n</tr>\n<tr>\n<td>6</td>\n<td><strong>BOM</strong></td>\n<td>Stykkliste (hva best\u00e5r produktet av)</td>\n<td>Parent Item, Component, Quantity Per</td>\n</tr>\n<tr>\n<td>7</td>\n<td><strong>Routing</strong></td>\n<td>Produksjonsflyt (operasjoner, tider)</td>\n<td>Item No, Operation No, Setup/Run Time</td>\n</tr>\n<tr>\n<td>8</td>\n<td><strong>By Product Rules</strong></td>\n<td>Biprodukter og verdsetting</td>\n<td>Parent Item, By Product, Market Value</td>\n</tr>\n<tr>\n<td>9</td>\n<td><strong>Capacity Calendar</strong></td>\n<td>Kapasitetskalender per arbeidssenter</td>\n<td>Work Center, Date, Available Hours</td>\n</tr>\n<tr>\n<td>10</td>\n<td><strong>Production Scenario</strong></td>\n<td>Produksjonsscenarioer</td>\n<td>Scenario Name, Product, Planned Quantity</td>\n</tr>\n</tbody>\n</table></span>"
+            "text/html": "<marimo-ui-element object-id='nWHF-0' random-id='499a703d-33cc-2018-cd82-dbba14e2d805'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udce5 Last ned komplett datafil&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element>"
           }
         }
       ],
@@ -189,7 +189,7 @@
     },
     {
       "id": "iLit",
-      "code_hash": "54c73c80812a0741e71b9bbe4e2f6011",
+      "code_hash": "b868949a75bea5f98a7374f235ba2495",
       "outputs": [
         {
           "type": "data",
@@ -202,12 +202,12 @@
     },
     {
       "id": "ZHCJ",
-      "code_hash": "f6b194edb83e4ac641d9ba017b605ae8",
+      "code_hash": "3a81adf8ed0fada79a8a36ee87ff07c1",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udd27 Juster parametere</h2></div>"
+            "text/plain": ""
           }
         }
       ],
@@ -215,12 +215,12 @@
     },
     {
       "id": "ROlb",
-      "code_hash": "1162427167e2bb0f5594c57f010c3254",
+      "code_hash": "dd7669a5424f87c7d370ed7491e7163a",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83e\udeb5 R\u00e5varer</strong></span></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"kalkyle-simulering\">\ud83d\udcca Kalkyle &amp; Simulering</h2></span>"
           }
         }
       ],
@@ -228,12 +228,12 @@
     },
     {
       "id": "qnkX",
-      "code_hash": "1c389c25278b9fc3fcfd6c95eb5741fc",
+      "code_hash": "72ff917a1b9e801a5b0c9c97fa6bb698",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/plain": ""
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"baseline-kostnader\">\ud83d\udcca Baseline kostnader</h3></span>"
           }
         }
       ],
@@ -241,12 +241,12 @@
     },
     {
       "id": "TqIu",
-      "code_hash": "d5921eead2d6897cc455af950637dd1b",
+      "code_hash": "4a64b9310b406ea34daafaee7d0923cf",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/plain": ""
+            "text/html": "<marimo-ui-element object-id='TqIu-0' random-id='340adf80-cf7b-8cc9-9a5c-500ea4b546e8'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;11302957&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;28x70*  BAROKK RAFTEKLEDN.NR.185 CA. 900 M/PK&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:6.14,&#92;&quot;Operasjonskost&#92;&quot;:1.45,&#92;&quot;Setupkost&#92;&quot;:0.34,&#92;&quot;Brutto kost&#92;&quot;:7.94,&#92;&quot;Biproduktverdi&#92;&quot;:0.23,&#92;&quot;Netto kost&#92;&quot;:7.71},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;11302957-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;28x70*  BAROKK RAFTEKLEDN.NR.185 CA. 900 M/PK B-KLASSE&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:6.14,&#92;&quot;Operasjonskost&#92;&quot;:0.03,&#92;&quot;Setupkost&#92;&quot;:0.01,&#92;&quot;Brutto kost&#92;&quot;:6.18,&#92;&quot;Biproduktverdi&#92;&quot;:0.0,&#92;&quot;Netto kost&#92;&quot;:6.18},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;21052915&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;29x223 JUST. KLEDN.          CA. 360 M/PK&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:33.86,&#92;&quot;Operasjonskost&#92;&quot;:1.2,&#92;&quot;Setupkost&#92;&quot;:0.28,&#92;&quot;Brutto kost&#92;&quot;:35.34,&#92;&quot;Biproduktverdi&#92;&quot;:0.23,&#92;&quot;Netto kost&#92;&quot;:35.12},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;21052915-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;29x223 JUST. KLEDN.          CA. 360 M/PK -B VARE&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:33.86,&#92;&quot;Operasjonskost&#92;&quot;:0.06,&#92;&quot;Setupkost&#92;&quot;:0.01,&#92;&quot;Brutto kost&#92;&quot;:33.93,&#92;&quot;Biproduktverdi&#92;&quot;:0.0,&#92;&quot;Netto kost&#92;&quot;:33.93},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;21052915-VISIR&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;29x223 JUST. KLEDN. VISIR          CA. 360 M/PK&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:35.34,&#92;&quot;Operasjonskost&#92;&quot;:0.95,&#92;&quot;Setupkost&#92;&quot;:0.66,&#92;&quot;Brutto kost&#92;&quot;:36.95,&#92;&quot;Biproduktverdi&#92;&quot;:0.0,&#92;&quot;Netto kost&#92;&quot;:36.95},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578016&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;21x95* TUNSBERG RU FORS.UTV.BELISTN.NR.480&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:6.42,&#92;&quot;Operasjonskost&#92;&quot;:1.44,&#92;&quot;Setupkost&#92;&quot;:1.07,&#92;&quot;Brutto kost&#92;&quot;:8.92,&#92;&quot;Biproduktverdi&#92;&quot;:0.23,&#92;&quot;Netto kost&#92;&quot;:8.7},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578016-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;21x95* TUNSBERG RU FORS.UTV.BELISTN.NR.480 B VARE&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:6.42,&#92;&quot;Operasjonskost&#92;&quot;:0.01,&#92;&quot;Setupkost&#92;&quot;:0.01,&#92;&quot;Brutto kost&#92;&quot;:6.44,&#92;&quot;Biproduktverdi&#92;&quot;:0.0,&#92;&quot;Netto kost&#92;&quot;:6.44},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578248&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;19x48* JUST. KLEDN. CA. 1950 M/PK&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:5.65,&#92;&quot;Operasjonskost&#92;&quot;:0.85,&#92;&quot;Setupkost&#92;&quot;:0.17,&#92;&quot;Brutto kost&#92;&quot;:6.67,&#92;&quot;Biproduktverdi&#92;&quot;:0.23,&#92;&quot;Netto kost&#92;&quot;:6.44},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578248-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;19x48* JUST. KLEDN. CA. 1950 M/PK B VARE&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:5.65,&#92;&quot;Operasjonskost&#92;&quot;:0.03,&#92;&quot;Setupkost&#92;&quot;:0.01,&#92;&quot;Brutto kost&#92;&quot;:5.69,&#92;&quot;Biproduktverdi&#92;&quot;:0.0,&#92;&quot;Netto kost&#92;&quot;:5.69},{&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578255&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;22x48*JUST. KLEDN.         CA. 1850 M/PK&#92;&quot;,&#92;&quot;Materialkost&#92;&quot;:6.42,&#92;&quot;Operasjonskost&#92;&quot;:0.84,&#92;&quot;Setupkost&#92;&quot;:0.17,&#92;&quot;Brutto kost&#92;&quot;:7.43,&#92;&quot;Biproduktverdi&#92;&quot;:0.23,&#92;&quot;Netto kost&#92;&quot;:7.2}]&quot;' data-total-rows='149' data-total-columns='9' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Lokasjon&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Produkt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Beskrivelse&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Materialkost&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Operasjonskost&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Setupkost&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Brutto kost&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Biproduktverdi&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Netto kost&quot;,[&quot;number&quot;,&quot;float64&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element>"
           }
         }
       ],
@@ -254,12 +254,12 @@
     },
     {
       "id": "Vxnm",
-      "code_hash": "d3837803002127f1ddc25716b65a145f",
+      "code_hash": "e8b511d0b12ec741667b54b0040a4fdc",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\uddd1\ufe0f Svinn- og kapp-prosenter</strong></span></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"simulerings-parametere\">\ud83d\udd27 Simulerings parametere</h2></span>"
           }
         }
       ],
@@ -267,12 +267,12 @@
     },
     {
       "id": "DnEU",
-      "code_hash": "e8651c587cf8a3adb31b7a581167bc0c",
+      "code_hash": "06f6d0bbbdff10cf554c288a95655fd0",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/plain": ""
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"ravarer\">\ud83e\udeb5 R\u00e5varer</h3></span>"
           }
         }
       ],
@@ -280,25 +280,18 @@
     },
     {
       "id": "ulZA",
-      "code_hash": "c0ca51a2e34cdfb3c16c552d9dde0408",
+      "code_hash": "103270bc0c2b56bf6cd8cc2f95cfbcf6",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "13074f56d1d0b330d3a783bfeb22f0af",
       "outputs": [
         {
           "type": "data",
           "data": {
             "text/plain": ""
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "ecfG",
-      "code_hash": "bbb541fb8772e3e09da6af5e15f894f9",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83c\udfed Arbeidssentre (timekostnad)</strong></span></span>"
           }
         }
       ],
@@ -306,12 +299,12 @@
     },
     {
       "id": "Pvdt",
-      "code_hash": "28f043d71ba63057c967c8d0d7d3dda6",
+      "code_hash": "db4c8b5c489ec9ff74a7c7dfdd215641",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/plain": ""
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"svinn-og-kapp-prosenter\">\ud83d\uddd1\ufe0f Svinn- og kapp-prosenter</h3></span>"
           }
         }
       ],
@@ -319,25 +312,18 @@
     },
     {
       "id": "ZBYS",
-      "code_hash": "ac472b5deb453858166899d94f95b807",
+      "code_hash": "bbc8479a8bf6b432c0314e501cb0e188",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "042125a058e64fc5e8cab39dc123479d",
       "outputs": [
         {
           "type": "data",
           "data": {
             "text/plain": ""
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "aLJB",
-      "code_hash": "ea36d05620fc99206bdfce666cc84436",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udccb Routing (stykkpris)</strong></span></span>"
           }
         }
       ],
@@ -345,12 +331,12 @@
     },
     {
       "id": "nHfw",
-      "code_hash": "5bf53450625d9ea294337357c3007b5f",
+      "code_hash": "7a02370203e201b873159e83d91d9521",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/plain": ""
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"arbeidssentre-timekostnad\">\ud83c\udfed Arbeidssentre (timekostnad)</h3></span>"
           }
         }
       ],
@@ -358,25 +344,18 @@
     },
     {
       "id": "xXTn",
-      "code_hash": "ee154b6f2b042854b85f46620722b138",
+      "code_hash": "c3216bf9242693c7a994b7cf1802c8ca",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "AjVT",
+      "code_hash": "d195fef5ff6848d59812982e5a6a5dd2",
       "outputs": [
         {
           "type": "data",
           "data": {
             "text/plain": ""
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "AjVT",
-      "code_hash": "06d2b3825ab4258702fe67e39cbe3c20",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udce6 Planlagt kvantum</strong></span></span>"
           }
         }
       ],
@@ -384,12 +363,12 @@
     },
     {
       "id": "pHFh",
-      "code_hash": "76f21a64be869a48450dc99ccdb70293",
+      "code_hash": "400d177829a75045af01053ad0e15942",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>Planlagt kvantum</strong> bestemmer hvor mye setupkost som fordeles per enhet.</span>\n<span class=\"paragraph\">Formel: <code>Setupkost per enhet = Setup-tid (timer) \u00d7 timekostnad / kvantum</code></span>\n<span class=\"paragraph\">Jo h\u00f8yere kvantum, desto lavere blir setupkostnaden per produsert enhet.</span></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"routing-stykkpris\">\ud83d\udccb Routing (stykkpris)</h3></span>"
           }
         }
       ],
@@ -397,46 +376,13 @@
     },
     {
       "id": "NCOB",
-      "code_hash": "22b27ea2d37f5a8bc6bb32c14c4a8913",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/html": "<marimo-ui-element object-id='NCOB-0' random-id='9321cdb9-08cb-804b-27f9-714508f4ea8b'><marimo-number data-initial-value='1000' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003ePlanlagt kvantum (stk)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-start='1' data-stop='100000' data-step='1' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element>"
-          }
-        }
-      ],
+      "code_hash": "45ff8f869230f8a05bed0ab6a97c286c",
+      "outputs": [],
       "console": []
     },
     {
       "id": "aqbW",
-      "code_hash": "4748bd811d9fdcb2160ccc76831da17c",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/html": "<div class=\"fti-card\"><h2>\ud83d\ude80 Kj\u00f8r simulering</h2></div>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "TRpd",
-      "code_hash": "a11afb80780c70ab5cfe02675fd7e2c2",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/html": "<marimo-ui-element object-id='TRpd-0' random-id='9f6eded2-2421-935d-6598-8a37dee8c5f0'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\u25b6\ufe0f Kj\u00f8r simulering&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "TXez",
-      "code_hash": "ae9fcb4526ed1b667dfe95ca66426153",
+      "code_hash": "6a129a98d1d50375631fc44f8adc4f65",
       "outputs": [
         {
           "type": "data",
@@ -448,13 +394,39 @@
       "console": []
     },
     {
-      "id": "dNNg",
-      "code_hash": "7d3573ad2b15bcd01f37e3cd0766647f",
+      "id": "TRpd",
+      "code_hash": "88ace9bd8a73ec0522ae99628831d3d4",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div class=\"fti-card\"><h2>\ud83d\udcbe Eksporter resultater</h2><p style=\"color:#2C5F8A;\">Last ned simuleringsresultatene som PDF-rapport eller Excel-fil</p></div>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"planlagt-kvantum\">\ud83d\udce6 Planlagt kvantum</h3></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TXez",
+      "code_hash": "43abef417abfa14a3a2bb1dfac6279f8",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>Planlagt kvantum</strong> bestemmer hvor mye oppstartskostnad som fordeles per enhet.</span>\n<span class=\"paragraph\">Formel: <code>Oppstartskost per enhet = Oppstartstid (timer) \u00d7 timekostnad / kvantum</code></span>\n<span class=\"paragraph\">Jo h\u00f8yere kvantum, desto lavere blir oppstartskostnaden per produsert enhet.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dNNg",
+      "code_hash": "22b27ea2d37f5a8bc6bb32c14c4a8913",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='dNNg-0' random-id='4bec0f77-5a54-bb4d-aa62-8640cb7bd783'><marimo-number data-initial-value='1000' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003ePlanlagt kvantum (stk)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-start='1' data-stop='100000' data-step='1' data-debounce='false' data-full-width='false' data-disabled='false'></marimo-number></marimo-ui-element>"
           }
         }
       ],
@@ -462,12 +434,12 @@
     },
     {
       "id": "yCnT",
-      "code_hash": "e43f21b5de6aa6da383a7570cc7e9079",
+      "code_hash": "9356a3f961641b9ddd1f1b5dff50b782",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"tilpass-pdf-rapport-for-ledelsen\">\ud83d\udcca Tilpass PDF-rapport for ledelsen</h3></span><marimo-ui-element object-id='yCnT-1' random-id='82f16049-d1bf-823a-a9d1-74afd768131b'><marimo-text-area data-initial-value='&quot;&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eLedelsessammendrag / Kommentar (vises \u00f8verst i PDF)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;Skriv f.eks. anbefalinger eller en kort analyse av simuleringen her...&quot;' data-disabled='false' data-debounce='true' data-full-width='false' data-rows='4'></marimo-text-area></marimo-ui-element><marimo-ui-element object-id='yCnT-2' random-id='47183e4e-a55d-a71f-e9d3-5af9a9dc0639'><marimo-checkbox data-initial-value='false' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eInkluder tekniske detaljer (Material- og operasjonsdetaljer per produkt) i PDF-en&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='yCnT-0' random-id='df5b13d6-31f4-969d-0aa6-63de3c4af61d'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcc4 Eksporter til PDF&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element></div>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"simulerings-resultater\">\ud83d\ude80 Simulerings resultater</h2></span>"
           }
         }
       ],
@@ -475,7 +447,7 @@
     },
     {
       "id": "wlCL",
-      "code_hash": "cb0a03c2258ce33b9539a398f6e2bedf",
+      "code_hash": "996e810a20cc5706aca109b080cd523f",
       "outputs": [
         {
           "type": "data",
@@ -488,12 +460,12 @@
     },
     {
       "id": "kqZH",
-      "code_hash": "7dc8e924109b1b8e5517bf04003305d5",
+      "code_hash": "15337b16f8710c0d91a6525e4e7136fd",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<marimo-ui-element object-id='kqZH-0' random-id='8c665ec8-9036-6c59-daea-802c3523a087'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcbe Lagre til Excel&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"last-ned-simulerings-rapport\">\ud83d\udcbe Last ned simulerings rapport</h3></span>"
           }
         }
       ],
@@ -501,12 +473,142 @@
     },
     {
       "id": "wAgl",
-      "code_hash": "74f45bc6f3efa8dccb70395164db136a",
+      "code_hash": "bd486d8d82a10b71f1363a5e53c6c0b5",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">** \ud83d\udcca Tilpass PDF-rapport **</span></span><marimo-ui-element object-id='wAgl-1' random-id='21886547-f580-f2f8-d48e-af7166ddbee7'><marimo-text-area data-initial-value='&quot;&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eLedelsessammendrag / Kommentar (vises \u00f8verst i PDF)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;Skriv f.eks. anbefalinger eller en kort analyse av simuleringen her...&quot;' data-disabled='false' data-debounce='true' data-full-width='false' data-rows='4'></marimo-text-area></marimo-ui-element><marimo-ui-element object-id='wAgl-2' random-id='fe428fe3-5b2d-b06f-4730-0030b2cb44d4'><marimo-checkbox data-initial-value='false' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003eInkluder tekniske detaljer (material- og operasjonsdetaljer per produkt)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-disabled='false'></marimo-checkbox></marimo-ui-element><marimo-ui-element object-id='wAgl-0' random-id='20ac66e4-bb22-06b3-8034-6e07a4a611f6'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcc4 Eksporter til PDF-rapport&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "rEll",
+      "code_hash": "1fc51620a5a8588309b32e9be2abb68c",
       "outputs": [
         {
           "type": "data",
           "data": {
             "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dGlV",
+      "code_hash": "2efe612b80dde6d5fa07f3fa52c1b17b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='dGlV-0' random-id='67078f48-7dd5-c7b4-fa7c-0a8efd93a896'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udcca Eksporter resultater til Excel&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='false'></marimo-button></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SdmI",
+      "code_hash": "b2b5eaf68bc56ca2ac8ed450642183e1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lgWD",
+      "code_hash": "652114314dae7fdd7b0d81c5644e7092",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"datamodell\">\ud83d\udccb Datamodell</h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "yOPj",
+      "code_hash": "c6945d9dd997a8fd04e3cfd585c5b64d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Modellen best\u00e5r av <strong>10 ark</strong> i Excel. Hvert ark har en spesifikk rolle:</span>\n<table>\n<thead>\n<tr>\n<th>#</th>\n<th>Arknavn</th>\n<th>Innhold</th>\n<th>N\u00f8kkelkolonner</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td><strong>Product Master</strong></td>\n<td>Vareregister</td>\n<td>Item No, Description, Item Type</td>\n</tr>\n<tr>\n<td>2</td>\n<td><strong>Locations</strong></td>\n<td>Fabrikker og lagre</td>\n<td>Location Code, Location Name</td>\n</tr>\n<tr>\n<td>3</td>\n<td><strong>Work Centers</strong></td>\n<td>Arbeidssentre med kostsatser</td>\n<td>Work Center Code, Labor/Machine/Overhead Cost</td>\n</tr>\n<tr>\n<td>4</td>\n<td><strong>Operation Master</strong></td>\n<td>Standardoperasjoner</td>\n<td>Operation Code, Description</td>\n</tr>\n<tr>\n<td>5</td>\n<td><strong>Item Costs</strong></td>\n<td>Kostpriser per vare</td>\n<td>Item No, Unit Cost, Currency</td>\n</tr>\n<tr>\n<td>6</td>\n<td><strong>BOM</strong></td>\n<td>Stykkliste (hva best\u00e5r produktet av)</td>\n<td>Parent Item, Component, Quantity Per</td>\n</tr>\n<tr>\n<td>7</td>\n<td><strong>Routing</strong></td>\n<td>Produksjonsflyt (operasjoner, tider)</td>\n<td>Item No, Operation No, Setup/Run Time</td>\n</tr>\n<tr>\n<td>8</td>\n<td><strong>By Product Rules</strong></td>\n<td>Biprodukter og verdsetting</td>\n<td>Parent Item, By Product, Market Value</td>\n</tr>\n<tr>\n<td>9</td>\n<td><strong>Capacity Calendar</strong></td>\n<td>Kapasitetskalender per arbeidssenter</td>\n<td>Work Center, Date, Available Hours</td>\n</tr>\n<tr>\n<td>10</td>\n<td><strong>Production Scenario</strong></td>\n<td>Produksjonsscenarioer</td>\n<td>Scenario Name, Product, Planned Quantity</td>\n</tr>\n</tbody>\n</table></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "fwwy",
+      "code_hash": "02d2e8cef372b64f1094c57402d477d6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-accordion data-labels='[&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udd0d Vis alle data (BOM, routing, arbeidssentre\u2026)&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;]' data-multiple='false'><div><div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udce6 Product Master (Vareregister)</strong></span></span><marimo-ui-element object-id='fwwy-0' random-id='3d7438cb-7852-0385-ba44-e07365394f36'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;11302957&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;28x70*  BAROKK RAFTEKLEDN.NR.185 CA. 900 M/PK&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Finished Good&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;11302957-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;28x70*  BAROKK RAFTEKLEDN.NR.185 CA. 900 M/PK B-KLASSE&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Semi Finished&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;21052915&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;29x223 JUST. KLEDN.          CA. 360 M/PK&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Finished Good&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;21052915-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;29x223 JUST. KLEDN.          CA. 360 M/PK -B VARE&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Semi Finished&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;21052915-VISIR&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;29x223 JUST. KLEDN. VISIR          CA. 360 M/PK&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Finished Good&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578016&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;21x95* TUNSBERG RU FORS.UTV.BELISTN.NR.480&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Finished Good&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578016-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;21x95* TUNSBERG RU FORS.UTV.BELISTN.NR.480 B VARE&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Semi Finished&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578248&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;19x48* JUST. KLEDN. CA. 1950 M/PK&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Finished Good&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578248-B&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;19x48* JUST. KLEDN. CA. 1950 M/PK B VARE&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Semi Finished&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578255&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;22x48*JUST. KLEDN.         CA. 1850 M/PK&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Finished Good&#92;&quot;,&#92;&quot;Gruppe&#92;&quot;:&#92;&quot;Kledning&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Aktiv&#92;&quot;:&#92;&quot;Ja&#92;&quot;}]&quot;' data-total-rows='189' data-total-columns='6' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Varenr&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Beskrivelse&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Type&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Gruppe&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Enhet&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Aktiv&quot;,[&quot;string&quot;,&quot;str&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83c\udfed Locations (Lokasjoner)</strong></span></span><marimo-ui-element object-id='fwwy-1' random-id='1c678d83-f861-c126-ff6a-a40889a7bfdf'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Kode&#92;&quot;:&#92;&quot;B&#92;&#92;u00d8&#92;&quot;,&#92;&quot;Navn&#92;&quot;:&#92;&quot;B&#92;&#92;u00f8 sagbruk&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Factory&#92;&quot;},{&#92;&quot;Kode&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Navn&#92;&quot;:&#92;&quot;Kodal Fabrikk&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Factory&#92;&quot;},{&#92;&quot;Kode&#92;&quot;:&#92;&quot;KV&#92;&quot;,&#92;&quot;Navn&#92;&quot;:&#92;&quot;Kvaas&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Factory&#92;&quot;},{&#92;&quot;Kode&#92;&quot;:&#92;&quot;SKI&#92;&quot;,&#92;&quot;Navn&#92;&quot;:&#92;&quot;Skien Lager&#92;&quot;,&#92;&quot;Type&#92;&quot;:&#92;&quot;Warehouse&#92;&quot;}]&quot;' data-total-rows='4' data-total-columns='3' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='false' data-page-size='10' data-field-types='[[&quot;Kode&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Navn&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Type&quot;,[&quot;string&quot;,&quot;str&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='false' data-show-data-types='true' data-show-page-size-selector='false' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83c\udfed Work Centers (Arbeidssentre)</strong></span></span><marimo-ui-element object-id='fwwy-2' random-id='b82d94a1-bf17-3df5-6d32-96abee68eb3d'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Hovedhovel (HH) &#92;&#92;u00b7 KOD&#92;&quot;,&#92;&quot;L&#92;&#92;u00f8nn/time&#92;&quot;:1800.0,&#92;&quot;Maskin/time&#92;&quot;:2000.0,&#92;&quot;Overhead/time&#92;&quot;:803.0,&#92;&quot;Totalt/time&#92;&quot;:5003.260869565217,&#92;&quot;Timer/dag&#92;&quot;:16.0,&#92;&quot;Eff. %&#92;&quot;:92.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;KVHOVEL&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Kvaas hovel &#92;&#92;u00b7 KV&#92;&quot;,&#92;&quot;L&#92;&#92;u00f8nn/time&#92;&quot;:500.0,&#92;&quot;Maskin/time&#92;&quot;:200.0,&#92;&quot;Overhead/time&#92;&quot;:100.0,&#92;&quot;Totalt/time&#92;&quot;:869.5652173913043,&#92;&quot;Timer/dag&#92;&quot;:16.0,&#92;&quot;Eff. %&#92;&quot;:92.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;MALINGSLINJE&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Malingslinje (M1) &#92;&#92;u00b7 KOD&#92;&quot;,&#92;&quot;L&#92;&#92;u00f8nn/time&#92;&quot;:900.0,&#92;&quot;Maskin/time&#92;&quot;:900.0,&#92;&quot;Overhead/time&#92;&quot;:560.0,&#92;&quot;Totalt/time&#92;&quot;:2622.222222222222,&#92;&quot;Timer/dag&#92;&quot;:16.0,&#92;&quot;Eff. %&#92;&quot;:90.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;PAKKELINJE&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Pakkelinje &#92;&#92;u00b7 KOD&#92;&quot;,&#92;&quot;L&#92;&#92;u00f8nn/time&#92;&quot;:400.0,&#92;&quot;Maskin/time&#92;&quot;:300.0,&#92;&quot;Overhead/time&#92;&quot;:100.0,&#92;&quot;Totalt/time&#92;&quot;:842.1052631578948,&#92;&quot;Timer/dag&#92;&quot;:8.0,&#92;&quot;Eff. %&#92;&quot;:95.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Spesialhovel (SH) &#92;&#92;u00b7 KOD&#92;&quot;,&#92;&quot;L&#92;&#92;u00f8nn/time&#92;&quot;:600.0,&#92;&quot;Maskin/time&#92;&quot;:700.0,&#92;&quot;Overhead/time&#92;&quot;:305.0,&#92;&quot;Totalt/time&#92;&quot;:1707.4468085106384,&#92;&quot;Timer/dag&#92;&quot;:16.0,&#92;&quot;Eff. %&#92;&quot;:94.0}]&quot;' data-total-rows='5' data-total-columns='8' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='false' data-page-size='10' data-field-types='[[&quot;Arbeidssenter&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Beskrivelse&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;L\u00f8nn/time&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Maskin/time&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Overhead/time&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Totalt/time&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Timer/dag&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Eff. %&quot;,[&quot;number&quot;,&quot;float64&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='false' data-show-data-types='true' data-show-page-size-selector='false' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\u2699\ufe0f Operation Master (Operasjoner)</strong></span></span><marimo-ui-element object-id='fwwy-3' random-id='f4ce281f-e571-679e-ea07-8311e8d6b642'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Kode&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Hovling (oppdeling + hovling + profilering)&#92;&quot;,&#92;&quot;Standard arb.senter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;Minutes&#92;&quot;},{&#92;&quot;Kode&#92;&quot;:&#92;&quot;MALING&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Overflatebehandling/maling&#92;&quot;,&#92;&quot;Standard arb.senter&#92;&quot;:&#92;&quot;MALINGSLINJE&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;Minutes&#92;&quot;},{&#92;&quot;Kode&#92;&quot;:&#92;&quot;PACKING&#92;&quot;,&#92;&quot;Beskrivelse&#92;&quot;:&#92;&quot;Pakking&#92;&quot;,&#92;&quot;Standard arb.senter&#92;&quot;:&#92;&quot;PAKKELINJE&#92;&quot;,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;Minutes&#92;&quot;}]&quot;' data-total-rows='3' data-total-columns='4' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='false' data-page-size='10' data-field-types='[[&quot;Kode&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Beskrivelse&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Standard arb.senter&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Enhet&quot;,[&quot;string&quot;,&quot;str&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='false' data-show-data-types='true' data-show-page-size-selector='false' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udcb0 Item Costs (Kostpriser)</strong></span></span><marimo-ui-element object-id='fwwy-4' random-id='2af4d210-9fdb-f02d-32f1-bd7e37622269'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;11302957&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;21052915&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;21052915-B&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578016&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578248&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578255&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578263&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578289&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578305&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;},{&#92;&quot;Varenr&#92;&quot;:&#92;&quot;23578313&#92;&quot;,&#92;&quot;Kosttype&#92;&quot;:&#92;&quot;Standard Cost&#92;&quot;,&#92;&quot;Enhetskost&#92;&quot;:0.0,&#92;&quot;Valuta&#92;&quot;:&#92;&quot;NOK&#92;&quot;,&#92;&quot;Gyldig fra&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;}]&quot;' data-total-rows='183' data-total-columns='5' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Varenr&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Kosttype&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Enhetskost&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Valuta&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Gyldig fra&quot;,[&quot;string&quot;,&quot;object&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udd17 BOM (Stykkliste)</strong></span></span><marimo-ui-element object-id='fwwy-5' random-id='7771bf9b-ef31-c56b-b575-51bb054bff6e'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;11302957&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM012&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:423.28,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:2.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;11302957-B&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;21052915&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM011&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:88.89,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:5.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;21052915-B&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;21052915-VISIR&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;21052915&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:1.0,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:0.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;23578016&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM006&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:400.0,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:1.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;23578016-B&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;23578248&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM006&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:454.54,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:4.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;23578248-B&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;23578255&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM006&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:400.0,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:3.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;23578255-B&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;23578263&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM004&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:303.04,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:10.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;23578263-B&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;23578289&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM014&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:228.58,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:0.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;23578305&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM014&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:200.0,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:0.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;&#92;&quot;},{&#92;&quot;Foreldreprodukt&#92;&quot;:&#92;&quot;23578313&#92;&quot;,&#92;&quot;Komponent&#92;&quot;:&#92;&quot;RM007&#92;&quot;,&#92;&quot;Qty per&#92;&quot;:320.0,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;LM&#92;&quot;,&#92;&quot;Svinn %&#92;&quot;:0.0,&#92;&quot;Co-Prod %&#92;&quot;:0.0,&#92;&quot;Co-Prod Vare&#92;&quot;:&#92;&quot;&#92;&quot;}]&quot;' data-total-rows='143' data-total-columns='7' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Foreldreprodukt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Komponent&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Qty per&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Enhet&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Svinn %&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Co-Prod %&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Co-Prod Vare&quot;,[&quot;string&quot;,&quot;str&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udccb Routing (Produksjonsflyt)</strong></span></span><marimo-ui-element object-id='fwwy-6' random-id='10220fe2-113c-d9ec-b2e6-9e12bcc087ee'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;11302957&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.05,&#92;&quot;Batch&#92;&quot;:2500.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;21052915&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.04,&#92;&quot;Batch&#92;&quot;:3000.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;21052915-VISIR&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;MALING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;MALINGSLINJE&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:60.0,&#92;&quot;Run time (min)&#92;&quot;:0.02173913043478261,&#92;&quot;Batch&#92;&quot;:4000.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578016&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.05,&#92;&quot;Batch&#92;&quot;:800.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578248&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.028571,&#92;&quot;Batch&#92;&quot;:5000.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578255&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.028571,&#92;&quot;Batch&#92;&quot;:5000.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578263&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:60.0,&#92;&quot;Run time (min)&#92;&quot;:0.011111,&#92;&quot;Batch&#92;&quot;:25000.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578289&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.033333,&#92;&quot;Batch&#92;&quot;:2000.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578305&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.028571,&#92;&quot;Batch&#92;&quot;:1500.0},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578313&#92;&quot;,&#92;&quot;Op.nr&#92;&quot;:10,&#92;&quot;Operasjon&#92;&quot;:&#92;&quot;HOVLING&#92;&quot;,&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;SPESIALHOVEL&#92;&quot;,&#92;&quot;Lokasjon&#92;&quot;:&#92;&quot;KOD&#92;&quot;,&#92;&quot;Setup (min)&#92;&quot;:30.0,&#92;&quot;Run time (min)&#92;&quot;:0.028571,&#92;&quot;Batch&#92;&quot;:6000.0}]&quot;' data-total-rows='143' data-total-columns='8' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Produkt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Op.nr&quot;,[&quot;integer&quot;,&quot;int64&quot;]],[&quot;Operasjon&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Arbeidssenter&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Lokasjon&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Setup (min)&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Run time (min)&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Batch&quot;,[&quot;number&quot;,&quot;float64&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\u267b\ufe0f By Product Rules (Biproduktregler)</strong></span></span><marimo-ui-element object-id='fwwy-7' random-id='20524fde-86e7-c51a-1083-c99deb01fc37'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;11302957&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;21052915&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578016&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578248&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578255&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578263&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578289&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578305&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578313&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;},{&#92;&quot;Produkt&#92;&quot;:&#92;&quot;23578321&#92;&quot;,&#92;&quot;Biprodukt&#92;&quot;:&#92;&quot;BP001&#92;&quot;,&#92;&quot;Forventet qty&#92;&quot;:0.15,&#92;&quot;Enhet&#92;&quot;:&#92;&quot;KG&#92;&quot;,&#92;&quot;Markedsverdi&#92;&quot;:1.5,&#92;&quot;Allokeringsmetode&#92;&quot;:&#92;&quot;Reduce Main Product Cost&#92;&quot;}]&quot;' data-total-rows='141' data-total-columns='6' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Produkt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Biprodukt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Forventet qty&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Enhet&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Markedsverdi&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Allokeringsmetode&quot;,[&quot;string&quot;,&quot;str&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83d\udcc5 Capacity Calendar (Kapasitetskalender)</strong></span></span><marimo-ui-element object-id='fwwy-8' random-id='441dea02-ed98-c1d2-29c3-7cdb061056c6'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-01&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-02&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-05&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-06&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-07&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-08&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-09&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-12&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-13&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0},{&#92;&quot;Arbeidssenter&#92;&quot;:&#92;&quot;HOVEDHOVEL&#92;&quot;,&#92;&quot;Dato&#92;&quot;:&#92;&quot;2026-01-14&#92;&quot;,&#92;&quot;Tilgj. timer&#92;&quot;:16.0,&#92;&quot;Planlagt nedetid&#92;&quot;:0.0,&#92;&quot;Prod. timer&#92;&quot;:16.0}]&quot;' data-total-rows='88' data-total-columns='5' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Arbeidssenter&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Dato&quot;,[&quot;string&quot;,&quot;object&quot;]],[&quot;Tilgj. timer&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Planlagt nedetid&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Prod. timer&quot;,[&quot;number&quot;,&quot;float64&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><strong>\ud83c\udfaf Production Scenario (Produksjonsscenarioer)</strong></span></span><marimo-ui-element object-id='fwwy-9' random-id='7cbabe83-5af2-6a4e-1b19-de451561619d'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Full Kapasitet&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172818&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:60000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Full Kapasitet&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172962&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:80000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172523&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:50000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172735&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:50000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172818&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:50000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172856&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:50000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172924&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:50000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54172962&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:32000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54173102&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:50000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null},{&#92;&quot;Scenario&#92;&quot;:&#92;&quot;Normal Produksjon&#92;&quot;,&#92;&quot;Produkt&#92;&quot;:&#92;&quot;54173212&#92;&quot;,&#92;&quot;Planlagt kvantum&#92;&quot;:50000.0,&#92;&quot;Startdato&#92;&quot;:null,&#92;&quot;Sluttdato&#92;&quot;:null}]&quot;' data-total-rows='15' data-total-columns='5' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Scenario&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Produkt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Planlagt kvantum&quot;,[&quot;number&quot;,&quot;float64&quot;]],[&quot;Startdato&quot;,[&quot;string&quot;,&quot;object&quot;]],[&quot;Sluttdato&quot;,[&quot;string&quot;,&quot;object&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element></div></div></marimo-accordion>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "LJZf",
+      "code_hash": "23dcb8379eaec0c262c08e8b34b9a79a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-sidebar data-width='&quot;260px&quot;'><div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><div class=\"fti-sidebar-section\"><h3>Handlinger</h3></div><marimo-ui-element object-id='LJZf-0' random-id='e6d4be7d-93b6-1ba3-7d43-73da75d37a52'><marimo-button data-initial-value='0' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\u26a1Start simulering&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-kind='&quot;neutral&quot;' data-disabled='false' data-full-width='true'></marimo-button></marimo-ui-element><marimo-ui-element object-id='LJZf-1' random-id='74c3b479-4873-7020-8eed-4ea6c5986690'><marimo-text data-initial-value='&quot;&quot;' data-label='&quot;&#92;u003cspan class=&#92;&quot;markdown prose dark:prose-invert contents&#92;&quot;&#92;u003e&#92;u003cspan class=&#92;&quot;paragraph&#92;&quot;&#92;u003e\ud83d\udd0d filtrer p\u00e5 varenummer og beskrivelse&#92;u003c/span&#92;u003e&#92;u003c/span&#92;u003e&quot;' data-placeholder='&quot;&quot;' data-kind='&quot;text&quot;' data-full-width='true' data-disabled='false' data-debounce='true'></marimo-text></marimo-ui-element><div class=\"fti-sidebar-section\"><h3>\ud83d\udcd1 Innholdsfortegnelse</h3></div><marimo-outline data-label='&quot;&quot;'></marimo-outline><div style=\"margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;\">Fram Treindustri - v0.23.14 \u00b7 Marimo</div></marimo-sidebar>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "urSm",
+      "code_hash": "44c8547c2147ceace79392615edab18d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"endringslogg\">\ud83d\udccb Endringslogg</h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "jxvo",
+      "code_hash": "2df9b11e1897b9efab2a75a7dd3794b1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<marimo-ui-element object-id='jxvo-0' random-id='7ef4e2ae-e731-1623-bcf1-dff1d13743dc'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-19 18:32:39&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;routing_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;50709237:10:SPESIALHOVEL&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;setup_time_minutes&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;30.0&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;90.0&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-19 09:17:13&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;routing_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;21052915-VISIR:10:MALINGSLINJE&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;_created&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;21052915-VISIR&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-19 09:17:13&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;bom_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;21052915-VISIR:21052915&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;_created&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;21052915&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-19 09:08:08&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;routing_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;57829062:20:MALINGSLINJE&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;_created&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;57829062&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-18 22:08:49&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;bom_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;23578263:RM004&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;co_product_pct&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;0.0&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;10.0&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-18 21:42:39&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;bom_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;23578255:RM006&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;co_product_pct&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;0.0&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;3.0&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-18 21:40:02&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;bom_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;23578248:RM006&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;co_product_pct&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;0.0&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;4.0&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-18 21:37:20&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;bom_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;23578016:RM006&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;co_product_pct&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;0.0&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;1.0&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-18 21:05:45&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;bom_lines&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;11302957:RM012&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;co_product_pct&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;0.0&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;2.0&#92;&quot;},{&#92;&quot;Tidspunkt&#92;&quot;:&#92;&quot;2026-07-18 20:44:30&#92;&quot;,&#92;&quot;Bruker&#92;&quot;:&#92;&quot;-&#92;&quot;,&#92;&quot;Kilde&#92;&quot;:&#92;&quot;import&#92;&quot;,&#92;&quot;Tabell&#92;&quot;:&#92;&quot;products&#92;&quot;,&#92;&quot;N&#92;&#92;u00f8kkel&#92;&quot;:&#92;&quot;21052915-B&#92;&quot;,&#92;&quot;Felt&#92;&quot;:&#92;&quot;item_type&#92;&quot;,&#92;&quot;Gammel&#92;&quot;:&#92;&quot;Finished Good&#92;&quot;,&#92;&quot;Ny&#92;&quot;:&#92;&quot;Semi Finished&#92;&quot;}]&quot;' data-total-rows='50' data-total-columns='8' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;Tidspunkt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Bruker&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Kilde&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Tabell&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;N\u00f8kkel&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Felt&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Gammel&quot;,[&quot;string&quot;,&quot;str&quot;]],[&quot;Ny&quot;,[&quot;string&quot;,&quot;str&quot;]]]' data-show-filters='true' data-show-download='true' data-show-search='true' data-show-column-summaries='true' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='true' data-row-headers='[]' data-hidden-columns='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "mWxS",
+      "code_hash": "d3e86d0ce0e94efdd888c83c303d52d7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div class=\"fti-footer\">\ud83c\udf32 Fram Treindustri \u2014 Produksjonskost Simulator \u00b7 Standardkostkalkyle & simulering</div>"
           }
         }
       ],

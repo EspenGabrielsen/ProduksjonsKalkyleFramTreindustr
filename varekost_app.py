@@ -44,26 +44,21 @@ def _():
 
     return (
         CostCalculator,
-        ExcelData,
-        SqliteData,
+        DataRepo,
         SimulationEngine,
         SimulationOverride,
+        SqliteData,
+        export_sqlite_to_excel,
+        generer_excel_rapport,
         generer_rapport,
+        import_excel_to_sqlite,
         mo,
         os,
         pd,
         registrer_fonter,
         tempfile,
-        _hent_logo,
-        generer_excel_rapport,
-        DataRepo,
-        import_excel_to_sqlite,
-        export_sqlite_to_excel,
         validate_excel,
     )
-
-
-# ═══ KAP 1: CSS + Header ════════════════════════════════════════════════
 
 
 @app.cell
@@ -76,7 +71,7 @@ def _(mo):
             color: #2C3E2B;
         }
         .marimo-app { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
-        
+
         /* ===== FTI Header ===== */
         .fti-header {
             background: linear-gradient(135deg, #14532D 0%, #1B6E3D 100%);
@@ -88,7 +83,7 @@ def _(mo):
             align-items: center;
             justify-content: space-between;
         }
-        
+
         .fti-header-title {
             font-size: 1.8em;
             font-weight: 700;
@@ -100,7 +95,7 @@ def _(mo):
             color: #C6E6D0;
             line-height: 1.2;
         }
-        
+
         /* ===== FTI Cards ===== */
         .fti-card {
             background: #F9FBF8; border-radius: 12px; padding: 24px;
@@ -115,7 +110,7 @@ def _(mo):
         .fti-card h2, .fti-card h3 { color: #14532D; margin-top: 0; margin-bottom: 12px; font-weight: 600; }
         .fti-highlight-green { color: #2F855A; background-color: #E6FFFA; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
         .fti-highlight-red { color: #C53030; background-color: #FFF5F5; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
-        
+
         /* ===== FTI Footer ===== */
         .fti-footer {
             background: #14532D;
@@ -127,7 +122,7 @@ def _(mo):
             margin-top: 32px;
             margin-bottom: 16px;
         }
-        
+
         /* ===== FTI Sidebar ===== */
         .fti-sidebar-logo {
             padding: 8px 0;
@@ -145,7 +140,7 @@ def _(mo):
             margin: 0 0 8px 0;
             font-weight: 600;
         }
-        
+
         /* ===== Styling av Marimo radio-knapper ===== */
         .marimo-radio {
             background: #F9FBF8;
@@ -167,14 +162,14 @@ def _(mo):
         .marimo-radio label:hover {
             background: #E6FFFA;
         }
-        
+
         /* ===== Styling av dropdowns ===== */
         .marimo-dropdown {
             border-radius: 6px;
             border: 1px solid #D1E0D4;
             background: #F9FBF8;
         }
-        
+
         /* ===== Outline/TOC styling ===== */
         .marimo-outline {
             background: transparent;
@@ -190,7 +185,7 @@ def _(mo):
         .marimo-outline a:hover {
             color: #FFFFFF;
         }
-        
+
         /* ===== Sidebar-specifikke overrides ===== */
         [data-marimo-theme="dark"] .fti-header {
             background: linear-gradient(135deg, #0B2819 0%, #14532D 100%);
@@ -223,12 +218,11 @@ def _(mo):
     return
 
 
-# ═══ 📂 Datagrunnlag ═══════════════════════════════════════════════════
-
-
 @app.cell
 def _(mo):
-    mo.md("## 📂 Datagrunnlag")
+    mo.md("""
+    ## 📂 Datagrunnlag
+    """)
     return
 
 
@@ -245,11 +239,11 @@ def _(mo):
     # Når set_reload kalles i import-cellen, re-kjøres alle celler
     # som leser get_reload() - inkludert data-loading-cellen.
     get_reload, set_reload = mo.state(0)
-    return (overrides, get_reload, set_reload)
+    return get_reload, overrides, set_reload
 
 
 @app.cell
-def _(CostCalculator, DataRepo, SqliteData, SimulationEngine, get_reload, mo, os, overrides, pd, tempfile):
+def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
     _db = DataRepo()
     _db.initialize()
 
@@ -296,7 +290,7 @@ def _(CostCalculator, DataRepo, SqliteData, SimulationEngine, get_reload, mo, os
             mo.output.replace(
                 mo.md(
                     f"""
-                    ### ✅ Data lastet!
+                    **✅ Data lastet!**
 
                     | Data | Antall |
                     |---|---|
@@ -317,21 +311,19 @@ def _(CostCalculator, DataRepo, SqliteData, SimulationEngine, get_reload, mo, os
             mo.output.replace(mo.md(f"### ❌ Feil ved lasting: {_e}"))
             import traceback as _traceback
             _traceback.print_exc()
-
-    return baseline, data, db_stats
-
-
-# ═══ KAP 3: 📤 Last opp ny Excel-fil ════════════════════════════════════
+    return baseline, data
 
 
 @app.cell
 def _(mo):
-    mo.md("### 📤 Last opp Excel")
+    mo.md("""
+    **📤 Last opp Excel**
+    """)
     return
 
 
 @app.cell
-def _(DataRepo, import_excel_to_sqlite, mo, os, tempfile, validate_excel):
+def _(mo):
     excel_import_file = mo.ui.file(
         label="📄 Velg Excel-fil",
         filetypes=[".xlsx"],
@@ -351,7 +343,17 @@ def _(DataRepo, import_excel_to_sqlite, mo, os, tempfile, validate_excel):
 
 
 @app.cell
-def _(DataRepo, excel_import_file, excel_import_kommentar, import_excel_to_sqlite, mo, os, overrides, set_reload, tempfile, validate_excel):
+def _(
+    excel_import_file,
+    excel_import_kommentar,
+    import_excel_to_sqlite,
+    mo,
+    os,
+    overrides,
+    set_reload,
+    tempfile,
+    validate_excel,
+):
     if excel_import_file.value and excel_import_kommentar.value.strip():
         try:
             _upload = excel_import_file.value[0]
@@ -416,14 +418,14 @@ def _(DataRepo, excel_import_file, excel_import_kommentar, import_excel_to_sqlit
             mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
             import traceback as _traceback
             _traceback.print_exc()
-
-
-# ═══ KAP 4: 📜 Gå tilbake til tidligere versjon ════════════════════════
+    return
 
 
 @app.cell
 def _(mo):
-    mo.md("### 📜 Versjonshistorikk")
+    mo.md("""
+    **📜 Versjonshistorikk**
+    """)
     return
 
 
@@ -459,11 +461,21 @@ def _(DataRepo, mo):
                 historikk_valg,
             ])
         )
-    return (historikk_valg, upload_id_map)
+    return historikk_valg, upload_id_map
 
 
 @app.cell
-def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, overrides, set_reload, tempfile, upload_id_map):
+def _(
+    DataRepo,
+    historikk_valg,
+    import_excel_to_sqlite,
+    mo,
+    os,
+    overrides,
+    set_reload,
+    tempfile,
+    upload_id_map,
+):
     if historikk_valg is not None and historikk_valg.value:
         try:
             _label = historikk_valg.value
@@ -514,14 +526,14 @@ def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, overrides, set_r
             mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
             import traceback as _traceback
             _traceback.print_exc()
-
-
-# ═══ KAP 5: 📥 Last ned komplett datafil ════════════════════════════════
+    return
 
 
 @app.cell
 def _(mo):
-    mo.md("### 📥 Eksporter komplett datafil")
+    mo.md("""
+    **📥 Eksporter komplett datafil**
+    """)
     return
 
 
@@ -555,9 +567,6 @@ def _(export_excel_db_button, export_sqlite_to_excel, mo, os, tempfile):
         except Exception as _e:
             mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
     return
-
-
-# ═══ KAP 6: 🔍 Filtrering (kaskade) ════════════════════════════════════
 
 
 @app.cell
@@ -657,7 +666,6 @@ def _(data, vareFilter):
             filtered_operations = list(data.operations)
             filtered_capacity_days = list(data.capacity_days)
     return (
-        filter_active,
         filtered_bom_lines,
         filtered_byproduct_rules,
         filtered_capacity_days,
@@ -671,18 +679,19 @@ def _(data, vareFilter):
     )
 
 
-# ═══ 📊 Kalkyle & Simulering ═══════════════════════════════════════════
-
-
 @app.cell
 def _(mo):
-    mo.md("## 📊 Kalkyle & Simulering")
+    mo.md("""
+    ## 📊 Kalkyle & Simulering
+    """)
     return
 
 
 @app.cell
 def _(mo):
-    mo.md("### 📊 Baseline kostnader")
+    mo.md("""
+    ### 📊 Baseline kostnader
+    """)
     return
 
 
@@ -709,13 +718,17 @@ def _(baseline, mo, pd):
 
 @app.cell
 def _(mo):
-    mo.md("### 🔧 Parametere")
+    mo.md("""
+    ## 🔧 Simulerings parametere
+    """)
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md("**🪵 Råvarer**")
+    mo.md("""
+    ###🪵 Råvarer
+    """)
     return
 
 
@@ -759,7 +772,9 @@ def _(overrides, rm_price_df):
 
 @app.cell
 def _(mo):
-    mo.md("**🗑️ Svinn- og kapp-prosenter**")
+    mo.md("""
+    ### 🗑️ Svinn- og kapp-prosenter
+    """)
     return
 
 
@@ -818,7 +833,9 @@ def _(bom_scrap_df, overrides):
 
 @app.cell
 def _(mo):
-    mo.md("**🏭 Arbeidssentre (timekostnad)**")
+    mo.md("""
+    ### 🏭 Arbeidssentre (timekostnad)
+    """)
     return
 
 
@@ -878,12 +895,22 @@ def _(overrides, wc_cost_df):
 
 @app.cell
 def _(mo):
-    mo.md("**📋 Routing (stykkpris)**")
+    mo.md("""
+    ### 📋 Routing (stykkpris)
+    """)
     return
 
 
 @app.cell
-def _(data, filtered_operations, filtered_routing_lines, filtered_work_centers, mo, overrides, pd):
+def _(
+    data,
+    filtered_operations,
+    filtered_routing_lines,
+    filtered_work_centers,
+    mo,
+    overrides,
+    pd,
+):
     routing_df = None
     if data:
         _rows = []
@@ -947,7 +974,9 @@ def _(overrides, routing_df):
 
 @app.cell
 def _(mo):
-    mo.md("**📦 Planlagt kvantum**")
+    mo.md("""
+    ### 📦 Planlagt kvantum
+    """)
     return
 
 
@@ -978,12 +1007,23 @@ def _(mo):
 
 @app.cell
 def _(mo):
-    mo.md("### 🚀 Resultater")
+    mo.md("""
+    ## 🚀 Simulerings resultater
+    """)
     return
 
 
 @app.cell
-def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty, run_button):
+def _(
+    SimulationEngine,
+    SimulationOverride,
+    data,
+    mo,
+    overrides,
+    pd,
+    planned_qty,
+    run_button,
+):
     sim_results = None
     sim_overrides = None
 
@@ -1075,7 +1115,9 @@ def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty
 
 @app.cell
 def _(mo):
-    mo.md("### 💾 Last ned simulerings rapport")
+    mo.md("""
+    ### 💾 Last ned simulerings rapport
+    """)
     return
 
 
@@ -1092,7 +1134,7 @@ def _(mo):
         value=False,
     )
     mo.vstack([
-        mo.md("### 📊 Tilpass PDF-rapport"),
+        mo.md("** 📊 Tilpass PDF-rapport **"),
         pdf_kommentar,
         pdf_inkluder_detaljer,
         export_pdf_button,
@@ -1101,7 +1143,18 @@ def _(mo):
 
 
 @app.cell
-def _(export_pdf_button, generer_rapport, mo, os, pdf_inkluder_detaljer, pdf_kommentar, registrer_fonter, sim_overrides, sim_results, tempfile):
+def _(
+    export_pdf_button,
+    generer_rapport,
+    mo,
+    os,
+    pdf_inkluder_detaljer,
+    pdf_kommentar,
+    registrer_fonter,
+    sim_overrides,
+    sim_results,
+    tempfile,
+):
     if export_pdf_button.value:
         try:
             if not sim_results:
@@ -1181,7 +1234,14 @@ def _(mo):
 
 
 @app.cell
-def _(export_excel_button, generer_excel_rapport, mo, os, sim_results, tempfile):
+def _(
+    export_excel_button,
+    generer_excel_rapport,
+    mo,
+    os,
+    sim_results,
+    tempfile,
+):
     if export_excel_button.value:
         if not sim_results:
             mo.output.replace(mo.md("### ❌ Ingen simuleringsresultater. Kjør en simulering først."))
@@ -1200,12 +1260,11 @@ def _(export_excel_button, generer_excel_rapport, mo, os, sim_results, tempfile)
     return
 
 
-# ═══ 📋 Datamodell ═══════════════════════════════════════════════════
-
-
 @app.cell
 def _(mo):
-    mo.md("## 📋 Datamodell")
+    mo.md("""
+    ## 📋 Datamodell
+    """)
     return
 
 
@@ -1231,7 +1290,21 @@ def _(mo):
 
 
 @app.cell
-def _(data, filtered_bom_lines, filtered_byproduct_rules, filtered_capacity_days, filtered_item_costs, filtered_locations, filtered_operations, filtered_products, filtered_routing_lines, filtered_scenarios, filtered_work_centers, mo, pd):
+def _(
+    data,
+    filtered_bom_lines,
+    filtered_byproduct_rules,
+    filtered_capacity_days,
+    filtered_item_costs,
+    filtered_locations,
+    filtered_operations,
+    filtered_products,
+    filtered_routing_lines,
+    filtered_scenarios,
+    filtered_work_centers,
+    mo,
+    pd,
+):
     if data:
         _outputs = []
 
@@ -1316,40 +1389,36 @@ def _(data, filtered_bom_lines, filtered_byproduct_rules, filtered_capacity_days
     return
 
 
-# ═══ SIDEBAR: Navigasjon og TOC ═══════════════════════════════════════
-
-
 @app.cell
 def _(mo):
-    vareFilter = mo.ui.text(label="🔍 Filtrer på varenr eller beskrivelse")
-    run_button = mo.ui.run_button(label="⚡Start simulering", kind="neutral")
-    
+    run_button = mo.ui.run_button(label="⚡Start simulering", kind="neutral",full_width=True)
+    vareFilter = mo.ui.text(label="🔍 filtrer på varenummer og beskrivelse",full_width=True)
+
     mo.sidebar(
         mo.vstack([
             # Handlinger
             mo.Html('<div class="fti-sidebar-section"><h3>Handlinger</h3></div>'),
             run_button,
             vareFilter,
-            
+
             # Outline / TOC
             mo.Html('<div class="fti-sidebar-section"><h3>📑 Innholdsfortegnelse</h3></div>'),
             mo.outline(label=""),
-            
+
             mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
-            mo.Html('Fram Treindustri -'),
+            mo.Html('Fram Treindustri - '),
             mo.Html('v0.23.14 · Marimo'),
         ]),
         width="260px",
     )
-    return (vareFilter, run_button)
-
-
-# ═══ 📋 Endringslogg ════════════════════════════════════════════════
+    return run_button, vareFilter
 
 
 @app.cell
 def _(mo):
-    mo.md("### 📋 Endringslogg")
+    mo.md("""
+    ## 📋 Endringslogg
+    """)
     return
 
 
@@ -1377,9 +1446,6 @@ def _(DataRepo, mo, pd):
     else:
         mo.output.replace(mo.md("*(Ingen endringer logget)*"))
     return
-
-
-# ═══ FOOTER ═════════════════════════════════════════════════════════════
 
 
 @app.cell
