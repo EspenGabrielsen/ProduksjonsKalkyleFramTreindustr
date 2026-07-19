@@ -95,7 +95,6 @@ KOLONNER = {
         "Setup Time Minutes": "Klargjoringstid i minutter. Eksempel: 15",
         "Run Time Minutes": "Produksjonstid per enhet i minutter. Eksempel: 0.15",
         "Batch Size": "Normal ordrestorrelse. Eksempel: 500",
-        "Changeover Time Minutes": "Omstillingstid mellom produkter. Eksempel: 45",
         "Valid From": "Gyldig fra dato",
         "Valid To": "Gyldig til dato (tom = alltid)",
     },
@@ -646,7 +645,6 @@ def _import_routing(db: DataRepo, rows: list[dict]) -> int:
             "setup_time_minutes": _f(row.get("Setup Time Minutes", 0)),
             "run_time_minutes": _f(row.get("Run Time Minutes", 0)),
             "batch_size": _f(row.get("Batch Size", 1)),
-            "changeover_time_minutes": _f(row.get("Changeover Time Minutes", 0)),
         })
     if rt_list:
         db.upsert_routing_lines(rt_list, source="import")
@@ -867,11 +865,9 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
     ws7 = wb.create_sheet()
     _write_sheet(ws7, "Routing", data.get("routing_lines", []),
                  ["Item No", "Operation No", "Operation Code", "Work Center Code",
-                  "Setup Time Minutes", "Run Time Minutes", "Batch Size",
-                  "Changeover Time Minutes"],
+                  "Setup Time Minutes", "Run Time Minutes", "Batch Size"],
                  db_keys=["item_no", "operation_no", "operation_code", "work_center_code",
-                          "setup_time_minutes", "run_time_minutes", "batch_size",
-                          "changeover_time_minutes"])
+                          "setup_time_minutes", "run_time_minutes", "batch_size"])
 
     # ── Ark 8: By Product Rules ──────────────────────────────
     ws8 = wb.create_sheet()

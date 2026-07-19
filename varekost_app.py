@@ -521,7 +521,7 @@ def _(DataRepo, historikk_valg, import_excel_to_sqlite, mo, os, overrides, set_r
 
 @app.cell
 def _(mo):
-    mo.md("### 📥 Eksporter data")
+    mo.md("### 📥 Eksporter komplett datafil")
     return
 
 
@@ -546,7 +546,7 @@ def _(export_excel_db_button, export_sqlite_to_excel, mo, os, tempfile):
                 mo.vstack([
                     mo.md("### ✅ Datafil klar!"),
                     mo.download(
-                        label="📥 Last ned (11 ark, inkl. endringslogg)",
+                        label="Last ned (11 ark, inkl. endringslogg)",
                         filename="produksjonsmodell_eksport.xlsx",
                         data=_excel_content,
                     ),
@@ -1075,7 +1075,7 @@ def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty
 
 @app.cell
 def _(mo):
-    mo.md("### 💾 Eksport")
+    mo.md("### 💾 Last ned simulerings rapport")
     return
 
 
@@ -1163,7 +1163,7 @@ def _(export_pdf_button, generer_rapport, mo, os, pdf_inkluder_detaljer, pdf_kom
 
                 mo.output.replace(mo.vstack([
                     mo.md("### ✅ PDF-rapport generert!"),
-                    mo.download(label="📥 Last ned PDF-rapport", filename="simuleringsrapport.pdf", data=_pdf_content),
+                    mo.download(label="Last ned PDF-rapport", filename="simuleringsrapport.pdf", data=_pdf_content),
                 ]))
 
         except Exception as _e:
@@ -1191,7 +1191,7 @@ def _(export_excel_button, generer_excel_rapport, mo, os, sim_results, tempfile)
                 _excel_data = generer_excel_rapport(sim_results, _output_path)
                 mo.output.replace(mo.vstack([
                     mo.md("### ✅ Excel-rapport generert!"),
-                    mo.download(label="📥 Last ned Excel-rapport", filename="simuleringsresultater.xlsx", data=_excel_data),
+                    mo.download(label="Last ned Excel-rapport", filename="simuleringsresultater.xlsx", data=_excel_data),
                 ]))
             except Exception as _e:
                 mo.output.replace(mo.md(f"### ❌ Feil ved generering av Excel: {_e}"))

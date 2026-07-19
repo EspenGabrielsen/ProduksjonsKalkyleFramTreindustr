@@ -386,7 +386,6 @@ Beskriver produksjonsprosessen - hvilke operasjoner som utfores, i hvilken rekke
 | **Setup Time Minutes** | Desimal | Tid til klargjoring (omstilling, knivbytte, innkjoring, kontrollmaling) | `15.0` |
 | **Run Time Minutes** | Desimal | Produksjonstid per enhet | `0.15` |
 | **Batch Size** | Desimal | Normal ordrestorrelse (brukes til a fordele setupkostnad) | `500` |
-| **Changeover Time Minutes** | Desimal | Tid det tar a stille om FRA dette produktet til et annet pa samme maskin | `45.0` |
 | **Valid From** | Dato | Gyldig fra dato | `2026-01-01` |
 | **Valid To** | Dato | Gyldig til dato | |
 
@@ -404,26 +403,16 @@ Eksempel - Op 10 (Oppdeling) for FG001:
   Setupkost: (15/60 x 1 600) / 500 = 400 / 500 = 0,80 kr/LM
 ```
 
-### 9.4 Changeover Time - omstillingstid
+### 9.4 Testdata - FG001 (Utvendig Panel 21x95)
 
-Changeover Time Minutes brukes i **scenariosimulering med flere produkter**. Nar flere produkter skal kjore pa samme maskin, ma maskinen stilles om mellom hvert produkt. Denne tiden angir hvor lang tid omstillingen tar.
+| Op.nr | Operasjon | Arbeidssenter | Setup (min) | Kjoretid (min) | Batch |
+|-------|-----------|---------------|-------------|----------------|-------|
+| 10 | Oppdeling | HOVEDHOVEL | 15,0 | 0,15 | 500 |
+| 20 | Hovling | HOVEDHOVEL | 10,0 | 0,10 | 500 |
+| 30 | Profilering | SPESIALHOVEL | 20,0 | 0,12 | 500 |
+| 40 | Pakking | PAKKELINJE | 5,0 | 0,05 | 500 |
 
-```
-Eksempel - HOVEDHOVEL:
-  FG001 -> FG002: 45 minutter omstilling
-  FG002 -> FG003: 30 minutter omstilling
-```
-
-### 9.5 Testdata - FG001 (Utvendig Panel 21x95)
-
-| Op.nr | Operasjon | Arbeidssenter | Setup (min) | Kjoretid (min) | Batch | Changeover (min) |
-|-------|-----------|---------------|-------------|----------------|-------|------------------|
-| 10 | Oppdeling | HOVEDHOVEL | 15,0 | 0,15 | 500 | 45,0 |
-| 20 | Hovling | HOVEDHOVEL | 10,0 | 0,10 | 500 | 45,0 |
-| 30 | Profilering | SPESIALHOVEL | 20,0 | 0,12 | 500 | 45,0 |
-| 40 | Pakking | PAKKELINJE | 5,0 | 0,05 | 500 | 0,0 |
-
-### 9.6 Produksjonsflyt - visuell
+### 9.5 Produksjonsflyt - visuell
 
 ```
 FG001 - Utvendig Panel 21x95
@@ -754,7 +743,6 @@ python lag_testdata_v3.py
 Dette oppretter `Produksjonsmodell_Testdata_v3.xlsx` med:
 - 8 ark med testdata
 - Beskrivende kommentarer pa header-radene
-- Changeover-tider i Routing
 
 ### 13.4 Alle flagg
 
@@ -823,11 +811,7 @@ JSON-filen kan lastes direkte inn i Power BI:
 
 Oppdater `Unit Cost` i **Item Costs** for ravarer, eller `Labor/Machine/Overhead Cost per Hour` i **Work Centers**.
 
-### 15.3 Endre changeover-tider
-
-Oppdater `Changeover Time Minutes` i **Routing** for hver operasjon.
-
-### 15.4 Oppdatere testdata-Excel
+### 15.3 Oppdatere testdata-Excel
 
 ```bash
 python lag_testdata_v3.py
@@ -837,9 +821,7 @@ Dette genererer Excel-filen pa nytt med all testdata og beskrivelser.
 
 ---
 
-> **Dokumentasjon versjon 2.0**
+> **Dokumentasjon versjon 2.1**
 > Sist oppdatert: juli 2026
 > Basert pa Kodal Hovleri som referanseeksempel
-
-
-
+> **Merk:** `Changeover Time Minutes` er fjernet fra datamodellen. Omstillingskost håndteres gjennom `Setup Time Minutes` (neste produkts setup-tid).

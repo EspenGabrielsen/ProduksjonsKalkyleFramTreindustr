@@ -120,7 +120,6 @@ class RoutingLine:
     setup_time_minutes: float = 0.0
     run_time_minutes: float = 0.0
     batch_size: float = 1.0
-    changeover_time_minutes: float = 0.0
     valid_from: Optional[date] = None
     valid_to: Optional[date] = None
 
@@ -431,7 +430,6 @@ class ExcelData:
                 setup_time_minutes=self._f(row.get("Setup Time Minutes", 0)),
                 run_time_minutes=self._f(row.get("Run Time Minutes", 0)),
                 batch_size=self._f(row.get("Batch Size", 1)),
-                changeover_time_minutes=self._f(row.get("Changeover Time Minutes", 0)),
                 valid_from=self._d(row.get("Valid From")),
                 valid_to=self._d(row.get("Valid To")),
             ))
@@ -796,8 +794,7 @@ class SqliteData:
     def _load_routing(self):
         rows = self.db.conn.execute(
             """SELECT item_no, operation_no, operation_code, work_center_code,
-                      setup_time_minutes, run_time_minutes, batch_size,
-                      changeover_time_minutes
+                      setup_time_minutes, run_time_minutes, batch_size
                FROM routing_lines ORDER BY item_no, operation_no"""
         ).fetchall()
         for r in rows:
@@ -809,7 +806,6 @@ class SqliteData:
                 setup_time_minutes=r["setup_time_minutes"],
                 run_time_minutes=r["run_time_minutes"],
                 batch_size=r["batch_size"],
-                changeover_time_minutes=r["changeover_time_minutes"],
             ))
 
     def _load_byproduct_rules(self):
@@ -1653,7 +1649,6 @@ class SimulationEngine:
                     setup_time_minutes=rl_overrides.get("setup_time_minutes", rl.setup_time_minutes),
                     run_time_minutes=rl_overrides.get("run_time_minutes", rl.run_time_minutes),
                     batch_size=rl_overrides.get("batch_size", rl.batch_size),
-                    changeover_time_minutes=rl_overrides.get("changeover_time_minutes", rl.changeover_time_minutes),
                     valid_from=rl.valid_from,
                     valid_to=rl.valid_to,
                 ))
@@ -1971,11 +1966,11 @@ def create_test_data() -> ExcelData:
 
     data.routing_lines = [
         # KOD (Kodal) - full produksjon
-        RoutingLine("FG001", 10, "RIP", "HOVEDHOVEL", 15.0, 0.15, 500, 0.0, date(2026, 1, 1), None),
-        RoutingLine("FG001", 20, "PLANING", "HOVEDHOVEL", 10.0, 0.10, 500, 0.0, date(2026, 1, 1), None),
-        RoutingLine("FG001", 30, "PROFILE", "SPESIALHOVEL", 20.0, 0.12, 500, 0.0, date(2026, 1, 1), None),
+        RoutingLine("FG001", 10, "RIP", "HOVEDHOVEL", 15.0, 0.15, 500, date(2026, 1, 1), None),
+        RoutingLine("FG001", 20, "PLANING", "HOVEDHOVEL", 10.0, 0.10, 500, date(2026, 1, 1), None),
+        RoutingLine("FG001", 30, "PROFILE", "SPESIALHOVEL", 20.0, 0.12, 500, date(2026, 1, 1), None),
         # KV (Kvås) - kun hovling, annen batch
-        RoutingLine("FG001", 10, "RIP", "KVHOVEL", 15.0, 0.15, 1000, 0.0, date(2026, 1, 1), None),
+        RoutingLine("FG001", 10, "RIP", "KVHOVEL", 15.0, 0.15, 1000, date(2026, 1, 1), None),
     ]
 
 
