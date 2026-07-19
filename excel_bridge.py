@@ -18,6 +18,11 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.comments import Comment as XLComment
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -26,6 +31,111 @@ elif hasattr(sys.stdout, 'buffer'):
 
 from data_repo import DataRepo
 
+
+# ──────────────────────────────────────────────────────────────────────
+#  Kolonnebeskrivelser (fra oppdater_mal.py)
+# ──────────────────────────────────────────────────────────────────────
+
+KOLONNER = {
+    "Product Master": {
+        "Item No": "Unik identifikator for varen. Eksempel: RM001, FG001, BP001",
+        "Description": "Beskrivende navn pa varen. Eksempel: Skrulast 48x198",
+        "Item Type": "Type vare: Raw Material, Semi Finished, Finished Good, By Product, Trading Item",
+        "Product Group": "Gruppering av varer. Eksempel: Skrulast, Panel, Kledning, Spon",
+        "Base Unit of Measure": "Standard maleenhet. Eksempel: LM, M3, KG, PCS",
+        "Active": "Er varen aktiv? Ja / Nei",
+    },
+    "Locations": {
+        "Location Code": "Unik kode for lokasjonen. Eksempel: KOD",
+        "Location Name": "Navn pa lokasjonen. Eksempel: Kodal Fabrikk",
+        "Location Type": "Type lokasjon: Factory, Warehouse, Distribution Center, Sales Office",
+        "Active": "Er lokasjonen aktiv? Ja / Nei",
+    },
+    "Work Centers": {
+        "Work Center Code": "Unik identifikator for arbeidssenteret. Eksempel: HOVEDHOVEL",
+        "Description": "Beskrivende navn pa arbeidssenteret",
+        "Location Code": "Fabrikken arbeidssenteret tilhorer",
+        "Labor Cost per Hour": "Arbeidskostnad per time (lonn, avgift, pensjon, ferie). Eksempel: 550",
+        "Machine Cost per Hour": "Maskinkostnad per time (avskrivn., service, leasing, vedlikehold, energi). Eksempel: 900",
+        "Overhead Cost per Hour": "Indirekte produksjonskostnader. Eksempel: 150",
+        "Capacity Hours per Day": "Tilgjengelige timer per dag. Eksempel: 16",
+        "Effective Capacity %": "Hvor stor del av tiden som kan brukes til produksjon. Eksempel: 85",
+        "Active": "Er arbeidssenteret aktivt? Ja / Nei",
+    },
+    "Operation Master": {
+        "Operation Code": "Unik kode for operasjonen. Eksempel: HOVLING, MALING, PACKING",
+        "Description": "Beskrivelse av operasjonen",
+        "Default Work Center": "Anbefalt arbeidssenter for operasjonen",
+        "Standard Unit": "Maleenhet for produksjonstid. Eksempel: Minutes, Hours",
+        "Active": "Er operasjonen aktiv? Ja / Nei",
+    },
+    "Item Costs": {
+        "Item No": "Referanse til varen (Item No fra Product Master)",
+        "Cost Type": "Type kostpris: Standard Cost, Last Direct Cost, Forecast Cost, Budget Cost",
+        "Unit Cost": "Kostpris per enhet. Eksempel: 3000.00",
+        "Currency": "Valuta. Eksempel: NOK, EUR",
+        "Effective Date": "Dato kostprisen gjelder fra",
+    },
+    "BOM": {
+        "Parent Item No": "Produktet som produseres (Item No)",
+        "Component Item No": "Komponenten som forbrukes (Item No)",
+        "Quantity Per": "Antall output-enheter per input-enhet. Eksempel: 400",
+        "Unit of Measure": "Maleenhet. Eksempel: LM",
+        "Scrap %": "Forventet materialsvinn i prosent. Eksempel: 5",
+        "Co-Prod %": "Andel samprodukt (co-product). Eksempel: 6",
+        "Co-Prod Item No": "Varenummer for samproduktet. Eksempel: JD16073-B",
+        "Valid From": "Gyldig fra dato",
+        "Valid To": "Gyldig til dato (tom = alltid)",
+    },
+    "Routing": {
+        "Item No": "Produkt som produseres (Item No)",
+        "Operation No": "Sekvensnummer. Eksempel: 10, 20, 30",
+        "Operation Code": "Operasjon (ref. Operation Master)",
+        "Work Center Code": "Arbeidssenter (ref. Work Centers)",
+        "Setup Time Minutes": "Klargjoringstid i minutter. Eksempel: 15",
+        "Run Time Minutes": "Produksjonstid per enhet i minutter. Eksempel: 0.15",
+        "Batch Size": "Normal ordrestorrelse. Eksempel: 500",
+        "Changeover Time Minutes": "Omstillingstid mellom produkter. Eksempel: 45",
+        "Valid From": "Gyldig fra dato",
+        "Valid To": "Gyldig til dato (tom = alltid)",
+    },
+    "By Product Rules": {
+        "Parent Item No": "Produktet (ferdigvaren) som skaper biproduktet",
+        "By Product Item No": "Biproduktet (Item No). Eksempel: BP001",
+        "Expected Quantity": "Forventet mengde biprodukt per enhet ferdigvare",
+        "Unit of Measure": "Maleenhet. Eksempel: KG",
+        "Market Value": "Forventet markedspris per enhet. Eksempel: 1.50",
+        "Allocation Method": "Reduce Main Product Cost, Separate Profit Center, Informational Only",
+    },
+    "Capacity Calendar": {
+        "Work Center": "Arbeidssenter (ref. Work Centers)",
+        "Date": "Dato",
+        "Available Hours": "Tilgjengelige timer for dagen",
+        "Planned Downtime": "Planlagte stopp i timer (vedlikehold, ferie, ombygging)",
+    },
+    "Production Scenario": {
+        "Scenario Name": "Navn pa scenario. Eksempel: Normal Produksjon",
+        "Product": "Produktet som simuleres (Item No)",
+        "Planned Quantity": "Planlagt produksjonsmengde. Eksempel: 100000",
+        "Start Date": "Startdato for scenario",
+        "End Date": "Sluttdato for scenario",
+    },
+}
+
+STATISKE_DROPDOWNS = [
+    ("Product Master", "C", '"Raw Material,Semi Finished,Finished Good,By Product,Trading Item"'),
+    ("Product Master", "F", '"Ja,Nei"'),
+    ("Locations", "A", ""),
+    ("Locations", "C", '"Factory,Warehouse,Distribution Center,Sales Office"'),
+    ("Locations", "D", '"Ja,Nei"'),
+    ("Work Centers", "A", ""),
+    ("Work Centers", "I", '"Ja,Nei"'),
+    ("Operation Master", "D", '"Minutes,Hours"'),
+    ("Operation Master", "E", '"Ja,Nei"'),
+    ("Item Costs", "B", '"Standard Cost,Last Direct Cost,Forecast Cost,Budget Cost"'),
+    ("Item Costs", "D", '"NOK,EUR,USD,SEK,DKK"'),
+    ("By Product Rules", "F", '"Reduce Main Product Cost,Separate Profit Center,Informational Only"'),
+]
 
 # ──────────────────────────────────────────────────────────────────────
 #  Hjelpefunksjoner for datakonvertering
@@ -615,9 +725,6 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
         output_path: Sti til output Excel-fil (.xlsx)
         db: DataRepo-instans (opprettes automatisk hvis None)
     """
-    import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from openpyxl.utils import get_column_letter
 
     if db is None:
         db = DataRepo()
@@ -641,7 +748,7 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
     )
 
     def _write_sheet(ws, title: str, rows: list, field_names: list[str], db_keys: Optional[list[str]] = None):
-        """Skriv data til et Excel-ark med header.
+        """Skriv data til et Excel-ark med header, kolonnebeskrivelser og dropdowns.
 
         Args:
             ws: openpyxl worksheet
@@ -660,13 +767,16 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
         if db_keys is None:
             db_keys = [name.lower().replace(" ", "_") for name in field_names]
 
-        # Headere
+        # Headere med kolonnebeskrivelser
+        kol_desc = KOLONNER.get(title, {})
         for col_idx, name in enumerate(field_names, 1):
             cell = ws.cell(row=1, column=col_idx, value=name)
             cell.font = header_font
             cell.fill = header_fill
-            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             cell.border = thin_border
+            if name in kol_desc:
+                cell.comment = XLComment(kol_desc[name], "System", width=300, height=100)
 
         # Data — konverter sqlite3.Row til dict for sikker aksess
         for row_idx, row in enumerate(rows, 2):
@@ -686,6 +796,30 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
                 if val is not None:
                     max_len = max(max_len, min(len(str(val)), 40))
             ws.column_dimensions[get_column_letter(col_idx)].width = max_len + 2
+
+        # Lås header-raden (freeze panes)
+        ws.freeze_panes = "A2"
+
+        # Legg til statiske dropdowns
+        _legg_til_dropdowns(ws, title)
+
+    def _legg_til_dropdowns(ws, ark_navn: str):
+        """Legg til statiske dropdowns for et ark (samme som oppdater_mal.py)."""
+        for sheet, col, liste in STATISKE_DROPDOWNS:
+            if sheet != ark_navn:
+                continue
+            if not liste:
+                continue
+            dv = DataValidation(
+                type="list",
+                formula1=liste,
+                allow_blank=True,
+                showErrorMessage=True,
+                errorTitle="Ugyldig verdi",
+                error=f"Verdien må være en av: {liste.replace(chr(34), '')}",
+            )
+            ws.add_data_validation(dv)
+            dv.add(f"{col}2:{col}1048576")
 
     # ── Ark 1: Product Master ────────────────────────────────
     ws1 = wb.active

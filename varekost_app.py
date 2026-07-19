@@ -88,6 +88,7 @@ def _(mo):
             align-items: center;
             justify-content: space-between;
         }
+        
         .fti-header-title {
             font-size: 1.8em;
             font-weight: 700;
@@ -205,7 +206,7 @@ def _(mo):
 @app.cell
 def _(mo):
     mo.Html("""
-    <div class="fti-header">
+    <div class="fti-header" id="fti-header">
         <div style="display: flex; align-items: center; gap: 16px;">
             <img src="https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png"
                  alt="Fram Treindustri" style="height: 48px;" />
