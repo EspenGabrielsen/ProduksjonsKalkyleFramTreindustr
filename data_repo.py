@@ -48,7 +48,8 @@ def get_current_user() -> Optional[str]:
 #  Databasehåndtering
 # ──────────────────────────────────────────────────────────────────────
 
-DB_FILENAME = "endringslogg.db"
+#DB_FILENAME = "endringslogg.db"
+DB_FILENAME = "produksjonskalkyle_copy.db"
 
 
 def _get_db_path(db_path: Optional[str] = None) -> str:
