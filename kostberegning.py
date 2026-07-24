@@ -500,10 +500,15 @@ class ExcelData:
         # Scenarios: scenario_name -> ProductionScenario
         self._scenario_index = {s.scenario_name: s for s in self.scenarios}
         
-        # Item costs: item_no -> liste med ItemCost
+        # Item costs: item_no -> liste med ItemCost (pre-sortert på effective_date, nyeste først)
         self._item_cost_index = {}
         for ic in self.item_costs:
             self._item_cost_index.setdefault(ic.item_no, []).append(ic)
+        for _item_no in self._item_cost_index:
+            self._item_cost_index[_item_no].sort(
+                key=lambda c: c.effective_date if c.effective_date is not None else date.min,
+                reverse=True
+            )
         
         # Routing locations: item_no -> sortert liste med unike location codes
         _temp_locs: dict[str, set[str]] = {}
@@ -1839,9 +1844,90 @@ class SimulationEngine:
         
         return comparison
     
+    @staticmethod
+    def _index_results(results: list[ProductCostResult]) -> dict[str, dict[str, ProductCostResult]]:
+        """Indekser en liste med ProductCostResults for raskt oppslag.
+        
+        Returnerer: {item_no: {location_code: ProductCostResult}}
+        """
+        idx: dict[str, dict[str, ProductCostResult]] = {}
+        for r in results:
+            if r.product_no not in idx:
+                idx[r.product_no] = {}
+            idx[r.product_no][r.location_code] = r
+        return idx
+
+    @staticmethod
+    def _get_co_product_pct(bom_lines: list[BOMLine], product_no: str) -> tuple[float, str]:
+        """Hent co-prod prosent og item_no for et produkt fra BOM."""
+        for bl in bom_lines:
+            if bl.parent_item_no == product_no and bl.co_product_pct > 0:
+                return bl.co_product_pct, bl.co_product_item_no
+        return 0.0, ""
+
+    def _build_comparison(self, orig: ProductCostResult, sim: ProductCostResult,
+                          overrides: SimulationOverride,
+                          orig_calculator: CostCalculator, sim_calculator: CostCalculator,
+                          co_pct: float, co_item_no: str) -> SimulationComparison:
+        """Bygg et SimulationComparison-objekt fra original og simulert resultat."""
+        # Co-produkt resultater
+        orig_co_results = orig_calculator._calc_co_product_results(orig)
+        sim_co_results = sim_calculator._calc_co_product_results(sim)
+        
+        comparison = SimulationComparison(
+            product_no=orig.product_no,
+            product_desc=orig.product_desc,
+            product_group=orig.product_group,
+            base_uom=orig.base_uom,
+            location_code=orig.location_code,
+            location_name=orig.location_name,
+            
+            original_material_cost=orig.material_cost,
+            original_operation_cost=orig.operation_cost,
+            original_setup_cost=orig.setup_cost,
+            original_gross_cost=orig.gross_production_cost,
+            original_byproduct_value=orig.by_product_value,
+            original_net_cost=orig.net_production_cost,
+            
+            simulated_material_cost=sim.material_cost,
+            simulated_operation_cost=sim.operation_cost,
+            simulated_setup_cost=sim.setup_cost,
+            simulated_gross_cost=sim.gross_production_cost,
+            simulated_byproduct_value=sim.by_product_value,
+            simulated_net_cost=sim.net_production_cost,
+            
+            original_material_details=list(orig.material_details),
+            simulated_material_details=list(sim.material_details),
+            original_operation_details=list(orig.operation_details),
+            simulated_operation_details=list(sim.operation_details),
+            original_byproduct_details=list(orig.byproduct_details),
+            simulated_byproduct_details=list(sim.byproduct_details),
+            
+            original_co_product_results=orig_co_results,
+            simulated_co_product_results=sim_co_results,
+            co_product_pct=co_pct,
+            co_product_item_no=co_item_no,
+        )
+        
+        # Scenario-beregning hvis kvantum er satt
+        if overrides.planned_quantity is not None and overrides.planned_quantity > 0:
+            qty = overrides.planned_quantity
+            comparison.planned_quantity = qty
+            sim_totals = self._calc_scenario_totals(sim, qty)
+            comparison.simulated_total_net_cost = sim_totals["total_net_cost"]
+            comparison.simulated_cost_per_unit = sim_totals["cost_per_unit"]
+            comparison.simulated_total_hours = sim_totals["total_hours"]
+            comparison.simulated_work_center_hours = sim_totals["work_center_hours"]
+        
+        return comparison
+
     def compare_all(self, overrides: SimulationOverride, 
                     product_filter: Optional[list[str]] = None) -> list[SimulationComparison]:
         """Sammenlign original vs simulert for alle (eller filtrerte) produkter.
+        
+        *** OPTIMERT VERSJON ***
+        Kjor calculate_all() kun 2 ganger totalt (istedenfor 2x per produkt).
+        Bruker indeksert oppslag for a bygge SimulationComparison-objekter.
         
         Returnerer resultater per fabrikk/lokasjon: hvis et produkt har routing
         pa flere fabrikker, returneres ett resultat per fabrikk.
@@ -1855,14 +1941,43 @@ class SimulationEngine:
         if product_filter:
             target_items = [p for p in target_items if p.item_no in product_filter]
         
+        # --- Trinn 1: Beregn original (baseline) ÉN gang ---
+        calculator_orig = CostCalculator(self.data)
+        orig_all_results = calculator_orig.calculate_all()
+        orig_index = self._index_results(orig_all_results)
+        
+        # --- Trinn 2: Beregn simulert (med overrides) ÉN gang ---
+        sim_data = self._apply_overrides(overrides)
+        calculator_sim = CostCalculator(sim_data)
+        sim_all_results = calculator_sim.calculate_all()
+        sim_index = self._index_results(sim_all_results)
+        
+        # --- Trinn 3: Bygg comparisons ved a sla opp i indeksene ---
         results = []
         for prod in target_items:
-            # Iterer over alle lokasjoner for dette produktet
+            # Finn alle lokasjoner for dette produktet
             location_codes = self.data.routing_locations_for(prod.item_no)
+            if not location_codes:
+                continue
+            
+            # Hent co-prod info (samme for alle lokasjoner)
+            co_pct, co_item_no = self._get_co_product_pct(
+                self.data.bom_lines, prod.item_no
+            )
+            
             for loc_code in location_codes:
-                comp = self.compare(prod.item_no, overrides, location_code=loc_code)
-                if comp is not None:
-                    results.append(comp)
+                orig_result = orig_index.get(prod.item_no, {}).get(loc_code)
+                sim_result = sim_index.get(prod.item_no, {}).get(loc_code)
+                
+                if orig_result is None or sim_result is None:
+                    continue
+                
+                comparison = self._build_comparison(
+                    orig_result, sim_result, overrides,
+                    calculator_orig, calculator_sim,
+                    co_pct, co_item_no
+                )
+                results.append(comparison)
         
         return results
 
@@ -1986,6 +2101,41 @@ def create_test_data() -> ExcelData:
         ProductionScenario("Full Kapasitet", "FG001", 200_000, date(2026, 1, 1), date(2026, 12, 31)),
     ]
 
+    # Bygg indekser (gjort manuelt siden vi bruker __new__ i stedet for __init__)
+    data._product_index = {p.item_no: p for p in data.products}
+    data._location_index = {l.code: l for l in data.locations}
+    data._wc_index = {w.code: w for w in data.work_centers}
+    data._op_index = {o.code: o for o in data.operations}
+    
+    data._bom_index = {}
+    for bl in data.bom_lines:
+        data._bom_index.setdefault(bl.parent_item_no, []).append(bl)
+    
+    data._routing_index = {}
+    for rl in data.routing_lines:
+        data._routing_index.setdefault(rl.item_no, []).append(rl)
+    for item_no in data._routing_index:
+        data._routing_index[item_no].sort(key=lambda r: r.operation_no)
+    
+    data._byproduct_index = {}
+    for br in data.byproduct_rules:
+        data._byproduct_index.setdefault(br.parent_item_no, []).append(br)
+    
+    data._scenario_index = {s.scenario_name: s for s in data.scenarios}
+    
+    data._item_cost_index = {}
+    for ic in data.item_costs:
+        data._item_cost_index.setdefault(ic.item_no, []).append(ic)
+    
+    _temp_locs: dict[str, set[str]] = {}
+    for rl in data.routing_lines:
+        wc = data._wc_index.get(rl.work_center_code)
+        if wc and wc.location_code:
+            _temp_locs.setdefault(rl.item_no, set()).add(wc.location_code)
+    data._routing_locations_index = {
+        item_no: sorted(locs) for item_no, locs in _temp_locs.items()
+    }
+    
     return data
 
 
