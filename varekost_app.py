@@ -1134,7 +1134,7 @@ def _(mo):
         value=False,
     )
     mo.vstack([
-        mo.md("** 📊 Tilpass PDF-rapport **"),
+        mo.md("**📊 Tilpass PDF-rapport**"),
         pdf_kommentar,
         pdf_inkluder_detaljer,
         export_pdf_button,

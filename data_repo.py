@@ -9,8 +9,12 @@ Tabeller:
   - Stamdata: products, locations, work_centers, operations, item_costs,
     bom_lines, routing_lines, byproduct_rules, capacity_days, production_scenarios
   - Infrastruktur: change_log, uploaded_files
+
+Alle tabeller har id INTEGER PRIMARY KEY AUTOINCREMENT, med unike constraints
+for å bevare integriteten til de naturlige nøklene.
 """
 
+import json
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -48,8 +52,7 @@ def get_current_user() -> Optional[str]:
 #  Databasehåndtering
 # ──────────────────────────────────────────────────────────────────────
 
-#DB_FILENAME = "endringslogg.db"
-DB_FILENAME = "produksjonskalkyle_copy.db"
+DB_FILENAME = "produksjonskalkyle.db"
 
 
 def _get_db_path(db_path: Optional[str] = None) -> str:
@@ -61,9 +64,11 @@ def _get_db_path(db_path: Optional[str] = None) -> str:
 
 SCHEMA_SQL = """
 -- Stamdata-tabeller (speiler dagens Excel-ark)
+-- Alle tabeller har id INTEGER PRIMARY KEY AUTOINCREMENT + UNIQUE constraints
 
 CREATE TABLE IF NOT EXISTS products (
-    item_no TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_no TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
     item_type TEXT NOT NULL DEFAULT '',
     product_group TEXT NOT NULL DEFAULT '',
@@ -71,13 +76,15 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE TABLE IF NOT EXISTS locations (
-    code TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL DEFAULT '',
     location_type TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS work_centers (
-    code TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
     location_code TEXT NOT NULL DEFAULT '',
     labor_cost_hour REAL NOT NULL DEFAULT 0,
@@ -88,22 +95,25 @@ CREATE TABLE IF NOT EXISTS work_centers (
 );
 
 CREATE TABLE IF NOT EXISTS operations (
-    code TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
     default_work_center TEXT NOT NULL DEFAULT '',
     standard_unit TEXT NOT NULL DEFAULT 'Minutes'
 );
 
 CREATE TABLE IF NOT EXISTS item_costs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     item_no TEXT NOT NULL,
     cost_type TEXT NOT NULL DEFAULT 'Standard Cost',
     unit_cost REAL NOT NULL DEFAULT 0,
     currency TEXT NOT NULL DEFAULT 'NOK',
     effective_date TEXT,
-    PRIMARY KEY (item_no, cost_type)
+    UNIQUE(item_no, cost_type)
 );
 
 CREATE TABLE IF NOT EXISTS bom_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_item_no TEXT NOT NULL,
     component_item_no TEXT NOT NULL,
     quantity_per REAL NOT NULL DEFAULT 1,
@@ -111,10 +121,11 @@ CREATE TABLE IF NOT EXISTS bom_lines (
     scrap_pct REAL NOT NULL DEFAULT 0,
     co_product_pct REAL NOT NULL DEFAULT 0,
     co_product_item_no TEXT NOT NULL DEFAULT '',
-    PRIMARY KEY (parent_item_no, component_item_no)
+    UNIQUE(parent_item_no, component_item_no)
 );
 
 CREATE TABLE IF NOT EXISTS routing_lines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     item_no TEXT NOT NULL,
     operation_no INTEGER NOT NULL,
     operation_code TEXT NOT NULL DEFAULT '',
@@ -123,32 +134,35 @@ CREATE TABLE IF NOT EXISTS routing_lines (
     run_time_minutes REAL NOT NULL DEFAULT 0,
     batch_size REAL NOT NULL DEFAULT 1,
     changeover_time_minutes REAL NOT NULL DEFAULT 0,
-    PRIMARY KEY (item_no, operation_no, work_center_code)
+    UNIQUE(item_no, operation_no, work_center_code)
 );
 
 CREATE TABLE IF NOT EXISTS byproduct_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     parent_item_no TEXT NOT NULL,
     by_product_item_no TEXT NOT NULL,
     expected_quantity REAL NOT NULL DEFAULT 0,
     uom TEXT NOT NULL DEFAULT '',
     market_value REAL NOT NULL DEFAULT 0,
     allocation_method TEXT NOT NULL DEFAULT 'Reduce Main Product Cost',
-    PRIMARY KEY (parent_item_no, by_product_item_no)
+    UNIQUE(parent_item_no, by_product_item_no)
 );
 
 CREATE TABLE IF NOT EXISTS capacity_days (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     work_center TEXT NOT NULL,
     date TEXT NOT NULL,
     available_hours REAL NOT NULL DEFAULT 0,
     planned_downtime REAL NOT NULL DEFAULT 0,
-    PRIMARY KEY (work_center, date)
+    UNIQUE(work_center, date)
 );
 
 CREATE TABLE IF NOT EXISTS production_scenarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     scenario_name TEXT NOT NULL,
     product TEXT NOT NULL,
     planned_quantity REAL NOT NULL DEFAULT 0,
-    PRIMARY KEY (scenario_name, product)
+    UNIQUE(scenario_name, product)
 );
 
 -- Infrastruktur-tabeller
@@ -241,7 +255,35 @@ class DataRepo:
     # ── Migrering ────────────────────────────────────────────────
 
     def initialize(self):
-        """Opprett alle tabeller hvis de ikke finnes."""
+        """Opprett alle tabeller hvis de ikke finnes.
+        
+        Hvis det finnes en database med gammelt skjema (uten id-kolonne),
+        vil den gamle databasen slettes og en ny opprettes.
+        """
+        # Sjekk om gammelt skjema finnes (products uten id-kolonne)
+        try:
+            test = self.conn.execute("SELECT id FROM products LIMIT 1").fetchone()
+            # id-kolonne finnes → nytt skjema
+        except sqlite3.OperationalError:
+            # Gammelt skjema → steng tilkobling, slett DB-fil, opprett på nytt
+            try:
+                if self._conn:
+                    self._conn.close()
+                    self._conn = None
+                if os.path.exists(self.db_path):
+                    os.remove(self.db_path)
+                    print(f"[*] Gammel database slettet: {self.db_path}")
+            except PermissionError:
+                # Kan hende WAL-filer eller -shm/-wal eksisterer; prøv å fjerne dem også
+                for ext in ('', '-wal', '-shm'):
+                    f = self.db_path + ext
+                    if os.path.exists(f):
+                        try:
+                            os.remove(f)
+                        except PermissionError:
+                            print(f"[!] Kunne ikke slette: {f}")
+            self.connect()
+
         self.conn.executescript(SCHEMA_SQL)
         self.conn.commit()
         # Migrer: legg til comment-kolonne hvis den ikke finnes
@@ -292,8 +334,8 @@ class DataRepo:
         
         Args:
             table_name: Hvilken tabell ble endret (f.eks. "item_costs")
-            record_key: Hvilken rad (f.eks. "RM001")
-            field_name: Hvilket felt (f.eks. "unit_cost")
+            record_key: Radens ID (string av id integer) eller tekst-nøkkel
+            field_name: Hvilket felt (f.eks. "unit_cost"), eller "_deleted" for sletting
             old_value: Gammel verdi (konverteres til str)
             new_value: Ny verdi (konverteres til str)
             source: Hvor kom endringen fra ("web_form" eller "import")
@@ -305,7 +347,7 @@ class DataRepo:
         self.conn.execute(
             """INSERT INTO change_log (user, source, table_name, record_key, field_name, old_value, new_value)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (user, source, table_name, record_key, field_name,
+            (user, source, table_name, str(record_key), field_name,
              str(old_value) if old_value is not None else None,
              str(new_value) if new_value is not None else None),
         )
@@ -336,7 +378,7 @@ class DataRepo:
                 user,
                 source,
                 c["table_name"],
-                c["record_key"],
+                str(c["record_key"]),
                 c["field_name"],
                 str(c["old_value"]) if c.get("old_value") is not None else None,
                 str(c["new_value"]) if c.get("new_value") is not None else None,
@@ -392,292 +434,861 @@ class DataRepo:
 
     # ── CRUD-hjelpere ────────────────────────────────────────────
 
-    def upsert_products(self, products: list[dict], source: str = "web_form"):
-        """Oppdater eller sett inn produkter. Logger endringer."""
+    def upsert_products(self, products: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn produkter. Logger endringer.
+        
+        Args:
+            products: Liste med dicts. Hver dict kan ha 'id' (for UPDATE) eller ikke (for CREATE).
+            source: Kilden for endringen
+
+        Returns:
+            Liste med id-er for de innsatte/oppdaterte radene
+        """
+        result_ids = []
         for p in products:
-            key = p.get("item_no", "")
-            existing = self.conn.execute(
-                "SELECT * FROM products WHERE item_no = ?", (key,)
-            ).fetchone()
-
-            if existing:
-                # Sammenlign felt-for-felt og loggfør endringer
-                fields = {
-                    "description": (str, ""),
-                    "item_type": (str, ""),
-                    "product_group": (str, ""),
-                    "base_uom": (str, ""),
-                }
-                for field, (ftype, default) in fields.items():
-                    old = existing[field]
-                    new = ftype(p.get(field, default))
-                    if old != new:
+            row_id = p.get("id")
+            if row_id:
+                # UPDATE: match på id
+                existing = self.conn.execute(
+                    "SELECT * FROM products WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    fields = {
+                        "description": (str, ""),
+                        "item_type": (str, ""),
+                        "product_group": (str, ""),
+                        "base_uom": (str, ""),
+                    }
+                    # Også sjekk item_no (kan endres, men UNIQUE constraint sørger for integritet)
+                    item_no_change = False
+                    new_item_no = str(p.get("item_no", ""))
+                    if new_item_no and new_item_no != existing["item_no"]:
                         self.log_change(
-                            "products", key, field, old, new,
-                            source=source,
+                            "products", str(row_id), "item_no",
+                            existing["item_no"], new_item_no, source=source,
                         )
+                        item_no_change = True
 
-            # Upsert: INSERT OR REPLACE
-            self.conn.execute(
-                """INSERT OR REPLACE INTO products
-                   (item_no, description, item_type, product_group, base_uom)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (
-                    p.get("item_no", ""),
-                    p.get("description", ""),
-                    p.get("item_type", ""),
-                    p.get("product_group", ""),
-                    p.get("base_uom", ""),
-                ),
-            )
-        self.conn.commit()
+                    for field, (ftype, default) in fields.items():
+                        old = existing[field]
+                        new = ftype(p.get(field, default))
+                        if old != new:
+                            self.log_change(
+                                "products", str(row_id), field, old, new,
+                                source=source,
+                            )
 
-    def upsert_work_centers(self, wcs: list[dict], source: str = "web_form"):
-        """Oppdater eller sett inn arbeidssentre. Logger endringer."""
-        for wc in wcs:
-            key = wc.get("code", "")
-            existing = self.conn.execute(
-                "SELECT * FROM work_centers WHERE code = ?", (key,)
-            ).fetchone()
-
-            if existing:
-                fields = {
-                    "description": (str, ""),
-                    "location_code": (str, ""),
-                    "labor_cost_hour": (float, 0),
-                    "machine_cost_hour": (float, 0),
-                    "overhead_cost_hour": (float, 0),
-                    "capacity_hours_day": (float, 0),
-                    "effective_capacity_pct": (float, 100),
-                }
-                for field, (ftype, default) in fields.items():
-                    old = existing[field]
-                    new = ftype(wc.get(field, default))
-                    if old != new:
-                        self.log_change(
-                            "work_centers", key, field, old, new,
-                            source=source,
-                        )
-
-            self.conn.execute(
-                """INSERT OR REPLACE INTO work_centers
-                   (code, description, location_code, labor_cost_hour, machine_cost_hour,
-                    overhead_cost_hour, capacity_hours_day, effective_capacity_pct)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    wc.get("code", ""),
-                    wc.get("description", ""),
-                    wc.get("location_code", ""),
-                    float(wc.get("labor_cost_hour", 0)),
-                    float(wc.get("machine_cost_hour", 0)),
-                    float(wc.get("overhead_cost_hour", 0)),
-                    float(wc.get("capacity_hours_day", 0)),
-                    float(wc.get("effective_capacity_pct", 100)),
-                ),
-            )
-        self.conn.commit()
-
-    def upsert_item_costs(self, costs: list[dict], source: str = "web_form"):
-        """Oppdater eller sett inn kostpriser. Logger endringer."""
-        for c in costs:
-            key = f"{c.get('item_no', '')}:{c.get('cost_type', 'Standard Cost')}"
-            existing = self.conn.execute(
-                """SELECT * FROM item_costs
-                   WHERE item_no = ? AND cost_type = ?""",
-                (c.get("item_no", ""), c.get("cost_type", "Standard Cost")),
-            ).fetchone()
-
-            if existing:
-                old = existing["unit_cost"]
-                new = float(c.get("unit_cost", 0))
-                if abs(old - new) > 0.001:
-                    self.log_change(
-                        "item_costs", c.get("item_no", ""),
-                        "unit_cost", old, new, source=source,
+                    self.conn.execute(
+                        """UPDATE products SET
+                           item_no = ?, description = ?, item_type = ?,
+                           product_group = ?, base_uom = ?
+                           WHERE id = ?""",
+                        (
+                            p.get("item_no", existing["item_no"]),
+                            p.get("description", ""),
+                            p.get("item_type", ""),
+                            p.get("product_group", ""),
+                            p.get("base_uom", ""),
+                            row_id,
+                        ),
                     )
-
-            self.conn.execute(
-                """INSERT OR REPLACE INTO item_costs
-                   (item_no, cost_type, unit_cost, currency, effective_date)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (
-                    c.get("item_no", ""),
-                    c.get("cost_type", "Standard Cost"),
-                    float(c.get("unit_cost", 0)),
-                    c.get("currency", "NOK"),
-                    c.get("effective_date"),
-                ),
-            )
-        self.conn.commit()
-
-    def upsert_bom_lines(self, lines: list[dict], source: str = "web_form"):
-        """Oppdater eller sett inn BOM-linjer. Logger endringer."""
-        for bl in lines:
-            parent = bl.get("parent_item_no", "")
-            component = bl.get("component_item_no", "")
-            key = f"{parent}:{component}"
-            existing = self.conn.execute(
-                """SELECT * FROM bom_lines
-                   WHERE parent_item_no = ? AND component_item_no = ?""",
-                (parent, component),
-            ).fetchone()
-
-            if existing:
-                for field in ("quantity_per", "scrap_pct", "co_product_pct"):
-                    old = existing[field]
-                    new = float(bl.get(field, 0))
-                    if abs(old - new) > 0.001:
-                        self.log_change(
-                            "bom_lines", key, field, old, new, source=source,
-                        )
+                    result_ids.append(row_id)
+                else:
+                    # id oppgitt men finnes ikke → INSERT
+                    result_ids.append(self._insert_product(p, source))
             else:
-                # Ny rad
-                self.log_change(
-                    "bom_lines", key, "_created", None, component, source=source,
-                )
-
-            self.conn.execute(
-                """INSERT OR REPLACE INTO bom_lines
-                   (parent_item_no, component_item_no, quantity_per, uom,
-                    scrap_pct, co_product_pct, co_product_item_no)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    parent, component,
-                    float(bl.get("quantity_per", 1)),
-                    bl.get("uom", ""),
-                    float(bl.get("scrap_pct", 0)),
-                    float(bl.get("co_product_pct", 0)),
-                    bl.get("co_product_item_no", ""),
-                ),
-            )
+                # CREATE: ny rad
+                result_ids.append(self._insert_product(p, source))
         self.conn.commit()
+        return result_ids
 
-    def upsert_routing_lines(self, lines: list[dict], source: str = "web_form"):
-        """Oppdater eller sett inn routing-linjer. Logger endringer."""
-        for rl in lines:
-            item = rl.get("item_no", "")
-            op_no = int(rl.get("operation_no", 0))
-            wc = rl.get("work_center_code", "")
-            key = f"{item}:{op_no}:{wc}"
-            existing = self.conn.execute(
-                """SELECT * FROM routing_lines
-                   WHERE item_no = ? AND operation_no = ? AND work_center_code = ?""",
-                (item, op_no, wc),
-            ).fetchone()
+    def _insert_product(self, p: dict, source: str) -> int:
+        """INSERT en ny product-rad og returner id."""
+        cur = self.conn.execute(
+            """INSERT INTO products (item_no, description, item_type, product_group, base_uom)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(item_no) DO UPDATE SET
+                   description = excluded.description,
+                   item_type = excluded.item_type,
+                   product_group = excluded.product_group,
+                   base_uom = excluded.base_uom
+               RETURNING id""",
+            (
+                p.get("item_no", ""),
+                p.get("description", ""),
+                p.get("item_type", ""),
+                p.get("product_group", ""),
+                p.get("base_uom", ""),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        # Logg opprettelse
+        self.log_change(
+            "products", str(new_id), "_created", None,
+            f"{p.get('item_no', '')}: {p.get('description', '')}",
+            source=source,
+        )
+        return new_id
 
-            if existing:
-                for field in ("run_time_minutes", "setup_time_minutes", "batch_size"):
-                    old = existing[field]
-                    new = float(rl.get(field, 0))
-                    if abs(old - new) > 0.001:
-                        self.log_change(
-                            "routing_lines", key, field, old, new, source=source,
-                        )
-            else:
-                self.log_change(
-                    "routing_lines", key, "_created", None, item, source=source,
-                )
-
-            self.conn.execute(
-                """INSERT OR REPLACE INTO routing_lines
-                   (item_no, operation_no, operation_code, work_center_code,
-                    setup_time_minutes, run_time_minutes, batch_size,
-                    changeover_time_minutes)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    item, op_no,
-                    rl.get("operation_code", ""),
-                    wc,
-                    float(rl.get("setup_time_minutes", 0)),
-                    float(rl.get("run_time_minutes", 0)),
-                    float(rl.get("batch_size", 1)),
-                    float(rl.get("changeover_time_minutes", 0)),
-                ),
+    def delete_product(self, product_id: int, source: str = "web_form"):
+        """Slett et produkt. Logger full rad i change_log for reversering."""
+        existing = self.conn.execute(
+            "SELECT * FROM products WHERE id = ?", (product_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "products", str(product_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
             )
-        self.conn.commit()
+            self.conn.execute("DELETE FROM products WHERE id = ?", (product_id,))
+            self.conn.commit()
 
-    # ── Bulk-oppdatering (for enkelthets skyld) ──────────────────
+    # ── Locations ─────────────────────────────────────────────────
 
-    def upsert_locations(self, locations: list[dict], source: str = "web_form"):
-        """Erstatt alle locations (enkel import)."""
+    def upsert_locations(self, locations: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn lokasjoner."""
+        result_ids = []
         for loc in locations:
-            self.conn.execute(
-                """INSERT OR REPLACE INTO locations
-                   (code, name, location_type)
-                   VALUES (?, ?, ?)""",
-                (
-                    loc.get("code", ""),
-                    loc.get("name", ""),
-                    loc.get("location_type", ""),
-                ),
-            )
+            row_id = loc.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM locations WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    self._log_location_changes(existing, loc, row_id, source)
+                    self.conn.execute(
+                        """UPDATE locations SET code = ?, name = ?, location_type = ?
+                           WHERE id = ?""",
+                        (loc.get("code", existing["code"]),
+                         loc.get("name", ""),
+                         loc.get("location_type", ""),
+                         row_id),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_location(loc, source))
+            else:
+                result_ids.append(self._insert_location(loc, source))
         self.conn.commit()
+        return result_ids
 
-    def upsert_operations(self, operations: list[dict], source: str = "web_form"):
-        """Erstatt alle operations (enkel import)."""
+    def _log_location_changes(self, existing, loc: dict, row_id: int, source: str):
+        fields = {
+            "code": (str, ""),
+            "name": (str, ""),
+            "location_type": (str, ""),
+        }
+        for field, (ftype, default) in fields.items():
+            old = existing[field]
+            new = ftype(loc.get(field, default))
+            if old != new:
+                self.log_change(
+                    "locations", str(row_id), field, old, new, source=source,
+                )
+
+    def _insert_location(self, loc: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO locations (code, name, location_type)
+               VALUES (?, ?, ?)
+               ON CONFLICT(code) DO UPDATE SET
+                   name = excluded.name,
+                   location_type = excluded.location_type
+               RETURNING id""",
+            (loc.get("code", ""), loc.get("name", ""), loc.get("location_type", "")),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("locations", str(new_id), "_created", None,
+                        loc.get("code", ""), source=source)
+        return new_id
+
+    def delete_location(self, location_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM locations WHERE id = ?", (location_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "locations", str(location_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM locations WHERE id = ?", (location_id,))
+            self.conn.commit()
+
+    # ── Work Centers ──────────────────────────────────────────────
+
+    def upsert_work_centers(self, wcs: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn arbeidssentre. Logger endringer."""
+        result_ids = []
+        for wc in wcs:
+            row_id = wc.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM work_centers WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    fields = {
+                        "description": (str, ""),
+                        "location_code": (str, ""),
+                        "labor_cost_hour": (float, 0),
+                        "machine_cost_hour": (float, 0),
+                        "overhead_cost_hour": (float, 0),
+                        "capacity_hours_day": (float, 0),
+                        "effective_capacity_pct": (float, 100),
+                    }
+                    for field, (ftype, default) in fields.items():
+                        old = existing[field]
+                        new = ftype(wc.get(field, default))
+                        if old != new:
+                            self.log_change(
+                                "work_centers", str(row_id), field, old, new,
+                                source=source,
+                            )
+                    self.conn.execute(
+                        """UPDATE work_centers SET
+                           code = ?, description = ?, location_code = ?,
+                           labor_cost_hour = ?, machine_cost_hour = ?,
+                           overhead_cost_hour = ?, capacity_hours_day = ?,
+                           effective_capacity_pct = ?
+                           WHERE id = ?""",
+                        (
+                            wc.get("code", existing["code"]),
+                            wc.get("description", ""),
+                            wc.get("location_code", ""),
+                            float(wc.get("labor_cost_hour", 0)),
+                            float(wc.get("machine_cost_hour", 0)),
+                            float(wc.get("overhead_cost_hour", 0)),
+                            float(wc.get("capacity_hours_day", 0)),
+                            float(wc.get("effective_capacity_pct", 100)),
+                            row_id,
+                        ),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_work_center(wc, source))
+            else:
+                result_ids.append(self._insert_work_center(wc, source))
+        self.conn.commit()
+        return result_ids
+
+    def _insert_work_center(self, wc: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO work_centers
+               (code, description, location_code, labor_cost_hour, machine_cost_hour,
+                overhead_cost_hour, capacity_hours_day, effective_capacity_pct)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(code) DO UPDATE SET
+                   description = excluded.description, location_code = excluded.location_code,
+                   labor_cost_hour = excluded.labor_cost_hour,
+                   machine_cost_hour = excluded.machine_cost_hour,
+                   overhead_cost_hour = excluded.overhead_cost_hour,
+                   capacity_hours_day = excluded.capacity_hours_day,
+                   effective_capacity_pct = excluded.effective_capacity_pct
+               RETURNING id""",
+            (
+                wc.get("code", ""),
+                wc.get("description", ""),
+                wc.get("location_code", ""),
+                float(wc.get("labor_cost_hour", 0)),
+                float(wc.get("machine_cost_hour", 0)),
+                float(wc.get("overhead_cost_hour", 0)),
+                float(wc.get("capacity_hours_day", 0)),
+                float(wc.get("effective_capacity_pct", 100)),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("work_centers", str(new_id), "_created", None,
+                        wc.get("code", ""), source=source)
+        return new_id
+
+    def delete_work_center(self, wc_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM work_centers WHERE id = ?", (wc_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "work_centers", str(wc_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM work_centers WHERE id = ?", (wc_id,))
+            self.conn.commit()
+
+    # ── Operations ────────────────────────────────────────────────
+
+    def upsert_operations(self, operations: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn operasjoner."""
+        result_ids = []
         for op in operations:
-            self.conn.execute(
-                """INSERT OR REPLACE INTO operations
-                   (code, description, default_work_center, standard_unit)
-                   VALUES (?, ?, ?, ?)""",
-                (
-                    op.get("code", ""),
-                    op.get("description", ""),
-                    op.get("default_work_center", ""),
-                    op.get("standard_unit", "Minutes"),
-                ),
-            )
+            row_id = op.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM operations WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    fields = {
+                        "description": (str, ""),
+                        "default_work_center": (str, ""),
+                        "standard_unit": (str, "Minutes"),
+                    }
+                    for field, (ftype, default) in fields.items():
+                        old = existing[field]
+                        new = ftype(op.get(field, default))
+                        if old != new:
+                            self.log_change(
+                                "operations", str(row_id), field, old, new,
+                                source=source,
+                            )
+                    self.conn.execute(
+                        """UPDATE operations SET
+                           code = ?, description = ?, default_work_center = ?, standard_unit = ?
+                           WHERE id = ?""",
+                        (op.get("code", existing["code"]),
+                         op.get("description", ""),
+                         op.get("default_work_center", ""),
+                         op.get("standard_unit", "Minutes"),
+                         row_id),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_operation(op, source))
+            else:
+                result_ids.append(self._insert_operation(op, source))
         self.conn.commit()
+        return result_ids
 
-    def upsert_byproduct_rules(self, rules: list[dict], source: str = "web_form"):
-        """Erstatt alle byproduct rules (enkel import)."""
+    def _insert_operation(self, op: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO operations (code, description, default_work_center, standard_unit)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(code) DO UPDATE SET
+                   description = excluded.description,
+                   default_work_center = excluded.default_work_center,
+                   standard_unit = excluded.standard_unit
+               RETURNING id""",
+            (op.get("code", ""), op.get("description", ""),
+             op.get("default_work_center", ""), op.get("standard_unit", "Minutes")),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("operations", str(new_id), "_created", None,
+                        op.get("code", ""), source=source)
+        return new_id
+
+    def delete_operation(self, op_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM operations WHERE id = ?", (op_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "operations", str(op_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM operations WHERE id = ?", (op_id,))
+            self.conn.commit()
+
+    # ── Item Costs ────────────────────────────────────────────────
+
+    def upsert_item_costs(self, costs: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn kostpriser. Logger endringer."""
+        result_ids = []
+        for c in costs:
+            row_id = c.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM item_costs WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    old_unit_cost = existing["unit_cost"]
+                    new_unit_cost = float(c.get("unit_cost", 0))
+                    if abs(old_unit_cost - new_unit_cost) > 0.001:
+                        self.log_change(
+                            "item_costs", str(row_id),
+                            "unit_cost", old_unit_cost, new_unit_cost,
+                            source=source,
+                        )
+                    self.conn.execute(
+                        """UPDATE item_costs SET
+                           item_no = ?, cost_type = ?, unit_cost = ?,
+                           currency = ?, effective_date = ?
+                           WHERE id = ?""",
+                        (
+                            c.get("item_no", existing["item_no"]),
+                            c.get("cost_type", existing["cost_type"]),
+                            new_unit_cost,
+                            c.get("currency", "NOK"),
+                            c.get("effective_date"),
+                            row_id,
+                        ),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_item_cost(c, source))
+            else:
+                result_ids.append(self._insert_item_cost(c, source))
+        self.conn.commit()
+        return result_ids
+
+    def _insert_item_cost(self, c: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO item_costs (item_no, cost_type, unit_cost, currency, effective_date)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(item_no, cost_type) DO UPDATE SET
+                   unit_cost = excluded.unit_cost,
+                   currency = excluded.currency,
+                   effective_date = excluded.effective_date
+               RETURNING id""",
+            (
+                c.get("item_no", ""),
+                c.get("cost_type", "Standard Cost"),
+                float(c.get("unit_cost", 0)),
+                c.get("currency", "NOK"),
+                c.get("effective_date"),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("item_costs", str(new_id), "_created", None,
+                        f"{c.get('item_no', '')}: {c.get('cost_type', '')}",
+                        source=source)
+        return new_id
+
+    def delete_item_cost(self, cost_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM item_costs WHERE id = ?", (cost_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "item_costs", str(cost_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM item_costs WHERE id = ?", (cost_id,))
+            self.conn.commit()
+
+    # ── BOM Lines ─────────────────────────────────────────────────
+
+    def upsert_bom_lines(self, lines: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn BOM-linjer. Logger endringer."""
+        result_ids = []
+        for bl in lines:
+            row_id = bl.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM bom_lines WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    for field in ("quantity_per", "scrap_pct", "co_product_pct"):
+                        old = existing[field]
+                        new = float(bl.get(field, 0))
+                        if abs(old - new) > 0.001:
+                            self.log_change(
+                                "bom_lines", str(row_id), field, old, new,
+                                source=source,
+                            )
+                    self.conn.execute(
+                        """UPDATE bom_lines SET
+                           parent_item_no = ?, component_item_no = ?,
+                           quantity_per = ?, uom = ?, scrap_pct = ?,
+                           co_product_pct = ?, co_product_item_no = ?
+                           WHERE id = ?""",
+                        (
+                            bl.get("parent_item_no", existing["parent_item_no"]),
+                            bl.get("component_item_no", existing["component_item_no"]),
+                            float(bl.get("quantity_per", 1)),
+                            bl.get("uom", ""),
+                            float(bl.get("scrap_pct", 0)),
+                            float(bl.get("co_product_pct", 0)),
+                            bl.get("co_product_item_no", ""),
+                            row_id,
+                        ),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_bom_line(bl, source))
+            else:
+                result_ids.append(self._insert_bom_line(bl, source))
+        self.conn.commit()
+        return result_ids
+
+    def _insert_bom_line(self, bl: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO bom_lines
+               (parent_item_no, component_item_no, quantity_per, uom,
+                scrap_pct, co_product_pct, co_product_item_no)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(parent_item_no, component_item_no) DO UPDATE SET
+                   quantity_per = excluded.quantity_per, uom = excluded.uom,
+                   scrap_pct = excluded.scrap_pct, co_product_pct = excluded.co_product_pct,
+                   co_product_item_no = excluded.co_product_item_no
+               RETURNING id""",
+            (
+                bl.get("parent_item_no", ""),
+                bl.get("component_item_no", ""),
+                float(bl.get("quantity_per", 1)),
+                bl.get("uom", ""),
+                float(bl.get("scrap_pct", 0)),
+                float(bl.get("co_product_pct", 0)),
+                bl.get("co_product_item_no", ""),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("bom_lines", str(new_id), "_created", None,
+                        f"{bl.get('parent_item_no', '')}:{bl.get('component_item_no', '')}",
+                        source=source)
+        return new_id
+
+    def delete_bom_line(self, bom_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM bom_lines WHERE id = ?", (bom_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "bom_lines", str(bom_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM bom_lines WHERE id = ?", (bom_id,))
+            self.conn.commit()
+
+    # ── Routing Lines ─────────────────────────────────────────────
+
+    def upsert_routing_lines(self, lines: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn routing-linjer. Logger endringer."""
+        result_ids = []
+        for rl in lines:
+            row_id = rl.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM routing_lines WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    for field in ("run_time_minutes", "setup_time_minutes", "batch_size", "changeover_time_minutes"):
+                        old = existing[field]
+                        new = float(rl.get(field, 0))
+                        if abs(old - new) > 0.001:
+                            self.log_change(
+                                "routing_lines", str(row_id), field, old, new,
+                                source=source,
+                            )
+                    self.conn.execute(
+                        """UPDATE routing_lines SET
+                           item_no = ?, operation_no = ?, operation_code = ?,
+                           work_center_code = ?, setup_time_minutes = ?,
+                           run_time_minutes = ?, batch_size = ?, changeover_time_minutes = ?
+                           WHERE id = ?""",
+                        (
+                            rl.get("item_no", existing["item_no"]),
+                            int(rl.get("operation_no", 0)),
+                            rl.get("operation_code", ""),
+                            rl.get("work_center_code", ""),
+                            float(rl.get("setup_time_minutes", 0)),
+                            float(rl.get("run_time_minutes", 0)),
+                            float(rl.get("batch_size", 1)),
+                            float(rl.get("changeover_time_minutes", 0)),
+                            row_id,
+                        ),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_routing_line(rl, source))
+            else:
+                result_ids.append(self._insert_routing_line(rl, source))
+        self.conn.commit()
+        return result_ids
+
+    def _insert_routing_line(self, rl: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO routing_lines
+               (item_no, operation_no, operation_code, work_center_code,
+                setup_time_minutes, run_time_minutes, batch_size,
+                changeover_time_minutes)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(item_no, operation_no, work_center_code) DO UPDATE SET
+                   operation_code = excluded.operation_code,
+                   setup_time_minutes = excluded.setup_time_minutes,
+                   run_time_minutes = excluded.run_time_minutes,
+                   batch_size = excluded.batch_size,
+                   changeover_time_minutes = excluded.changeover_time_minutes
+               RETURNING id""",
+            (
+                rl.get("item_no", ""),
+                int(rl.get("operation_no", 0)),
+                rl.get("operation_code", ""),
+                rl.get("work_center_code", ""),
+                float(rl.get("setup_time_minutes", 0)),
+                float(rl.get("run_time_minutes", 0)),
+                float(rl.get("batch_size", 1)),
+                float(rl.get("changeover_time_minutes", 0)),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("routing_lines", str(new_id), "_created", None,
+                        f"{rl.get('item_no', '')}:{rl.get('operation_no', 0)}",
+                        source=source)
+        return new_id
+
+    def delete_routing_line(self, routing_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM routing_lines WHERE id = ?", (routing_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "routing_lines", str(routing_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM routing_lines WHERE id = ?", (routing_id,))
+            self.conn.commit()
+
+    # ── By Product Rules ──────────────────────────────────────────
+
+    def upsert_byproduct_rules(self, rules: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn byproduct rules."""
+        result_ids = []
         for r in rules:
-            self.conn.execute(
-                """INSERT OR REPLACE INTO byproduct_rules
-                   (parent_item_no, by_product_item_no, expected_quantity, uom,
-                    market_value, allocation_method)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (
-                    r.get("parent_item_no", ""),
-                    r.get("by_product_item_no", ""),
-                    float(r.get("expected_quantity", 0)),
-                    r.get("uom", ""),
-                    float(r.get("market_value", 0)),
-                    r.get("allocation_method", "Reduce Main Product Cost"),
-                ),
-            )
+            row_id = r.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM byproduct_rules WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    fields = {
+                        "expected_quantity": (float, 0),
+                        "market_value": (float, 0),
+                        "allocation_method": (str, "Reduce Main Product Cost"),
+                        "uom": (str, ""),
+                    }
+                    for field, (ftype, default) in fields.items():
+                        old = existing[field]
+                        new = ftype(r.get(field, default))
+                        if old != new:
+                            self.log_change(
+                                "byproduct_rules", str(row_id), field, old, new,
+                                source=source,
+                            )
+                    self.conn.execute(
+                        """UPDATE byproduct_rules SET
+                           parent_item_no = ?, by_product_item_no = ?,
+                           expected_quantity = ?, uom = ?,
+                           market_value = ?, allocation_method = ?
+                           WHERE id = ?""",
+                        (
+                            r.get("parent_item_no", existing["parent_item_no"]),
+                            r.get("by_product_item_no", existing["by_product_item_no"]),
+                            float(r.get("expected_quantity", 0)),
+                            r.get("uom", ""),
+                            float(r.get("market_value", 0)),
+                            r.get("allocation_method", "Reduce Main Product Cost"),
+                            row_id,
+                        ),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_byproduct_rule(r, source))
+            else:
+                result_ids.append(self._insert_byproduct_rule(r, source))
         self.conn.commit()
+        return result_ids
 
-    def upsert_capacity_days(self, days: list[dict], source: str = "web_form"):
-        """Erstatt alle capacity days (enkel import)."""
+    def _insert_byproduct_rule(self, r: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO byproduct_rules
+               (parent_item_no, by_product_item_no, expected_quantity, uom,
+                market_value, allocation_method)
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON CONFLICT(parent_item_no, by_product_item_no) DO UPDATE SET
+                   expected_quantity = excluded.expected_quantity,
+                   uom = excluded.uom,
+                   market_value = excluded.market_value,
+                   allocation_method = excluded.allocation_method
+               RETURNING id""",
+            (
+                r.get("parent_item_no", ""),
+                r.get("by_product_item_no", ""),
+                float(r.get("expected_quantity", 0)),
+                r.get("uom", ""),
+                float(r.get("market_value", 0)),
+                r.get("allocation_method", "Reduce Main Product Cost"),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("byproduct_rules", str(new_id), "_created", None,
+                        f"{r.get('parent_item_no', '')}:{r.get('by_product_item_no', '')}",
+                        source=source)
+        return new_id
+
+    def delete_byproduct_rule(self, rule_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM byproduct_rules WHERE id = ?", (rule_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "byproduct_rules", str(rule_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM byproduct_rules WHERE id = ?", (rule_id,))
+            self.conn.commit()
+
+    # ── Capacity Days ─────────────────────────────────────────────
+
+    def upsert_capacity_days(self, days: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn capacity days."""
+        result_ids = []
         for d in days:
-            self.conn.execute(
-                """INSERT OR REPLACE INTO capacity_days
-                   (work_center, date, available_hours, planned_downtime)
-                   VALUES (?, ?, ?, ?)""",
-                (
-                    d.get("work_center", ""),
-                    d.get("date", ""),
-                    float(d.get("available_hours", 0)),
-                    float(d.get("planned_downtime", 0)),
-                ),
-            )
+            row_id = d.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM capacity_days WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    fields = {
+                        "available_hours": (float, 0),
+                        "planned_downtime": (float, 0),
+                    }
+                    for field, (ftype, default) in fields.items():
+                        old = existing[field]
+                        new = ftype(d.get(field, default))
+                        if old != new:
+                            self.log_change(
+                                "capacity_days", str(row_id), field, old, new,
+                                source=source,
+                            )
+                    self.conn.execute(
+                        """UPDATE capacity_days SET
+                           work_center = ?, date = ?,
+                           available_hours = ?, planned_downtime = ?
+                           WHERE id = ?""",
+                        (
+                            d.get("work_center", existing["work_center"]),
+                            d.get("date", existing["date"]),
+                            float(d.get("available_hours", 0)),
+                            float(d.get("planned_downtime", 0)),
+                            row_id,
+                        ),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_capacity_day(d, source))
+            else:
+                result_ids.append(self._insert_capacity_day(d, source))
         self.conn.commit()
+        return result_ids
 
-    def upsert_scenarios(self, scenarios: list[dict], source: str = "web_form"):
-        """Erstatt alle production scenarios (enkel import)."""
-        for sc in scenarios:
-            self.conn.execute(
-                """INSERT OR REPLACE INTO production_scenarios
-                   (scenario_name, product, planned_quantity)
-                   VALUES (?, ?, ?)""",
-                (
-                    sc.get("scenario_name", ""),
-                    sc.get("product", ""),
-                    float(sc.get("planned_quantity", 0)),
-                ),
+    def _insert_capacity_day(self, d: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO capacity_days (work_center, date, available_hours, planned_downtime)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(work_center, date) DO UPDATE SET
+                   available_hours = excluded.available_hours,
+                   planned_downtime = excluded.planned_downtime
+               RETURNING id""",
+            (
+                d.get("work_center", ""),
+                d.get("date", ""),
+                float(d.get("available_hours", 0)),
+                float(d.get("planned_downtime", 0)),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("capacity_days", str(new_id), "_created", None,
+                        f"{d.get('work_center', '')}:{d.get('date', '')}",
+                        source=source)
+        return new_id
+
+    def delete_capacity_day(self, capacity_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM capacity_days WHERE id = ?", (capacity_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "capacity_days", str(capacity_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
             )
+            self.conn.execute("DELETE FROM capacity_days WHERE id = ?", (capacity_id,))
+            self.conn.commit()
+
+    # ── Production Scenarios ──────────────────────────────────────
+
+    def upsert_scenarios(self, scenarios: list[dict], source: str = "web_form") -> list[int]:
+        """Oppdater eller sett inn production scenarios."""
+        result_ids = []
+        for sc in scenarios:
+            row_id = sc.get("id")
+            if row_id:
+                existing = self.conn.execute(
+                    "SELECT * FROM production_scenarios WHERE id = ?", (row_id,)
+                ).fetchone()
+                if existing:
+                    old_qty = existing["planned_quantity"]
+                    new_qty = float(sc.get("planned_quantity", 0))
+                    if abs(old_qty - new_qty) > 0.001:
+                        self.log_change(
+                            "production_scenarios", str(row_id),
+                            "planned_quantity", old_qty, new_qty,
+                            source=source,
+                        )
+                    self.conn.execute(
+                        """UPDATE production_scenarios SET
+                           scenario_name = ?, product = ?, planned_quantity = ?
+                           WHERE id = ?""",
+                        (
+                            sc.get("scenario_name", existing["scenario_name"]),
+                            sc.get("product", existing["product"]),
+                            new_qty,
+                            row_id,
+                        ),
+                    )
+                    result_ids.append(row_id)
+                else:
+                    result_ids.append(self._insert_scenario(sc, source))
+            else:
+                result_ids.append(self._insert_scenario(sc, source))
         self.conn.commit()
+        return result_ids
+
+    def _insert_scenario(self, sc: dict, source: str) -> int:
+        cur = self.conn.execute(
+            """INSERT INTO production_scenarios (scenario_name, product, planned_quantity)
+               VALUES (?, ?, ?)
+               ON CONFLICT(scenario_name, product) DO UPDATE SET
+                   planned_quantity = excluded.planned_quantity
+               RETURNING id""",
+            (
+                sc.get("scenario_name", ""),
+                sc.get("product", ""),
+                float(sc.get("planned_quantity", 0)),
+            ),
+        )
+        row = cur.fetchone()
+        new_id = row["id"] if row else 0
+        self.log_change("production_scenarios", str(new_id), "_created", None,
+                        f"{sc.get('scenario_name', '')}:{sc.get('product', '')}",
+                        source=source)
+        return new_id
+
+    def delete_scenario(self, scenario_id: int, source: str = "web_form"):
+        existing = self.conn.execute(
+            "SELECT * FROM production_scenarios WHERE id = ?", (scenario_id,)
+        ).fetchone()
+        if existing:
+            self.log_change(
+                "production_scenarios", str(scenario_id), "_deleted",
+                json.dumps(dict(existing), ensure_ascii=False), None,
+                source=source,
+            )
+            self.conn.execute("DELETE FROM production_scenarios WHERE id = ?", (scenario_id,))
+            self.conn.commit()
 
     # ── Tømming og tilbakestilling ──────────────────────────────
 
@@ -758,26 +1369,25 @@ class DataRepo:
             (filename, blob, comment, row_count),
         )
         self.conn.commit()
-        # cur.lastrowid kan være None på INSERT OR REPLACE, men vi har plain INSERT
         result = cur.lastrowid
         return result if result is not None else 0
 
     def export_all_data(self) -> dict[str, list[sqlite3.Row]]:
-        """Eksporter all data fra alle tabeller.
+        """Eksporter all data fra alle tabeller (inkluderer id).
         
         Returnerer dict med tabellnavn som nøkler.
         """
         tables = {
-            "products": "SELECT * FROM products ORDER BY item_no",
-            "locations": "SELECT * FROM locations ORDER BY code",
-            "work_centers": "SELECT * FROM work_centers ORDER BY code",
-            "operations": "SELECT * FROM operations ORDER BY code",
-            "item_costs": "SELECT * FROM item_costs ORDER BY item_no, cost_type",
-            "bom_lines": "SELECT * FROM bom_lines ORDER BY parent_item_no, component_item_no",
-            "routing_lines": "SELECT * FROM routing_lines ORDER BY item_no, operation_no",
-            "byproduct_rules": "SELECT * FROM byproduct_rules ORDER BY parent_item_no, by_product_item_no",
-            "capacity_days": "SELECT * FROM capacity_days ORDER BY work_center, date",
-            "production_scenarios": "SELECT * FROM production_scenarios ORDER BY scenario_name, product",
+            "products": "SELECT * FROM products ORDER BY id",
+            "locations": "SELECT * FROM locations ORDER BY id",
+            "work_centers": "SELECT * FROM work_centers ORDER BY id",
+            "operations": "SELECT * FROM operations ORDER BY id",
+            "item_costs": "SELECT * FROM item_costs ORDER BY id",
+            "bom_lines": "SELECT * FROM bom_lines ORDER BY id",
+            "routing_lines": "SELECT * FROM routing_lines ORDER BY id",
+            "byproduct_rules": "SELECT * FROM byproduct_rules ORDER BY id",
+            "capacity_days": "SELECT * FROM capacity_days ORDER BY id",
+            "production_scenarios": "SELECT * FROM production_scenarios ORDER BY id",
         }
         result = {}
         for name, query in tables.items():
@@ -814,7 +1424,7 @@ def main():
             print(f"   {table}: {count} rader")
 
     if args.clear:
-        confirm = input("[ADV] T\u00f8mme all data? (ja/nei): ")
+        confirm = input("[ADV] Tømme all data? (ja/nei): ")
         if confirm.lower() in ("ja", "yes", "y"):
             db.clear_all_data()
             print("[OK] All data slettet")
@@ -822,7 +1432,7 @@ def main():
             print("Avbrutt")
 
     if args.clear_log:
-        confirm = input("[ADV] T\u00f8mme endringsloggen? (ja/nei): ")
+        confirm = input("[ADV] Tømme endringsloggen? (ja/nei): ")
         if confirm.lower() in ("ja", "yes", "y"):
             db.clear_change_log()
             print("[OK] Endringslogg slettet")
