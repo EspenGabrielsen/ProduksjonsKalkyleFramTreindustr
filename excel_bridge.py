@@ -157,8 +157,36 @@ SHEET_TO_TABLE = {
     "Production Scenario": "production_scenarios",
 }
 
+# Mapping: Excel-arknavn → navn på delete-metode i DataRepo
+SHEET_TO_DELETE_METHOD = {
+    "Product Master": "delete_product",
+    "Locations": "delete_location",
+    "Work Centers": "delete_work_center",
+    "Operation Master": "delete_operation",
+    "Item Costs": "delete_item_cost",
+    "BOM": "delete_bom_line",
+    "Routing": "delete_routing_line",
+    "By Product Rules": "delete_byproduct_rule",
+    "Capacity Calendar": "delete_capacity_day",
+    "Production Scenario": "delete_scenario",
+}
+
 # Gyldige ACTION-verdier
 VALID_ACTIONS = {"CREATE", "UPDATE", "DELETE", ""}
+
+# Mapping: Excel-arknavn → (tabellnavn, nøkkelkolonne, sql_where) for DELETE uten Rad ID
+SHEET_DELETE_KEY = {
+    "Product Master": ("products", "Item No", "item_no = ?"),
+    "Locations": ("locations", "Location Code", "code = ?"),
+    "Work Centers": ("work_centers", "Work Center Code", "code = ?"),
+    "Operation Master": ("operations", "Operation Code", "code = ?"),
+    "Item Costs": ("item_costs", "Item No + Cost Type", "item_no = ? AND cost_type = ?"),
+    "BOM": ("bom_lines", "Parent Item No + Component Item No", "parent_item_no = ? AND component_item_no = ?"),
+    "Routing": ("routing_lines", "Item No + Operation No + Work Center", "item_no = ? AND operation_no = ? AND work_center_code = ?"),
+    "By Product Rules": ("byproduct_rules", "Parent + By Product", "parent_item_no = ? AND by_product_item_no = ?"),
+    "Capacity Calendar": ("capacity_days", "Work Center + Date", "work_center = ? AND date = ?"),
+    "Production Scenario": ("production_scenarios", "Scenario + Product", "scenario_name = ? AND product = ?"),
+}
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -592,20 +620,57 @@ def _deletions_from_action(rows: list[dict], sheet_name: str, db: DataRepo) -> i
     if not table_name:
         return 0
 
+    delete_method_name = SHEET_TO_DELETE_METHOD.get(sheet_name)
+    delete_key_info = SHEET_DELETE_KEY.get(sheet_name)
     delete_count = 0
     for row in rows:
         action = _get_action(row)
         if action != "DELETE":
             continue
+
         row_id = _i(row.get("Rad ID"))
+
+        # Hvis Rad ID mangler, slå opp id via naturlig nøkkel
+        if row_id is None and delete_key_info:
+            _tbl, _, _where = delete_key_info
+            # Bygg WHERE-parametere basert på sheet-type
+            if sheet_name == "Product Master":
+                params = (_s(row.get("Item No", "")),)
+            elif sheet_name in ("Locations", "Work Centers", "Operation Master"):
+                col = "Location Code" if sheet_name == "Locations" else ("Work Center Code" if sheet_name == "Work Centers" else "Operation Code")
+                params = (_s(row.get(col, "")),)
+            elif sheet_name == "Item Costs":
+                params = (_s(row.get("Item No", "")), _s(row.get("Cost Type", "Standard Cost")))
+            elif sheet_name == "BOM":
+                params = (_s(row.get("Parent Item No", "")), _s(row.get("Component Item No", "")))
+            elif sheet_name == "Routing":
+                params = (_s(row.get("Item No", "")), int(_f(row.get("Operation No", 0))), _s(row.get("Work Center Code", "")))
+            elif sheet_name == "By Product Rules":
+                params = (_s(row.get("Parent Item No", "")), _s(row.get("By Product Item No", "")))
+            elif sheet_name == "Capacity Calendar":
+                params = (_s(row.get("Work Center", "")), _s(row.get("Date", "")))
+            elif sheet_name == "Production Scenario":
+                params = (_s(row.get("Scenario Name", "")), _s(row.get("Product", "")))
+            else:
+                params = ()
+
+            if params and params[0]:
+                existing = db.conn.execute(
+                    f"SELECT id FROM {_tbl} WHERE {_where}",
+                    params,
+                ).fetchone()
+                if existing:
+                    row_id = existing["id"]
+
         if row_id is None:
             continue
 
         # Kall riktig delete-metode basert på tabell
-        delete_method = getattr(db, f"delete_{table_name}", None)
-        if delete_method:
-            delete_method(row_id, source="import")
-            delete_count += 1
+        if delete_method_name:
+            delete_method = getattr(db, delete_method_name, None)
+            if delete_method:
+                delete_method(row_id, source="import")
+                delete_count += 1
 
     return delete_count
 
@@ -630,8 +695,18 @@ def _import_products(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         if not item_no:
             continue
 
+        # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM products WHERE item_no = ?",
+                (item_no,),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+
         entry = {
-            "id": _i(row.get("Rad ID")),
+            "id": row_id,
             "item_no": item_no,
             "description": _s(row.get("Description", "")),
             "item_type": _s(row.get("Item Type", "")),
@@ -658,8 +733,19 @@ def _import_locations(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         code = _s(row.get("Location Code", ""))
         if not code:
             continue
+
+        # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM locations WHERE code = ?",
+                (code,),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+
         loc_list.append({
-            "id": _i(row.get("Rad ID")),
+            "id": row_id,
             "code": code,
             "name": _s(row.get("Location Name", "")),
             "location_type": _s(row.get("Location Type", "")),
@@ -682,8 +768,19 @@ def _import_work_centers(db: DataRepo, rows: list[dict], sheet_name: str) -> int
         code = _s(row.get("Work Center Code", ""))
         if not code:
             continue
+
+        # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM work_centers WHERE code = ?",
+                (code,),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+
         wc_list.append({
-            "id": _i(row.get("Rad ID")),
+            "id": row_id,
             "code": code,
             "description": _s(row.get("Description", "")),
             "location_code": _s(row.get("Location Code", "")),
@@ -711,8 +808,19 @@ def _import_operations(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         code = _s(row.get("Operation Code", ""))
         if not code:
             continue
+
+        # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM operations WHERE code = ?",
+                (code,),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+
         op_list.append({
-            "id": _i(row.get("Rad ID")),
+            "id": row_id,
             "code": code,
             "description": _s(row.get("Description", "")),
             "default_work_center": _s(row.get("Default Work Center", "")),

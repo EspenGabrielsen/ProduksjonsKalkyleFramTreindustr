@@ -215,60 +215,101 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
 def _(mo):
     excel_import_file = mo.ui.file(label="📄 Velg Excel-fil", filetypes=[".xlsx"], multiple=False)
     excel_import_kommentar = mo.ui.text(
-        label="Hva er endret? (valgfri kommentar)",
-        placeholder="f.eks. 'Oppdaterte råvarepriser Q3' eller 'Ny BOM for Panel'",
+        label="Hva er endret? (obligatorisk kommentar)",
+        placeholder="Beskriv hva som er endret i denne versjonen",
     )
-    return excel_import_file, excel_import_kommentar
+    excel_validate_button = mo.ui.run_button(label="🔍 Valider Excel-fil")
+    excel_import_button = mo.ui.run_button(label="⬆️ Importer til database")
+    return excel_import_file, excel_import_button, excel_import_kommentar, excel_validate_button
 
 
 @app.cell
 def _(
-    excel_import_file, excel_import_kommentar, import_excel_to_sqlite, mo, os,
+    excel_import_button, excel_import_file, excel_import_kommentar,
+    excel_validate_button, import_excel_to_sqlite, mo, os,
     overrides, set_reload, tempfile, validate_excel,
 ):
-    if excel_import_file.value and excel_import_kommentar.value.strip():
+    _validation_result = None
+    _has_file = bool(excel_import_file.value)
+    _has_comment = bool(excel_import_kommentar.value.strip()) if excel_import_kommentar.value else False
+
+    # Hent opplastet fil
+    _upload = excel_import_file.value[0] if _has_file else None
+    _fcontent = _upload.contents if _upload else None
+    _filename = _upload.name if _upload else ""
+    _temp_path = None
+
+    if _has_file and _fcontent:
+        _temp_dir = tempfile.mkdtemp()
+        _temp_path = os.path.join(_temp_dir, _filename)
+        with open(_temp_path, "wb") as _f:
+            _f.write(_fcontent)
+
+    # Valider når validate-knappen er trykket
+    if excel_validate_button.value and _has_file:
+        _validation_result = validate_excel(_temp_path)
+    # Valider også automatisk hvis import-knappen trykkes (sikkerhetssjekk)
+    if excel_import_button.value and _has_file and _has_comment and _validation_result is None:
+        _validation_result = validate_excel(_temp_path)
+
+    # Importer når import-knappen er trykket, validering OK, og kommentar finnes
+    _import_output = None
+    if excel_import_button.value and _has_file and _has_comment:
         try:
-            _upload = excel_import_file.value[0]
-            _fcontent = _upload.contents
-            _comment = excel_import_kommentar.value.strip()
-            _temp_dir = tempfile.mkdtemp()
-            _temp_path = os.path.join(_temp_dir, _upload.name)
-            with open(_temp_path, "wb") as _f:
-                _f.write(_fcontent)
-            _validation = validate_excel(_temp_path)
-            _outputs = [mo.md(f"### Kontroll av '{_upload.name}'")]
-            if _validation["stats"]:
-                _stat_rows = [f"  - {_sheet}: {_count} rader" for _sheet, _count in _validation["stats"].items()]
-                _outputs.append(mo.md("**Antall rader:**\n" + "\n".join(_stat_rows)))
-            if _validation["diff"]["nye_rader"] > 0:
-                _outputs.append(mo.md(f"**Nye produkter:** {_validation['diff']['nye_rader']}"))
-            if _validation["diff"]["slettede_rader"] > 0:
-                _outputs.append(mo.md(f"**Fjernede produkter:** {_validation['diff']['slettede_rader']}"))
-            if not _validation["valid"]:
-                _feil_txt = "\n".join(f"  - {e}" for e in _validation["errors"])
-                _outputs.append(mo.md(f"### ❌ Kontrollen fant feil! Ingenting er importert.\n\n{_feil_txt}"))
+            # Kjør validering hvis ikke allerede gjort
+            if _validation_result is None:
+                _validation_result = validate_excel(_temp_path)
+            if _validation_result and not _validation_result["valid"]:
+                _import_output = mo.md("### ❌ Validering mislyktes — ingenting er importert.")
             else:
-                if _validation["warnings"]:
-                    _adv_txt = "\n".join(f"  - {w}" for w in _validation["warnings"])
-                    _outputs.append(mo.md(f"**Advarsler:**\n{_adv_txt}"))
-                _stats = import_excel_to_sqlite(_temp_path, excel_blob=_fcontent, comment=_comment)
-                _outputs.append(mo.md("### ✅ Import fullført!"))
+                _stats = import_excel_to_sqlite(
+                    _temp_path, excel_blob=_fcontent,
+                    comment=excel_import_kommentar.value.strip(),
+                )
+                _lines = [mo.md("### ✅ Import fullført!")]
                 for _sheet, _count in _stats["tables_updated"].items():
-                    _outputs.append(mo.md(f"  - {_sheet}: oppdatert {_count} rader"))
+                    _lines.append(mo.md(f"  - {_sheet}: oppdatert {_count} rader"))
                 if _stats["errors"]:
                     _err_txt = "\n".join(f"  - {e}" for e in _stats["errors"])
-                    _outputs.append(mo.md(f"**Import-advarsler:**\n{_err_txt}"))
+                    _lines.append(mo.md(f"**Import-advarsler:**\n{_err_txt}"))
                 overrides["item_costs"].clear()
                 overrides["bom_scrap"].clear()
                 overrides["bom_co_product"].clear()
                 overrides["work_centers"].clear()
                 overrides["routing"].clear()
                 set_reload(lambda v: v + 1)
-            mo.output.replace(mo.vstack(_outputs))
+                _import_output = mo.vstack(_lines)
         except Exception as _e:
-            mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
+            _import_output = mo.md(f"### ❌ Feil: {_e}")
             import traceback as _traceback
             _traceback.print_exc()
+
+    # Bygg valideringsoutput
+    _validate_output = None
+    if _validation_result is not None:
+        _vo = [mo.md(f"### 🔍 Kontroll av '{_filename}'")]
+        if _validation_result["stats"]:
+            _stat_rows = [f"  - {_sheet}: {_count} rader" for _sheet, _count in _validation_result["stats"].items()]
+            _vo.append(mo.md("**Antall rader:**\n" + "\n".join(_stat_rows)))
+        if _validation_result["diff"]["nye_rader"] > 0:
+            _vo.append(mo.md(f"**Nye produkter:** {_validation_result['diff']['nye_rader']}"))
+        if _validation_result["diff"]["slettede_rader"] > 0:
+            _vo.append(mo.md(f"**Fjernede produkter:** {_validation_result['diff']['slettede_rader']}"))
+        if _validation_result["valid"]:
+            _vo.append(mo.md("### ✅ Validering OK — klar for import"))
+            if _validation_result["warnings"]:
+                _adv_txt = "\n".join(f"  - {w}" for w in _validation_result["warnings"])
+                _vo.append(mo.md(f"**Advarsler:**\n{_adv_txt}"))
+        else:
+            _feil_txt = "\n".join(f"  - {e}" for e in _validation_result["errors"])
+            _vo.append(mo.md(f"### ❌ Validering fant feil!\n\n{_feil_txt}"))
+        _validate_output = mo.vstack(_vo)
+
+    # Bestem output
+    if _import_output is not None:
+        mo.output.replace(_import_output)
+    elif _validate_output is not None:
+        mo.output.replace(_validate_output)
     return
 
 
@@ -649,6 +690,7 @@ def _(mo):
 @app.cell
 def _(
     DataRepo, baseline, data, db_download, excel_import_file, excel_import_kommentar,
+    excel_validate_button, excel_import_button,
     export_excel_db_button, export_pdf_button, filter_info, historikk_valg,
     import_excel_to_sqlite, mo, overrides, pd, planned_qty, rm_price_df,
     routing_df, run_button, set_reload, validate_excel, wc_cost_df, bom_scrap_df,
@@ -749,9 +791,10 @@ def _(
     # ── Fane 2: Dataimport & Versjoner ─────────────────────────
     _import_parts = []
     _import_parts.append(mo.md("**📤 Last opp Excel**"))
-    _import_parts.append(mo.md("Valideres og importeres automatisk."))
+    _import_parts.append(mo.md("1. Velg Excel-fil\n2. Skriv en obligatorisk kommentar om hva som er endret\n3. Trykk **Valider** for å sjekke filen\n4. Trykk **Importer** for å lagre i databasen"))
     _import_parts.append(excel_import_file)
     _import_parts.append(excel_import_kommentar)
+    _import_parts.append(mo.hstack([excel_validate_button, excel_import_button], justify="start", gap=1))
     _import_parts.append(mo.md("**📜 Versjonshistorikk**"))
     if historikk_valg is not None:
         _import_parts.append(mo.md("Velg en tidligere import for å laste den inn på nytt."))

@@ -803,12 +803,40 @@ class DataRepo:
                     "SELECT * FROM item_costs WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
+                    # Logg unit_cost-endringer
                     old_unit_cost = existing["unit_cost"]
                     new_unit_cost = float(c.get("unit_cost", 0))
                     if abs(old_unit_cost - new_unit_cost) > 0.001:
                         self.log_change(
                             "item_costs", str(row_id),
                             "unit_cost", old_unit_cost, new_unit_cost,
+                            source=source,
+                        )
+                    # Logg currency-endringer
+                    old_currency = existing["currency"]
+                    new_currency = c.get("currency", "NOK")
+                    if old_currency != new_currency:
+                        self.log_change(
+                            "item_costs", str(row_id),
+                            "currency", old_currency, new_currency,
+                            source=source,
+                        )
+                    # Logg effective_date-endringer
+                    old_date = existing["effective_date"]
+                    new_date = c.get("effective_date")
+                    if old_date != new_date:
+                        self.log_change(
+                            "item_costs", str(row_id),
+                            "effective_date", old_date, new_date,
+                            source=source,
+                        )
+                    # Logg cost_type-endringer
+                    old_cost_type = existing["cost_type"]
+                    new_cost_type = c.get("cost_type", existing["cost_type"])
+                    if old_cost_type != new_cost_type:
+                        self.log_change(
+                            "item_costs", str(row_id),
+                            "cost_type", old_cost_type, new_cost_type,
                             source=source,
                         )
                     self.conn.execute(
@@ -818,10 +846,10 @@ class DataRepo:
                            WHERE id = ?""",
                         (
                             c.get("item_no", existing["item_no"]),
-                            c.get("cost_type", existing["cost_type"]),
+                            new_cost_type,
                             new_unit_cost,
-                            c.get("currency", "NOK"),
-                            c.get("effective_date"),
+                            new_currency,
+                            new_date,
                             row_id,
                         ),
                     )
