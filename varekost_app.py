@@ -170,20 +170,31 @@ def _(mo):
             background: #F9FBF8;
         }
 
-        /* ===== Outline/TOC styling ===== */
-        .marimo-outline {
-            background: transparent;
+        /* ===== KPI-kort ===== */
+        .fti-kpi-card {
+            background: #FFFFFF;
+            border-radius: 10px;
+            padding: 16px 20px;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            min-width: 180px;
         }
-        .marimo-outline a {
-            color: #C6E6D0;
-            text-decoration: none;
-            font-size: 0.9em;
-            padding: 4px 0;
-            display: block;
-            transition: color 0.15s ease;
+        .fti-kpi-title {
+            font-size: 0.78em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6B8F7D;
+            margin-bottom: 4px;
         }
-        .marimo-outline a:hover {
-            color: #FFFFFF;
+        .fti-kpi-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #14532D;
+        }
+        .fti-kpi-delta {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 8px;
         }
 
         /* ===== Sidebar-specifikke overrides ===== */
@@ -192,6 +203,11 @@ def _(mo):
         }
         [data-marimo-theme="dark"] .fti-footer {
             background: #0B2819;
+        }
+
+        /* ===== Run button prominent styling ===== */
+        .fti-run-button {
+            margin: 16px 0;
         }
     </style>
     """)
@@ -214,14 +230,6 @@ def _(mo):
             Last opp Excel-modell · Juster parametere · Se kostnader i sanntid
         </div>
     </div>
-    """)
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    ## 📂 Datagrunnlag
     """)
     return
 
@@ -252,9 +260,6 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
     baseline = None
     db_stats = None
 
-    # Les trigger for a skape Marimo-avhengighet.
-    # Nar set_reload kalles i import-cellen, re-kjorer denne cellen
-    # og SqliteData() leser ferske data fra SQLite.
     _reload_verdi = get_reload()
 
     if _db.is_empty():
@@ -287,26 +292,7 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
             _n_rm = len([p for p in data.products if p.item_type == 'Raw Material'])
             _n_bp = len([p for p in data.products if p.item_type == 'By Product'])
 
-            mo.output.replace(
-                mo.md(
-                    f"""
-                    **✅ Data lastet!**
-
-                    | Data | Antall |
-                    |---|---|
-                    | Produkter | {len(data.products)} |
-                    | Ferdigvarer/Halvfabrikata | {_n_fg} |
-                    | Råvarer | {_n_rm} |
-                    | Biprodukter | {_n_bp} |
-                    | Arbeidssentre | {len(data.work_centers)} |
-                    | BOM-linjer | {len(data.bom_lines)} |
-                    | Routing-linjer | {len(data.routing_lines)} |
-                    | Biprodukt-regler | {len(data.byproduct_rules)} |
-                    | Scenarioer | {len(data.scenarios)} |
-                    | Endringer logget | {db_stats.get('change_log', 0)} |
-                    """
-                )
-            )
+            pass
         except Exception as _e:
             mo.output.replace(mo.md(f"### ❌ Feil ved lasting: {_e}"))
             import traceback as _traceback
@@ -314,12 +300,9 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
     return baseline, data
 
 
-@app.cell
-def _(mo):
-    mo.md("""
-    **📤 Last opp Excel**
-    """)
-    return
+# ═══════════════════════════════════
+# DATAIMPORT & VERSJONER
+# ═══════════════════════════════════
 
 
 @app.cell
@@ -333,12 +316,6 @@ def _(mo):
         label="Hva er endret? (valgfri kommentar)",
         placeholder="f.eks. 'Oppdaterte råvarepriser Q3' eller 'Ny BOM for Panel'",
     )
-
-    mo.vstack([
-        mo.md("Last opp en redigert Excel-fil. Den valideres og importeres automatisk."),
-        excel_import_file,
-        excel_import_kommentar,
-    ])
     return excel_import_file, excel_import_kommentar
 
 
@@ -397,19 +374,11 @@ def _(
                     _err_txt = "\n".join(f"  - {e}" for e in _stats["errors"])
                     _outputs.append(mo.md(f"**Import-advarsler:**\n{_err_txt}"))
 
-                # ═══════════════════════════════════════════════════
-                # Nullstill ALLE overstyringer.
-                # ═══════════════════════════════════════════════════
                 overrides["item_costs"].clear()
                 overrides["bom_scrap"].clear()
                 overrides["bom_co_product"].clear()
                 overrides["work_centers"].clear()
                 overrides["routing"].clear()
-
-                # ═══════════════════════════════════════════════════
-                # Trigger reload: data-loading-cellen re-kjores og
-                # SqliteData() leser ferske data fra SQLite.
-                # ═══════════════════════════════════════════════════
                 set_reload(lambda v: v + 1)
 
             mo.output.replace(mo.vstack(_outputs))
@@ -418,14 +387,6 @@ def _(
             mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
             import traceback as _traceback
             _traceback.print_exc()
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    **📜 Versjonshistorikk**
-    """)
     return
 
 
@@ -454,12 +415,6 @@ def _(DataRepo, mo):
             options=_options,
             label="📜 Velg tidligere versjon",
             value=None,
-        )
-        mo.output.replace(
-            mo.vstack([
-                mo.md("Velg en tidligere import for å laste den inn på nytt."),
-                historikk_valg,
-            ])
         )
     return historikk_valg, upload_id_map
 
@@ -510,7 +465,6 @@ def _(
                         comment=f"Gjeninnlasting av versjon {_upload_id}",
                     )
 
-                    # Nullstill overstyringer + trigger reload
                     overrides["item_costs"].clear()
                     overrides["bom_scrap"].clear()
                     overrides["bom_co_product"].clear()
@@ -531,16 +485,7 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.md("""
-    **📥 Eksporter komplett datafil**
-    """)
-    return
-
-
-@app.cell
-def _(mo):
     export_excel_db_button = mo.ui.run_button(label="📥 Last ned komplett datafil")
-    export_excel_db_button
     return (export_excel_db_button,)
 
 
@@ -569,6 +514,11 @@ def _(export_excel_db_button, export_sqlite_to_excel, mo, os, tempfile):
     return
 
 
+# ═══════════════════════════════════
+# FILTER
+# ═══════════════════════════════════
+
+
 @app.cell
 def _(data, vareFilter):
     filtered_products = []
@@ -582,6 +532,7 @@ def _(data, vareFilter):
     filtered_operations = []
     filtered_capacity_days = []
     filter_active = False
+    filter_info = ""
 
     if data:
         _filter_text = vareFilter.value.strip().lower() if vareFilter.value else ""
@@ -654,6 +605,8 @@ def _(data, vareFilter):
             for _cd in data.capacity_days:
                 if _cd.work_center in _routing_wc_set:
                     filtered_capacity_days.append(_cd)
+
+            filter_info = f"ℹ️ Viser {len(filtered_products)} av {len(data.products)} produkter (filtrert på \"{_filter_text}\")"
         else:
             filtered_products = list(data.products)
             filtered_bom_lines = list(data.bom_lines)
@@ -666,6 +619,7 @@ def _(data, vareFilter):
             filtered_operations = list(data.operations)
             filtered_capacity_days = list(data.capacity_days)
     return (
+        filter_info,
         filtered_bom_lines,
         filtered_byproduct_rules,
         filtered_capacity_days,
@@ -679,57 +633,9 @@ def _(data, vareFilter):
     )
 
 
-@app.cell
-def _(mo):
-    mo.md("""
-    ## 📊 Kalkyle & Simulering
-    """)
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    ### 📊 Baseline kostnader
-    """)
-    return
-
-
-@app.cell
-def _(baseline, mo, pd):
-    if baseline:
-        _rows = []
-        for _r in baseline:
-            _rows.append({
-                "Lokasjon": _r.location_code,
-                "Produkt": _r.product_no,
-                "Beskrivelse": _r.product_desc,
-                "Materialkost": round(_r.material_cost, 2),
-                "Operasjonskost": round(_r.operation_cost, 2),
-                "Setupkost": round(_r.setup_cost, 2),
-                "Brutto kost": round(_r.gross_production_cost, 2),
-                "Biproduktverdi": round(_r.by_product_value, 2),
-                "Netto kost": round(_r.net_production_cost, 2),
-            })
-        _df = pd.DataFrame(_rows)
-        mo.output.replace(mo.ui.table(_df, selection=None))
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    ## 🔧 Simulerings parametere
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ###🪵 Råvarer
-    """)
-    return
+# ═══════════════════════════════════
+# SIMULERING - parametere
+# ═══════════════════════════════════
 
 
 @app.cell
@@ -750,8 +656,6 @@ def _(data, filtered_products, mo, overrides, pd):
         if _rows:
             _df = pd.DataFrame(_rows)
             rm_price_df = mo.ui.data_editor(_df, editable_columns=["Ny pris"])
-
-    rm_price_df
     return (rm_price_df,)
 
 
@@ -767,14 +671,6 @@ def _(overrides, rm_price_df):
                 overrides["item_costs"][_varenr] = _ny
             elif _varenr in overrides["item_costs"]:
                 del overrides["item_costs"][_varenr]
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    ### 🗑️ Svinn- og kapp-prosenter
-    """)
     return
 
 
@@ -801,8 +697,6 @@ def _(data, filtered_bom_lines, mo, overrides, pd):
         if _rows:
             _df = pd.DataFrame(_rows)
             bom_scrap_df = mo.ui.data_editor(_df, editable_columns=["Nytt svinn %", "Ny co-prod %"])
-
-    bom_scrap_df
     return (bom_scrap_df,)
 
 
@@ -832,14 +726,6 @@ def _(bom_scrap_df, overrides):
 
 
 @app.cell
-def _(mo):
-    mo.md("""
-    ### 🏭 Arbeidssentre (timekostnad)
-    """)
-    return
-
-
-@app.cell
 def _(data, filtered_work_centers, mo, overrides, pd):
     wc_cost_df = None
     if data:
@@ -865,8 +751,6 @@ def _(data, filtered_work_centers, mo, overrides, pd):
         if _rows:
             _df = pd.DataFrame(_rows)
             wc_cost_df = mo.ui.data_editor(_df, editable_columns=["Ny lønn", "Ny maskin", "Ny overhead", "Ny eff. %"])
-
-    wc_cost_df
     return (wc_cost_df,)
 
 
@@ -890,14 +774,6 @@ def _(overrides, wc_cost_df):
                 overrides["work_centers"][_kode] = _wc_overrides
             elif _kode in overrides["work_centers"]:
                 del overrides["work_centers"][_kode]
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    ### 📋 Routing (stykkpris)
-    """)
     return
 
 
@@ -942,8 +818,6 @@ def _(
         if _rows:
             _df = pd.DataFrame(_rows)
             routing_df = mo.ui.data_editor(_df, editable_columns=["Ny run time", "Ny setup (min)", "Ny batch"])
-
-    routing_df
     return (routing_df,)
 
 
@@ -974,26 +848,6 @@ def _(overrides, routing_df):
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ### 📦 Planlagt kvantum
-    """)
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    **Planlagt kvantum** bestemmer hvor mye oppstartskostnad som fordeles per enhet.
-
-    Formel: `Oppstartskost per enhet = Oppstartstid (timer) × timekostnad / kvantum`
-
-    Jo høyere kvantum, desto lavere blir oppstartskostnaden per produsert enhet.
-    """)
-    return
-
-
-@app.cell
-def _(mo):
     planned_qty = mo.ui.number(
         label="Planlagt kvantum (stk)",
         start=1,
@@ -1001,16 +855,17 @@ def _(mo):
         step=1,
         value=1000,
     )
-    planned_qty
     return (planned_qty,)
 
 
 @app.cell
 def _(mo):
-    mo.md("""
-    ## 🚀 Simulerings resultater
-    """)
-    return
+    run_button = mo.ui.run_button(
+        label="⚡ Start simulering",
+        kind="neutral",
+        full_width=True,
+    )
+    return (run_button,)
 
 
 @app.cell
@@ -1056,56 +911,6 @@ def _(
                     sim_results = _comparisons
                     sim_overrides = _overrides
 
-                    _outputs = []
-
-                    _rows = []
-                    for _c in _comparisons:
-                        _rows.append({
-                            "Lokasjon": _c.location_code,
-                            "Produkt": _c.product_no,
-                            "Beskrivelse": _c.product_desc,
-                            "Org. materialkost": round(_c.original_material_cost, 2),
-                            "Sim. materialkost": round(_c.simulated_material_cost, 2),
-                            "Diff material": round(_c.material_diff, 2),
-                            "Org. operasjonskost": round(_c.original_operation_cost, 2),
-                            "Sim. operasjonskost": round(_c.simulated_operation_cost, 2),
-                            "Diff operasjon": round(_c.operation_diff, 2),
-                            "Org. oppstartkost": round(_c.original_setup_cost, 2),
-                            "Sim. oppstartkost": round(_c.simulated_setup_cost, 2),
-                            "Diff oppstart": round(_c.setup_diff, 2),
-                            "Org. brutto": round(_c.original_gross_cost, 2),
-                            "Sim. brutto": round(_c.simulated_gross_cost, 2),
-                            "Diff brutto": round(_c.gross_diff, 2),
-                            "Org. biprodukt": round(_c.original_byproduct_value, 2),
-                            "Sim. biprodukt": round(_c.simulated_byproduct_value, 2),
-                            "Diff biprodukt": round(_c.byproduct_diff, 2),
-                            "Org. netto": round(_c.original_net_cost, 2),
-                            "Sim. netto": round(_c.simulated_net_cost, 2),
-                            "Diff netto": round(_c.net_diff, 2),
-                        })
-                    _df = pd.DataFrame(_rows)
-                    _outputs.append(mo.md("**📊 Sammenligning: Opprinnelig vs Simulert**"))
-                    _outputs.append(mo.ui.table(_df, selection=None))
-
-                    if _comparisons[0].planned_quantity:
-                        _sc_rows = []
-                        for _c in _comparisons:
-                            _sc_rows.append({
-                                "Lokasjon": _c.location_code,
-                                "Produkt": _c.product_no,
-                                "Kvantum": f"{_c.planned_quantity:.0f}",
-                                "Total netto kost": f"{_c.simulated_total_net_cost:,.2f}",
-                                "Kost per enhet": f"{_c.simulated_cost_per_unit:.2f}",
-                                "Timebehov": f"{_c.simulated_total_hours:.2f} timer",
-                            })
-                        _sc_df = pd.DataFrame(_sc_rows)
-                        _outputs.append(mo.md("**📦 Scenariototaler**"))
-                        _outputs.append(mo.ui.table(_sc_df, selection=None))
-
-                    mo.output.replace(mo.vstack(_outputs))
-                else:
-                    mo.output.replace(mo.md("### Ingen resultater funnet"))
-
             except Exception as _e:
                 mo.output.replace(mo.md(f"### ❌ Feil ved simulering: {_e}"))
                 import traceback as _traceback
@@ -1113,12 +918,7 @@ def _(
     return sim_overrides, sim_results
 
 
-@app.cell
-def _(mo):
-    mo.md("""
-    ### 💾 Last ned simulerings rapport
-    """)
-    return
+# ── Eksportpanel (PDF + Excel) ─────────────────────────
 
 
 @app.cell
@@ -1127,19 +927,19 @@ def _(mo):
     pdf_kommentar = mo.ui.text_area(
         label="Ledelsessammendrag / Kommentar (vises øverst i PDF)",
         placeholder="Skriv f.eks. anbefalinger eller en kort analyse av simuleringen her...",
-        rows=4,
+        rows=3,
     )
     pdf_inkluder_detaljer = mo.ui.checkbox(
         label="Inkluder tekniske detaljer (material- og operasjonsdetaljer per produkt)",
         value=False,
     )
-    mo.vstack([
-        mo.md("**📊 Tilpass PDF-rapport**"),
-        pdf_kommentar,
-        pdf_inkluder_detaljer,
+    export_excel_button = mo.ui.run_button(label="📊 Eksporter resultater til Excel", kind="neutral")
+    return (
+        export_excel_button,
         export_pdf_button,
-    ])
-    return export_pdf_button, pdf_inkluder_detaljer, pdf_kommentar
+        pdf_inkluder_detaljer,
+        pdf_kommentar,
+    )
 
 
 @app.cell
@@ -1227,13 +1027,6 @@ def _(
 
 
 @app.cell
-def _(mo):
-    export_excel_button = mo.ui.run_button(label="📊 Eksporter resultater til Excel", kind="neutral")
-    export_excel_button
-    return (export_excel_button,)
-
-
-@app.cell
 def _(
     export_excel_button,
     generer_excel_rapport,
@@ -1260,38 +1053,74 @@ def _(
     return
 
 
-@app.cell
-def _(mo):
-    mo.md("""
-    ## 📋 Datamodell
-    """)
-    return
+# ═══════════════════════════════════
+# SIDEBAR
+# ═══════════════════════════════════
 
 
 @app.cell
 def _(mo):
-    mo.md("""
-    Modellen består av **10 ark** i Excel. Hvert ark har en spesifikk rolle:
+    vareFilter = mo.ui.text(label="🔍 Filtrer på varenummer og beskrivelse", full_width=True)
 
-    | # | Arknavn | Innhold | Nøkkelkolonner |
-    |---|---------|---------|----------------|
-    | 1 | **Product Master** | Vareregister | Item No, Description, Item Type |
-    | 2 | **Locations** | Fabrikker og lagre | Location Code, Location Name |
-    | 3 | **Work Centers** | Arbeidssentre med kostsatser | Work Center Code, Labor/Machine/Overhead Cost |
-    | 4 | **Operation Master** | Standardoperasjoner | Operation Code, Description |
-    | 5 | **Item Costs** | Kostpriser per vare | Item No, Unit Cost, Currency |
-    | 6 | **BOM** | Stykkliste (hva består produktet av) | Parent Item, Component, Quantity Per |
-    | 7 | **Routing** | Produksjonsflyt (operasjoner, tider) | Item No, Operation No, Setup/Run Time |
-    | 8 | **By Product Rules** | Biprodukter og verdsetting | Parent Item, By Product, Market Value |
-    | 9 | **Capacity Calendar** | Kapasitetskalender per arbeidssenter | Work Center, Date, Available Hours |
-    | 10 | **Production Scenario** | Produksjonsscenarioer | Scenario Name, Product, Planned Quantity |
-    """)
-    return
+    mo.sidebar(
+        mo.vstack([
+            mo.Html('<div class="fti-sidebar-section"><h3>Filter</h3></div>'),
+            vareFilter,
+            mo.Html('<div class="fti-sidebar-section"><h3>📑 Faner</h3></div>'),
+            mo.md("""
+            - 📊 **Simulering & Analyse** — juster parametere, kjør simulering, se resultater
+            - 📁 **Dataimport & Versjoner** — last opp Excel, versjonshistorikk
+            - 🔍 **Datamodell (Innsyn)** — se alle rådata-tabeller
+            - 📜 **Endringslogg** — vis endringer over tid
+            """),
+            mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
+            mo.Html('Fram Treindustri - '),
+            mo.Html('v0.23.14 · Marimo'),
+        ]),
+        width="260px",
+    )
+    return (vareFilter,)
+
+
+# ═══════════════════════════════════
+# HOVEDLAYOUT: Faner
+# ═══════════════════════════════════
 
 
 @app.cell
 def _(
+    DataRepo,
+    baseline,
     data,
+    excel_import_file,
+    excel_import_kommentar,
+    export_excel_db_button,
+    export_pdf_button,
+    filter_info,
+    historikk_valg,
+    import_excel_to_sqlite,
+    mo,
+    overrides,
+    pd,
+    planned_qty,
+    rm_price_df,
+    routing_df,
+    run_button,
+    set_reload,
+    validate_excel,
+    wc_cost_df,
+    bom_scrap_df,
+    os,
+    tempfile,
+    generer_rapport,
+    registrer_fonter,
+    pdf_kommentar,
+    pdf_inkluder_detaljer,
+    sim_results,
+    sim_overrides,
+    export_sqlite_to_excel,
+    generer_excel_rapport,
+    export_excel_button,
     filtered_bom_lines,
     filtered_byproduct_rules,
     filtered_capacity_days,
@@ -1302,136 +1131,235 @@ def _(
     filtered_routing_lines,
     filtered_scenarios,
     filtered_work_centers,
-    mo,
-    pd,
 ):
+    # ── Fane 1: Simulering & Analyse ───────────────────────────
+    _sim_parts = []
+
+    if filter_info:
+        _sim_parts.append(mo.md(f"> {filter_info}"))
+
+    _sim_parts.append(mo.md("## 🔧 Simuleringsparametere"))
+
+    if rm_price_df is not None:
+        _sim_parts.append(mo.md("### 🪵 Råvarer"))
+        _sim_parts.append(rm_price_df)
+    if bom_scrap_df is not None:
+        _sim_parts.append(mo.md("### 🗑️ Svinn- og kapp-prosenter"))
+        _sim_parts.append(bom_scrap_df)
+    if wc_cost_df is not None:
+        _sim_parts.append(mo.md("### 🏭 Arbeidssentre (timekostnad)"))
+        _sim_parts.append(wc_cost_df)
+    if routing_df is not None:
+        _sim_parts.append(mo.md("### 📋 Routing (stykkpris)"))
+        _sim_parts.append(routing_df)
+
+    _sim_parts.append(mo.md("### 📦 Planlagt kvantum"))
+    _sim_parts.append(mo.md("Jo høyere kvantum, desto lavere oppstartskostnad per enhet."))
+    _sim_parts.append(planned_qty)
+
+    _sim_parts.append(mo.Html('<div class="fti-run-button"></div>'))
+    _sim_parts.append(mo.hstack([mo.Html('<div style="flex:1"></div>'), run_button, mo.Html('<div style="flex:1"></div>')], justify="center"))
+
+    if sim_results:
+        _total_diff = sum(_c.net_diff for _c in sim_results)
+        _total_org = sum(_c.original_net_cost for _c in sim_results)
+        _pct_diff = (_total_diff / _total_org * 100) if _total_org else 0
+        _total_hours = sum(_c.simulated_total_hours for _c in sim_results)
+        _total_products = len(sim_results)
+
+        _sim_parts.append(mo.md("## 🚀 Simuleringsresultater"))
+
+        _kpi_cards = mo.hstack([
+            mo.Html(f'<div class="fti-kpi-card"><div class="fti-kpi-title">Totalt simulerte produkter</div><div class="fti-kpi-value">{_total_products} stk</div></div>'),
+            mo.Html(f'<div class="fti-kpi-card"><div class="fti-kpi-title">Samlet kostnadsendring</div><div class="fti-kpi-value">{_total_diff:,.0f} NOK</div><div class="fti-kpi-delta">{_pct_diff:+.1f}%</div></div>'),
+            mo.Html(f'<div class="fti-kpi-card"><div class="fti-kpi-title">Totalt timebehov</div><div class="fti-kpi-value">{_total_hours:.1f} t</div></div>'),
+        ], justify="start")
+        _sim_parts.append(_kpi_cards)
+
+        _rows = []
+        for _c in sim_results:
+            _rows.append({
+                "Lokasjon": _c.location_code,
+                "Produkt": _c.product_no,
+                "Beskrivelse": _c.product_desc,
+                "Org. materialkost": round(_c.original_material_cost, 2),
+                "Sim. materialkost": round(_c.simulated_material_cost, 2),
+                "Diff material": round(_c.material_diff, 2),
+                "Org. operasjonskost": round(_c.original_operation_cost, 2),
+                "Sim. operasjonskost": round(_c.simulated_operation_cost, 2),
+                "Diff operasjon": round(_c.operation_diff, 2),
+                "Org. oppstartkost": round(_c.original_setup_cost, 2),
+                "Sim. oppstartkost": round(_c.simulated_setup_cost, 2),
+                "Diff oppstart": round(_c.setup_diff, 2),
+                "Org. brutto": round(_c.original_gross_cost, 2),
+                "Sim. brutto": round(_c.simulated_gross_cost, 2),
+                "Diff brutto": round(_c.gross_diff, 2),
+                "Org. biprodukt": round(_c.original_byproduct_value, 2),
+                "Sim. biprodukt": round(_c.simulated_byproduct_value, 2),
+                "Diff biprodukt": round(_c.byproduct_diff, 2),
+                "Org. netto": round(_c.original_net_cost, 2),
+                "Sim. netto": round(_c.simulated_net_cost, 2),
+                "Diff netto": round(_c.net_diff, 2),
+            })
+        _df = pd.DataFrame(_rows)
+        _sim_parts.append(mo.md("**📊 Sammenligning: Opprinnelig vs Simulert**"))
+        _sim_parts.append(mo.ui.table(_df, selection=None))
+
+        if sim_results[0].planned_quantity:
+            _sc_rows = []
+            for _c in sim_results:
+                _sc_rows.append({
+                    "Lokasjon": _c.location_code,
+                    "Produkt": _c.product_no,
+                    "Kvantum": f"{_c.planned_quantity:.0f}",
+                    "Total netto kost": f"{_c.simulated_total_net_cost:,.2f}",
+                    "Kost per enhet": f"{_c.simulated_cost_per_unit:.2f}",
+                    "Timebehov": f"{_c.simulated_total_hours:.2f} timer",
+                })
+            _sc_df = pd.DataFrame(_sc_rows)
+            _sim_parts.append(mo.md("**📦 Scenariototaler**"))
+            _sim_parts.append(mo.ui.table(_sc_df, selection=None))
+
+        # Eksportpanel i accordion
+        _sim_parts.append(mo.md("### 💾 Eksport"))
+        _sim_parts.append(
+            mo.accordion({
+                "📥 Last ned rapporter (PDF / Excel)": mo.vstack([
+                    export_pdf_button,
+                    pdf_kommentar,
+                    pdf_inkluder_detaljer,
+                    mo.Html('<hr style="margin: 12px 0; border-color: #E2E8F0;">'),
+                    export_excel_button,
+                ])
+            })
+        )
+
+    _tab_simulering = mo.vstack(_sim_parts)
+
+    # ── Fane 2: Dataimport & Versjoner ─────────────────────────
+    _import_parts = []
+    _import_parts.append(mo.md("**📤 Last opp Excel**"))
+    _import_parts.append(mo.md("Valideres og importeres automatisk."))
+    _import_parts.append(excel_import_file)
+    _import_parts.append(excel_import_kommentar)
+    _import_parts.append(mo.md("**📜 Versjonshistorikk**"))
+    if historikk_valg is not None:
+        _import_parts.append(mo.md("Velg en tidligere import for å laste den inn på nytt."))
+        _import_parts.append(historikk_valg)
+    _import_parts.append(mo.md("**📥 Eksporter komplett datafil**"))
+    _import_parts.append(export_excel_db_button)
+    _tab_import = mo.vstack(_import_parts)
+
+    # ── Fane 3: Datamodell (Innsyn) ────────────────────────────
+    _modell_parts = []
+
+    _modell_parts.append(mo.md("""
+    Modellen består av **10 ark** i Excel.
+
+    | # | Arknavn | Innhold |
+    |---|---------|---------|
+    | 1 | **Product Master** | Vareregister |
+    | 2 | **Locations** | Fabrikker og lagre |
+    | 3 | **Work Centers** | Arbeidssentre med kostsatser |
+    | 4 | **Operation Master** | Standardoperasjoner |
+    | 5 | **Item Costs** | Kostpriser per vare |
+    | 6 | **BOM** | Stykkliste |
+    | 7 | **Routing** | Produksjonsflyt |
+    | 8 | **By Product Rules** | Biprodukter og verdsetting |
+    | 9 | **Capacity Calendar** | Kapasitetskalender |
+    | 10 | **Production Scenario** | Produksjonsscenarioer |
+    """))
+
     if data:
-        _outputs = []
+        _data_outputs = []
 
         _prod_rows = []
         for _p in filtered_products:
             _prod_rows.append({"Varenr": _p.item_no, "Beskrivelse": _p.description, "Type": _p.item_type, "Gruppe": _p.product_group, "Enhet": _p.base_uom, "Aktiv": "Ja" if _p.active else "Nei"})
-        _outputs.append(mo.md("**📦 Product Master (Vareregister)**"))
-        _outputs.append(mo.ui.table(pd.DataFrame(_prod_rows), selection=None))
+        _data_outputs.append(mo.md("**📦 Product Master**"))
+        _data_outputs.append(mo.ui.table(pd.DataFrame(_prod_rows), selection=None))
 
         if filtered_locations:
             _loc_rows = []
             for _loc in filtered_locations:
                 _loc_rows.append({"Kode": _loc.code, "Navn": _loc.name, "Type": _loc.location_type})
-            _outputs.append(mo.md("**🏭 Locations (Lokasjoner)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_loc_rows), selection=None))
+            _data_outputs.append(mo.md("**🏭 Locations**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_loc_rows), selection=None))
 
         if filtered_work_centers:
             _wc_rows = []
             for _wc in filtered_work_centers:
-                _wc_rows.append({"Arbeidssenter": _wc.code, "Beskrivelse": f"{_wc.description} · {_wc.location_code}", "Lønn/time": _wc.labor_cost_hour, "Maskin/time": _wc.machine_cost_hour, "Overhead/time": _wc.overhead_cost_hour, "Totalt/time": _wc.total_cost_hour, "Timer/dag": _wc.capacity_hours_day, "Eff. %": _wc.effective_capacity_pct})
-            _outputs.append(mo.md("**🏭 Work Centers (Arbeidssentre)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_wc_rows), selection=None))
+                _wc_rows.append({"Kode": _wc.code, "Beskrivelse": f"{_wc.description} · {_wc.location_code}", "Lønn/time": _wc.labor_cost_hour, "Maskin/time": _wc.machine_cost_hour, "Overhead/time": _wc.overhead_cost_hour, "Totalt/time": _wc.total_cost_hour, "Eff. %": _wc.effective_capacity_pct})
+            _data_outputs.append(mo.md("**🏭 Work Centers**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_wc_rows), selection=None))
 
         if filtered_operations:
             _op_rows = []
             for _op in filtered_operations:
-                _op_rows.append({"Kode": _op.code, "Beskrivelse": _op.description, "Standard arb.senter": _op.default_work_center, "Enhet": _op.standard_unit})
-            _outputs.append(mo.md("**⚙️ Operation Master (Operasjoner)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_op_rows), selection=None))
+                _op_rows.append({"Kode": _op.code, "Beskrivelse": _op.description, "Standard arb.senter": _op.default_work_center})
+            _data_outputs.append(mo.md("**⚙️ Operations**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_op_rows), selection=None))
 
         if filtered_item_costs:
             _ic_rows = []
             for _ic in filtered_item_costs:
-                _ic_rows.append({"Varenr": _ic.item_no, "Kosttype": _ic.cost_type, "Enhetskost": _ic.unit_cost, "Valuta": _ic.currency, "Gyldig fra": _ic.effective_date})
-            _outputs.append(mo.md("**💰 Item Costs (Kostpriser)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_ic_rows), selection=None))
+                _ic_rows.append({"Varenr": _ic.item_no, "Enhetskost": _ic.unit_cost, "Valuta": _ic.currency, "Gyldig fra": _ic.effective_date})
+            _data_outputs.append(mo.md("**💰 Item Costs**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_ic_rows), selection=None))
 
         if filtered_bom_lines:
             _bom_rows = []
             for _bl in filtered_bom_lines:
-                _bom_rows.append({"Foreldreprodukt": _bl.parent_item_no, "Komponent": _bl.component_item_no, "Qty per": _bl.quantity_per, "Enhet": _bl.uom, "Svinn %": _bl.scrap_pct, "Co-Prod %": _bl.co_product_pct, "Co-Prod Vare": _bl.co_product_item_no})
-            _outputs.append(mo.md("**🔗 BOM (Stykkliste)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_bom_rows), selection=None))
+                _bom_rows.append({"Foreldreprodukt": _bl.parent_item_no, "Komponent": _bl.component_item_no, "Qty per": _bl.quantity_per, "Svinn %": _bl.scrap_pct, "Co-Prod %": _bl.co_product_pct})
+            _data_outputs.append(mo.md("**🔗 BOM**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_bom_rows), selection=None))
 
         if filtered_routing_lines:
             _rt_rows = []
             for _rl in filtered_routing_lines:
                 _op = next((o for o in filtered_operations if o.code == _rl.operation_code), None)
                 _op_desc = _op.description if _op else _rl.operation_code
-                _wc_c = next((w for w in filtered_work_centers if w.code == _rl.work_center_code), None)
-                _loc = _wc_c.location_code if _wc_c else ""
-                _rt_rows.append({"Produkt": _rl.item_no, "Op.nr": _rl.operation_no, "Operasjon": _rl.operation_code, "Arbeidssenter": _rl.work_center_code, "Lokasjon": _loc, "Setup (min)": _rl.setup_time_minutes, "Run time (min)": _rl.run_time_minutes, "Batch": _rl.batch_size})
-            _outputs.append(mo.md("**📋 Routing (Produksjonsflyt)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_rt_rows), selection=None))
+                _rt_rows.append({"Produkt": _rl.item_no, "Operasjon": f"{_rl.operation_code} ({_op_desc})", "Arb.senter": _rl.work_center_code, "Setup (min)": _rl.setup_time_minutes, "Run time (min)": _rl.run_time_minutes, "Batch": _rl.batch_size})
+            _data_outputs.append(mo.md("**📋 Routing**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_rt_rows), selection=None))
 
         if filtered_byproduct_rules:
             _bp_rows = []
             for _br in filtered_byproduct_rules:
-                _bp_rows.append({"Produkt": _br.parent_item_no, "Biprodukt": _br.by_product_item_no, "Forventet qty": _br.expected_quantity, "Enhet": _br.uom, "Markedsverdi": _br.market_value, "Allokeringsmetode": _br.allocation_method})
-            _outputs.append(mo.md("**♻️ By Product Rules (Biproduktregler)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_bp_rows), selection=None))
+                _bp_rows.append({"Produkt": _br.parent_item_no, "Biprodukt": _br.by_product_item_no, "Forventet qty": _br.expected_quantity, "Markedsverdi": _br.market_value})
+            _data_outputs.append(mo.md("**♻️ By Product Rules**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_bp_rows), selection=None))
 
         if filtered_capacity_days:
             _cap_rows = []
             for _cd in filtered_capacity_days:
-                _cap_rows.append({"Arbeidssenter": _cd.work_center, "Dato": _cd.date, "Tilgj. timer": _cd.available_hours, "Planlagt nedetid": _cd.planned_downtime, "Prod. timer": _cd.available_production_hours})
-            _outputs.append(mo.md("**📅 Capacity Calendar (Kapasitetskalender)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_cap_rows), selection=None))
+                _cap_rows.append({"Arbeidssenter": _cd.work_center, "Dato": _cd.date, "Prod. timer": _cd.available_production_hours})
+            _data_outputs.append(mo.md("**📅 Capacity Calendar**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_cap_rows), selection=None))
 
         if filtered_scenarios:
             _sc_rows = []
             for _sc in filtered_scenarios:
-                _sc_rows.append({"Scenario": _sc.scenario_name, "Produkt": _sc.product, "Planlagt kvantum": _sc.planned_quantity, "Startdato": _sc.start_date, "Sluttdato": _sc.end_date})
-            _outputs.append(mo.md("**🎯 Production Scenario (Produksjonsscenarioer)**"))
-            _outputs.append(mo.ui.table(pd.DataFrame(_sc_rows), selection=None))
+                _sc_rows.append({"Scenario": _sc.scenario_name, "Produkt": _sc.product, "Kvantum": _sc.planned_quantity})
+            _data_outputs.append(mo.md("**🎯 Production Scenario**"))
+            _data_outputs.append(mo.ui.table(pd.DataFrame(_sc_rows), selection=None))
 
-        mo.output.replace(
+        _modell_parts.append(
             mo.accordion({
-                "🔍 Vis alle data (BOM, routing, arbeidssentre…)": mo.vstack(_outputs)
+                "🔍 Vis alle data": mo.vstack(_data_outputs)
             })
         )
-    return
 
+    _tab_modell = mo.vstack(_modell_parts)
 
-@app.cell
-def _(mo):
-    run_button = mo.ui.run_button(label="⚡Start simulering", kind="neutral",full_width=True)
-    vareFilter = mo.ui.text(label="🔍 filtrer på varenummer og beskrivelse",full_width=True)
-
-    mo.sidebar(
-        mo.vstack([
-            # Handlinger
-            mo.Html('<div class="fti-sidebar-section"><h3>Handlinger</h3></div>'),
-            run_button,
-            vareFilter,
-
-            # Outline / TOC
-            mo.Html('<div class="fti-sidebar-section"><h3>📑 Innholdsfortegnelse</h3></div>'),
-            mo.outline(label=""),
-
-            mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
-            mo.Html('Fram Treindustri - '),
-            mo.Html('v0.23.14 · Marimo'),
-        ]),
-        width="260px",
-    )
-    return run_button, vareFilter
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    ## 📋 Endringslogg
-    """)
-    return
-
-
-@app.cell
-def _(DataRepo, mo, pd):
+    # ── Fane 4: Endringslogg ───────────────────────────────────
     _db = DataRepo()
     _db.initialize()
-
     _changes = _db.get_changes(limit=50)
     if _changes:
-        _rows = []
+        _ch_rows = []
         for _c in _changes:
-            _rows.append({
+            _ch_rows.append({
                 "Tidspunkt": _c["timestamp"],
                 "Bruker": _c["user"] or "-",
                 "Kilde": _c["source"],
@@ -1441,10 +1369,26 @@ def _(DataRepo, mo, pd):
                 "Gammel": (_c["old_value"] or "-")[:30],
                 "Ny": (_c["new_value"] or "-")[:30],
             })
-        _df = pd.DataFrame(_rows)
-        mo.output.replace(mo.ui.table(_df, selection=None))
+        _ch_df = pd.DataFrame(_ch_rows)
+        _tab_changelog = mo.vstack([
+            mo.md("## 📋 Endringslogg"),
+            mo.ui.table(_ch_df, selection=None),
+        ])
     else:
-        mo.output.replace(mo.md("*(Ingen endringer logget)*"))
+        _tab_changelog = mo.vstack([
+            mo.md("## 📋 Endringslogg"),
+            mo.md("*(Ingen endringer logget)*"),
+        ])
+
+    # ── Samle i faner ──────────────────────────────────────────
+    mo.output.replace(
+        mo.ui.tabs({
+            "📊 Simulering & Analyse": _tab_simulering,
+            "📁 Dataimport & Versjoner": _tab_import,
+            "🔍 Datamodell (Innsyn)": _tab_modell,
+            "📜 Endringslogg": _tab_changelog,
+        })
+    )
     return
 
 
