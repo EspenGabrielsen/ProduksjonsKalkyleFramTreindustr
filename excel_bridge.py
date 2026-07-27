@@ -8,8 +8,12 @@ Brukes til:
 
 Alle importfunksjonene sammenligner felt-for-felt med eksisterende data i SQLite
 og loggfører kun faktiske endringer.
+
+Excel-eksport inkluderer ACTION (col A) og Rad ID (col B) for hvert ark.
+ACTION-støttede verdier: CREATE, UPDATE, DELETE (eller tom for å inferere).
 """
 
+import json
 import os
 import sys
 import io
@@ -136,6 +140,27 @@ STATISKE_DROPDOWNS = [
     ("By Product Rules", "F", '"Reduce Main Product Cost,Separate Profit Center,Informational Only"'),
 ]
 
+# ACTION-kolonne: Kolonne A er alltid ACTION, kolonne B er alltid Rad ID
+ACTION_VALUES = '"CREATE,UPDATE,DELETE"'
+
+# Mapping: Excel-arknavn → navn på DB-tabell (for sletting)
+SHEET_TO_TABLE = {
+    "Product Master": "products",
+    "Locations": "locations",
+    "Work Centers": "work_centers",
+    "Operation Master": "operations",
+    "Item Costs": "item_costs",
+    "BOM": "bom_lines",
+    "Routing": "routing_lines",
+    "By Product Rules": "byproduct_rules",
+    "Capacity Calendar": "capacity_days",
+    "Production Scenario": "production_scenarios",
+}
+
+# Gyldige ACTION-verdier
+VALID_ACTIONS = {"CREATE", "UPDATE", "DELETE", ""}
+
+
 # ──────────────────────────────────────────────────────────────────────
 #  Hjelpefunksjoner for datakonvertering
 # ──────────────────────────────────────────────────────────────────────
@@ -176,6 +201,27 @@ def _b(value) -> bool:
     return s in ("ja", "yes", "true", "1", "y")
 
 
+def _i(value) -> Optional[int]:
+    """Trygg integer-konvertering for Rad ID."""
+    if pd.isna(value):
+        return None
+    try:
+        return int(float(value))
+    except (ValueError, TypeError):
+        return None
+
+
+def _get_action(row: dict) -> str:
+    """Hent ACTION-verdi fra en rad. Returner uppercase eller tom string."""
+    action = row.get("ACTION", "")
+    if pd.isna(action):
+        return ""
+    action = str(action).strip().upper()
+    if action in VALID_ACTIONS:
+        return action
+    return ""
+
+
 # ──────────────────────────────────────────────────────────────────────
 #  Validering (uten å skrive til DB)
 # ──────────────────────────────────────────────────────────────────────
@@ -186,6 +232,7 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
     Sjekker:
       - Alle påkrevde ark finnes
       - Alle påkrevde kolonner i hvert ark
+      - ACTION-kolonnen har gyldige verdier
       - Kryss-referanser (Item No, Work Center, etc.)
       - Numeriske felt har gyldige verdier
     
@@ -253,12 +300,34 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
             result["warnings"].append(f"Ark '{sheet_name}' er tomt")
             continue
 
-        # Sjekk påkrevde kolonner
-        missing = [c for c in required_cols if c not in df.columns]
+        # Sjekk at ACTION og Rad ID kolonner finnes (advarsel hvis ikke)
+        # Merk: ACTION og ID er kolonne A og B, men vi sjekker på navn
+        if "ACTION" not in df.columns and "Rad ID" not in df.columns:
+            # Sjekk om første/tomme kolonner fungerer som ACTION/ID
+            # Dette er en myk sjekk — vi gir bare en advarsel
+            pass
+
+        # Sjekk påkrevde kolonner (etter ACTION/ID)
+        # Først må vi finne datakolonnene (de som ikke er ACTION eller Rad ID)
+        data_cols = [c for c in df.columns if c not in ("ACTION", "Rad ID")]
+        missing = [c for c in required_cols if c not in data_cols]
         if missing:
             result["valid"] = False
             result["errors"].append(f"Ark '{sheet_name}' mangler kolonner: {missing}")
             continue
+
+        # Valider ACTION-verdier
+        if "ACTION" in df.columns:
+            action_col = df["ACTION"]
+            for i, val in action_col.items():
+                if pd.isna(val) or str(val).strip() == "":
+                    continue
+                action_str = str(val).strip().upper()
+                if action_str not in VALID_ACTIONS:
+                    result["errors"].append(
+                        f"Ark '{sheet_name}', rad {i+2}: Ugyldig ACTION-verdi '{val}'. "
+                        f"Tillatte verdier: CREATE, UPDATE, DELETE"
+                    )
 
         result["stats"][sheet_name] = len(df)
 
@@ -417,6 +486,12 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
                            comment: str = "") -> dict:
     """Importer alle ark fra Excel-fil til SQLite.
 
+    Håndterer ACTION-kolonnen:
+      - CREATE: Ny rad (INSERT)
+      - UPDATE: Oppdater eksisterende rad (match på Rad ID)
+      - DELETE: Slett rad (via Rad ID)
+      - Tom: Inferer (Rad ID finnes → UPDATE, ellers CREATE)
+
     Args:
         excel_path: Sti til Excel-filen (.xlsx)
         db: DataRepo-instans (opprettes automatisk hvis None)
@@ -476,8 +551,9 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
             if df.empty:
                 continue
 
-            # Sjekk at nødvendige kolonner finnes
-            missing = [c for c in required_cols if c not in df.columns]
+            # Sjekk at nødvendige kolonner finnes (etter å ha fjernet ACTION/Rad ID)
+            data_cols = [c for c in df.columns if c not in ("ACTION", "Rad ID")]
+            missing = [c for c in required_cols if c not in data_cols]
             if missing:
                 stats["errors"].append(
                     f"Ark '{sheet_name}': mangler kolonner: {missing}"
@@ -485,7 +561,7 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
                 continue
 
             rows = df.to_dict("records")
-            count = import_func(db, rows)
+            count = import_func(db, rows, sheet_name)
             stats["tables_updated"][sheet_name] = count
             stats["total_changes"] += count
 
@@ -507,56 +583,107 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
 
 
 # ──────────────────────────────────────────────────────────────────────
+#  Hjelper: prosesser en rad med ACTION
+# ──────────────────────────────────────────────────────────────────────
+
+def _deletions_from_action(rows: list[dict], sheet_name: str, db: DataRepo) -> int:
+    """Prosesser og utfør DELETE-ACTIONer. Returner antall slettinger."""
+    table_name = SHEET_TO_TABLE.get(sheet_name)
+    if not table_name:
+        return 0
+
+    delete_count = 0
+    for row in rows:
+        action = _get_action(row)
+        if action != "DELETE":
+            continue
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            continue
+
+        # Kall riktig delete-metode basert på tabell
+        delete_method = getattr(db, f"delete_{table_name}", None)
+        if delete_method:
+            delete_method(row_id, source="import")
+            delete_count += 1
+
+    return delete_count
+
+
+# ──────────────────────────────────────────────────────────────────────
 #  Importere hvert ark
 # ──────────────────────────────────────────────────────────────────────
 
-def _import_products(db: DataRepo, rows: list[dict]) -> int:
+def _import_products(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer produkter. Returner antall endringer."""
-    changes = 0
+    # Først: håndter DELETE
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
+    # Så: upsert CREATE/UPDATE/tom
     product_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         item_no = _s(row.get("Item No", ""))
         if not item_no:
             continue
-        product_list.append({
+
+        entry = {
+            "id": _i(row.get("Rad ID")),
             "item_no": item_no,
             "description": _s(row.get("Description", "")),
             "item_type": _s(row.get("Item Type", "")),
             "product_group": _s(row.get("Product Group", "")),
             "base_uom": _s(row.get("Base Unit of Measure", "")),
-        })
+        }
+        product_list.append(entry)
+
     if product_list:
         db.upsert_products(product_list, source="import")
-        # Telle endringer: vi kunne sjekket change_log, men returantall er et estimat
-        changes = len(product_list)
-    return changes
+    return len(product_list) + deletions
 
 
-def _import_locations(db: DataRepo, rows: list[dict]) -> int:
+def _import_locations(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer lokasjoner."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     loc_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         code = _s(row.get("Location Code", ""))
         if not code:
             continue
         loc_list.append({
+            "id": _i(row.get("Rad ID")),
             "code": code,
             "name": _s(row.get("Location Name", "")),
             "location_type": _s(row.get("Location Type", "")),
         })
     if loc_list:
         db.upsert_locations(loc_list, source="import")
-    return len(loc_list)
+    return len(loc_list) + deletions
 
 
-def _import_work_centers(db: DataRepo, rows: list[dict]) -> int:
+def _import_work_centers(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer arbeidssentre."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     wc_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         code = _s(row.get("Work Center Code", ""))
         if not code:
             continue
         wc_list.append({
+            "id": _i(row.get("Rad ID")),
             "code": code,
             "description": _s(row.get("Description", "")),
             "location_code": _s(row.get("Location Code", "")),
@@ -568,17 +695,24 @@ def _import_work_centers(db: DataRepo, rows: list[dict]) -> int:
         })
     if wc_list:
         db.upsert_work_centers(wc_list, source="import")
-    return len(wc_list)
+    return len(wc_list) + deletions
 
 
-def _import_operations(db: DataRepo, rows: list[dict]) -> int:
+def _import_operations(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer operasjoner."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     op_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         code = _s(row.get("Operation Code", ""))
         if not code:
             continue
         op_list.append({
+            "id": _i(row.get("Rad ID")),
             "code": code,
             "description": _s(row.get("Description", "")),
             "default_work_center": _s(row.get("Default Work Center", "")),
@@ -586,37 +720,66 @@ def _import_operations(db: DataRepo, rows: list[dict]) -> int:
         })
     if op_list:
         db.upsert_operations(op_list, source="import")
-    return len(op_list)
+    return len(op_list) + deletions
 
 
-def _import_item_costs(db: DataRepo, rows: list[dict]) -> int:
+def _import_item_costs(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer kostpriser."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     cost_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         item_no = _s(row.get("Item No", ""))
         if not item_no:
             continue
-        cost_list.append({
+
+        cost_type = _s(row.get("Cost Type", "Standard Cost"))
+
+        entry = {
             "item_no": item_no,
-            "cost_type": _s(row.get("Cost Type", "Standard Cost")),
+            "cost_type": cost_type,
             "unit_cost": _f(row.get("Unit Cost", 0)),
             "currency": _s(row.get("Currency", "NOK")),
             "effective_date": _d(row.get("Effective Date")),
-        })
+        }
+
+        # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM item_costs WHERE item_no = ? AND cost_type = ?",
+                (item_no, cost_type),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+        entry["id"] = row_id
+        cost_list.append(entry)
+
     if cost_list:
         db.upsert_item_costs(cost_list, source="import")
-    return len(cost_list)
+    return len(cost_list) + deletions
 
 
-def _import_bom(db: DataRepo, rows: list[dict]) -> int:
+def _import_bom(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer BOM-linjer."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     bom_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         parent = _s(row.get("Parent Item No", ""))
         component = _s(row.get("Component Item No", ""))
         if not parent or not component:
             continue
-        bom_list.append({
+
+        entry = {
             "parent_item_no": parent,
             "component_item_no": component,
             "quantity_per": _f(row.get("Quantity Per", 1)),
@@ -624,89 +787,185 @@ def _import_bom(db: DataRepo, rows: list[dict]) -> int:
             "scrap_pct": _f(row.get("Scrap %", 0)),
             "co_product_pct": _f(row.get("Co-Prod %", 0)),
             "co_product_item_no": _s(row.get("Co-Prod Item No", "")),
-        })
+        }
+
+        # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no = ?",
+                (parent, component),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+        entry["id"] = row_id
+        bom_list.append(entry)
+
     if bom_list:
         db.upsert_bom_lines(bom_list, source="import")
-    return len(bom_list)
+    return len(bom_list) + deletions
 
 
-def _import_routing(db: DataRepo, rows: list[dict]) -> int:
+def _import_routing(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer routing-linjer."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     rt_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         item_no = _s(row.get("Item No", ""))
         if not item_no:
             continue
-        rt_list.append({
+
+        operation_no = int(_f(row.get("Operation No", 0)))
+        wc_code = _s(row.get("Work Center Code", ""))
+
+        entry = {
             "item_no": item_no,
-            "operation_no": int(_f(row.get("Operation No", 0))),
+            "operation_no": operation_no,
             "operation_code": _s(row.get("Operation Code", "")),
-            "work_center_code": _s(row.get("Work Center Code", "")),
+            "work_center_code": wc_code,
             "setup_time_minutes": _f(row.get("Setup Time Minutes", 0)),
             "run_time_minutes": _f(row.get("Run Time Minutes", 0)),
             "batch_size": _f(row.get("Batch Size", 1)),
-        })
+        }
+
+        # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM routing_lines WHERE item_no = ? AND operation_no = ? AND work_center_code = ?",
+                (item_no, operation_no, wc_code),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+        entry["id"] = row_id
+        rt_list.append(entry)
+
     if rt_list:
         db.upsert_routing_lines(rt_list, source="import")
-    return len(rt_list)
+    return len(rt_list) + deletions
 
 
-def _import_byproduct_rules(db: DataRepo, rows: list[dict]) -> int:
+def _import_byproduct_rules(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer biproduktregler."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     bp_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         parent = _s(row.get("Parent Item No", ""))
         byprod = _s(row.get("By Product Item No", ""))
         if not parent or not byprod:
             continue
-        bp_list.append({
+
+        entry = {
             "parent_item_no": parent,
             "by_product_item_no": byprod,
             "expected_quantity": _f(row.get("Expected Quantity", 0)),
             "uom": _s(row.get("Unit of Measure", "")),
             "market_value": _f(row.get("Market Value", 0)),
             "allocation_method": _s(row.get("Allocation Method", "Reduce Main Product Cost")),
-        })
+        }
+
+        # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM byproduct_rules WHERE parent_item_no = ? AND by_product_item_no = ?",
+                (parent, byprod),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+        entry["id"] = row_id
+        bp_list.append(entry)
+
     if bp_list:
         db.upsert_byproduct_rules(bp_list, source="import")
-    return len(bp_list)
+    return len(bp_list) + deletions
 
 
-def _import_capacity(db: DataRepo, rows: list[dict]) -> int:
+def _import_capacity(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer kapasitetskalender."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     cap_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         wc = _s(row.get("Work Center", ""))
         d = _d(row.get("Date"))
         if not wc or not d:
             continue
-        cap_list.append({
+
+        entry = {
             "work_center": wc,
             "date": d,
             "available_hours": _f(row.get("Available Hours", 0)),
             "planned_downtime": _f(row.get("Planned Downtime", 0)),
-        })
+        }
+
+        # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM capacity_days WHERE work_center = ? AND date = ?",
+                (wc, d),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+        entry["id"] = row_id
+        cap_list.append(entry)
+
     if cap_list:
         db.upsert_capacity_days(cap_list, source="import")
-    return len(cap_list)
+    return len(cap_list) + deletions
 
 
-def _import_scenarios(db: DataRepo, rows: list[dict]) -> int:
+def _import_scenarios(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer produksjonsscenarioer."""
+    deletions = _deletions_from_action(rows, sheet_name, db)
+
     sc_list = []
     for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            continue
+
         name = _s(row.get("Scenario Name", ""))
         product = _s(row.get("Product", ""))
         if not name or not product:
             continue
-        sc_list.append({
+
+        entry = {
             "scenario_name": name,
             "product": product,
             "planned_quantity": _f(row.get("Planned Quantity", 0)),
-        })
+        }
+
+        # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
+        row_id = _i(row.get("Rad ID"))
+        if row_id is None:
+            existing = db.conn.execute(
+                "SELECT id FROM production_scenarios WHERE scenario_name = ? AND product = ?",
+                (name, product),
+            ).fetchone()
+            if existing:
+                row_id = existing["id"]
+        entry["id"] = row_id
+        sc_list.append(entry)
+
     if sc_list:
         db.upsert_scenarios(sc_list, source="import")
-    return len(sc_list)
+    return len(sc_list) + deletions
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -717,7 +976,8 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
     """Eksporter all data fra SQLite til en Excel-fil.
     
     Genererer de samme 10 arkene som den originale Excel-malen.
-    Inkluderer et 11. ark: 'Endringslogg'.
+    Hvert ark har ACTION (col A) og Rad ID (col B) før datakolonnene.
+    Inkluderer et 11. ark: 'Endringslogg' (uten ACTION/ID).
 
     Args:
         output_path: Sti til output Excel-fil (.xlsx)
@@ -738,6 +998,7 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
     header_font = Font(name='Calibri', bold=True, color='FFFFFF', size=11)
     header_fill = PatternFill(start_color='14532D', end_color='14532D', fill_type='solid')
     data_font = Font(name='Calibri', size=10)
+    action_font = Font(name='Calibri', size=10, italic=True, color='666666')
     thin_border = Border(
         left=Side(style='thin', color='48BB78'),
         right=Side(style='thin', color='48BB78'),
@@ -745,7 +1006,9 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
         bottom=Side(style='thin', color='48BB78'),
     )
 
-    def _write_sheet(ws, title: str, rows: list, field_names: list[str], db_keys: Optional[list[str]] = None):
+    def _write_sheet(ws, title: str, rows: list, field_names: list[str],
+                     db_keys: Optional[list[str]] = None,
+                     include_action: bool = True):
         """Skriv data til et Excel-ark med header, kolonnebeskrivelser og dropdowns.
 
         Args:
@@ -755,19 +1018,45 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
             field_names: Kolonneoverskrifter (Excel-visning)
             db_keys: Database-nøkler for data-aksess. Hvis None, konverteres field_names
                      til snake_case (f.eks. "Item No" → "item_no").
+            include_action: Om ACTION/ID skal inkluderes (True for data-ark, False for Endringslogg)
         """
         ws.title = title
-        if not rows:
-            ws.cell(row=1, column=1, value="(Ingen data)").font = data_font
-            return
 
         # Hvis db_keys ikke er oppgitt, konverter field_names til snake_case
         if db_keys is None:
             db_keys = [name.lower().replace(" ", "_") for name in field_names]
 
-        # Headere med kolonnebeskrivelser
         kol_desc = KOLONNER.get(title, {})
-        for col_idx, name in enumerate(field_names, 1):
+
+        # -- Header --
+        col_offset = 1
+        if include_action:
+            # Kolonne A: ACTION
+            cell = ws.cell(row=1, column=1, value="ACTION")
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = thin_border
+            cell.comment = XLComment(
+                "Handling for denne raden ved import. CREATE=ny, UPDATE=endre, DELETE=slett. "
+                "Tom verdi = inferer (CREATE hvis ny, UPDATE hvis eksisterende).",
+                "System", width=300, height=100,
+            )
+
+            # Kolonne B: Rad ID
+            cell = ws.cell(row=1, column=2, value="Rad ID")
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = thin_border
+            cell.comment = XLComment(
+                "Unik database-ID for raden. Skrivebeskyttet - brukes kun for matching ved import.",
+                "System", width=300, height=100,
+            )
+            col_offset = 3
+
+        # Headere for datakolonner
+        for col_idx, name in enumerate(field_names, col_offset):
             cell = ws.cell(row=1, column=col_idx, value=name)
             cell.font = header_font
             cell.fill = header_fill
@@ -776,38 +1065,81 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
             if name in kol_desc:
                 cell.comment = XLComment(kol_desc[name], "System", width=300, height=100)
 
-        # Data — konverter sqlite3.Row til dict for sikker aksess
+        if not rows:
+            if not include_action:
+                ws.cell(row=2, column=1, value="(Ingen data)").font = data_font
+            return
+
+        # -- Data --
         for row_idx, row in enumerate(rows, 2):
             if hasattr(row, 'keys'):
                 row = dict(row)
-            for col_idx, key in enumerate(db_keys, 1):
+
+            if include_action:
+                # ACTION: default tom
+                cell = ws.cell(row=row_idx, column=1, value="")
+                cell.font = action_font
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal='center')
+
+                # Rad ID
+                row_id = row.get("id", "")
+                cell = ws.cell(row=row_idx, column=2, value=row_id)
+                cell.font = data_font
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal='center')
+
+            for col_idx, key in enumerate(db_keys, col_offset):
                 value = row.get(key, "")
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.font = data_font
                 cell.border = thin_border
 
-        # Auto-width
-        for col_idx in range(1, len(field_names) + 1):
-            max_len = len(str(field_names[col_idx - 1]))
+        # -- Auto-width --
+        total_cols = len(field_names) + (2 if include_action else 0)
+        for col_idx in range(1, total_cols + 1):
+            max_len = len(str(ws.cell(row=1, column=col_idx).value or ""))
             for row_idx in range(2, len(rows) + 2):
                 val = ws.cell(row=row_idx, column=col_idx).value
                 if val is not None:
                     max_len = max(max_len, min(len(str(val)), 40))
             ws.column_dimensions[get_column_letter(col_idx)].width = max_len + 2
 
-        # Lås header-raden (freeze panes)
+        # -- Freeze panes --
         ws.freeze_panes = "A2"
 
-        # Legg til statiske dropdowns
-        _legg_til_dropdowns(ws, title)
+        # -- Dropdowns --
+        _legg_til_dropdowns(ws, title, include_action)
 
-    def _legg_til_dropdowns(ws, ark_navn: str):
-        """Legg til statiske dropdowns for et ark (samme som oppdater_mal.py)."""
+        # -- Høyde på rad 1 --
+        ws.row_dimensions[1].height = 40
+
+    def _legg_til_dropdowns(ws, ark_navn: str, include_action: bool = True):
+        """Legg til statiske dropdowns for et ark."""
+        # ACTION-dropdown (kolonne A) - alltid hvis include_action
+        if include_action:
+            dv_action = DataValidation(
+                type="list",
+                formula1=ACTION_VALUES,
+                allow_blank=True,
+                showErrorMessage=True,
+                errorTitle="Ugyldig ACTION",
+                error="Verdien må være: CREATE, UPDATE, DELETE, eller tom",
+            )
+            ws.add_data_validation(dv_action)
+            dv_action.add("A2:A1048576")
+
+        # Eksisterende statiske dropdowns (justert for ACTION/ID offset)
+        col_adjust = 2 if include_action else 0
         for sheet, col, liste in STATISKE_DROPDOWNS:
             if sheet != ark_navn:
                 continue
             if not liste:
                 continue
+            # Konverter kolonnebokstav til index, juster, og tilbake til bokstav
+            col_idx = ord(col.upper()) - 65  # A=0
+            new_col = col_idx + col_adjust + 1  # +1 for 1-indexed
+            new_col_letter = get_column_letter(new_col)
             dv = DataValidation(
                 type="list",
                 formula1=liste,
@@ -817,7 +1149,7 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
                 error=f"Verdien må være en av: {liste.replace(chr(34), '')}",
             )
             ws.add_data_validation(dv)
-            dv.add(f"{col}2:{col}1048576")
+            dv.add(f"{new_col_letter}2:{new_col_letter}1048576")
 
     # ── Ark 1: Product Master ────────────────────────────────
     ws1 = wb.active
@@ -890,6 +1222,7 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
                  db_keys=["scenario_name", "product", "planned_quantity"])
 
     # ── Ark 11: Endringslogg ─────────────────────────────────
+    # Endringsloggen har IKKE ACTION/ID kolonner
     ws11 = wb.create_sheet()
     change_log = db.get_changes(limit=1000)
     if change_log:
@@ -897,7 +1230,8 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
                      ["ID", "Tidspunkt", "Bruker", "Kilde", "Tabell", "Nokkel",
                       "Felt", "Gammel verdi", "Ny verdi"],
                      db_keys=["id", "timestamp", "user", "source", "table_name",
-                              "record_key", "field_name", "old_value", "new_value"])
+                              "record_key", "field_name", "old_value", "new_value"],
+                     include_action=False)
     else:
         ws11.title = "Endringslogg"
         ws11.cell(row=1, column=1, value="(Ingen endringer logget)").font = data_font
