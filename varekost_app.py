@@ -65,8 +65,8 @@ def _():
 def _(mo):
     mo.Html("""
     <style>
-        body { 
-            background-color: #F3F5F2; 
+        body {
+            background-color: #F3F5F2;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #2C3E2B;
         }
@@ -108,7 +108,6 @@ def _(mo):
             margin-bottom: 16px;
         }
 
-        .fti-sidebar-logo { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.15); margin-bottom: 16px; }
         .fti-sidebar-section { margin-bottom: 20px; }
         .fti-sidebar-section h3 {
             font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px;
@@ -176,30 +175,23 @@ def _(mo):
 def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
     _db = DataRepo()
     _db.initialize()
-
     data = None
     engine = None
     baseline = None
     db_stats = None
-
     _reload_verdi = get_reload()
-
     if _db.is_empty():
-        mo.output.replace(
-            mo.md("""
-            ### Velkommen!
-
-            Du må laste opp en Excel-fil med data for å komme i gang.
-
-            **Slik fungerer det:**
-            1. Last ned Excel-malen fra SharePoint
-            2. Rediger data i Excel
-            3. Last opp filen nedenfor — valideres og importeres automatisk
-            4. Kjør simuleringer og analyser kostnader
-            5. Last ned oppdatert Excel ved behov
-            ---
-            """)
-        )
+        mo.output.replace(mo.md("""
+        ### Velkommen!
+        Du må laste opp en Excel-fil med data for å komme i gang.
+        **Slik fungerer det:**
+        1. Last ned Excel-malen fra SharePoint
+        2. Rediger data i Excel
+        3. Last opp filen nedenfor — valideres og importeres automatisk
+        4. Kjør simuleringer og analyser kostnader
+        5. Last ned oppdatert Excel ved behov
+        ---
+        """))
     else:
         try:
             data = SqliteData()
@@ -329,9 +321,7 @@ def _(
                     _temp_path = os.path.join(_temp_dir, _filename)
                     with open(_temp_path, "wb") as _f:
                         _f.write(_blob)
-                    _stats = import_excel_to_sqlite(
-                        _temp_path, excel_blob=_blob, comment=f"Gjeninnlasting av versjon {_upload_id}",
-                    )
+                    _stats = import_excel_to_sqlite(_temp_path, excel_blob=_blob, comment=f"Gjeninnlasting av versjon {_upload_id}")
                     overrides["item_costs"].clear()
                     overrides["bom_scrap"].clear()
                     overrides["bom_co_product"].clear()
@@ -356,19 +346,17 @@ def _(mo):
 
 @app.cell
 def _(export_excel_db_button, export_sqlite_to_excel, mo, os, tempfile):
+    db_download = None
     if export_excel_db_button.value:
         try:
             _output_path = os.path.join(tempfile.gettempdir(), "produksjonsmodell_eksport.xlsx")
             export_sqlite_to_excel(_output_path)
             with open(_output_path, "rb") as _f:
                 _excel_content = _f.read()
-            mo.output.replace(mo.download(
-                label="📥 Last ned (11 ark, inkl. endringslogg)",
-                filename="produksjonsmodell_eksport.xlsx", data=_excel_content,
-            ))
+            db_download = mo.download(label="📥 Last ned (11 ark, inkl. endringslogg)", filename="produksjonsmodell_eksport.xlsx", data=_excel_content)
         except Exception as _e:
-            mo.output.replace(mo.md(f"### ❌ Feil: {_e}"))
-    return
+            pass
+    return (db_download,)
 
 
 # ═══════════════════════════════════
@@ -389,10 +377,8 @@ def _(data, vareFilter):
     filtered_operations = []
     filtered_capacity_days = []
     filter_info = ""
-
     if data:
         _filter_text = vareFilter.value.strip().lower() if vareFilter.value else ""
-
         if _filter_text:
             _fg_set = set()
             for _p in data.products:
@@ -416,51 +402,30 @@ def _(data, vareFilter):
                 if _p.item_type == 'By Product' and _p.item_no in _bp_set:
                     _all_product_set.add(_p.item_no)
             for _p in data.products:
-                if _p.item_no in _all_product_set:
-                    filtered_products.append(_p)
+                if _p.item_no in _all_product_set: filtered_products.append(_p)
             for _br in data.byproduct_rules:
-                if _br.parent_item_no in _fg_set:
-                    filtered_byproduct_rules.append(_br)
+                if _br.parent_item_no in _fg_set: filtered_byproduct_rules.append(_br)
             _routing_wc_set = set()
             for _rl in data.routing_lines:
                 if _rl.item_no in _fg_set:
                     filtered_routing_lines.append(_rl)
                     _routing_wc_set.add(_rl.work_center_code)
             for _ic in data.item_costs:
-                if _ic.item_no in _all_product_set:
-                    filtered_item_costs.append(_ic)
+                if _ic.item_no in _all_product_set: filtered_item_costs.append(_ic)
             for _sc in data.scenarios:
-                if _sc.product in _fg_set:
-                    filtered_scenarios.append(_sc)
+                if _sc.product in _fg_set: filtered_scenarios.append(_sc)
             for _wc in data.work_centers:
-                if _wc.code in _routing_wc_set:
-                    filtered_work_centers.append(_wc)
+                if _wc.code in _routing_wc_set: filtered_work_centers.append(_wc)
             for _loc in data.locations:
-                if _loc.code in {_wc.location_code for _wc in filtered_work_centers}:
-                    filtered_locations.append(_loc)
+                if _loc.code in {_wc.location_code for _wc in filtered_work_centers}: filtered_locations.append(_loc)
             for _op in data.operations:
-                if _op.code in {_rl.operation_code for _rl in filtered_routing_lines}:
-                    filtered_operations.append(_op)
+                if _op.code in {_rl.operation_code for _rl in filtered_routing_lines}: filtered_operations.append(_op)
             for _cd in data.capacity_days:
-                if _cd.work_center in _routing_wc_set:
-                    filtered_capacity_days.append(_cd)
+                if _cd.work_center in _routing_wc_set: filtered_capacity_days.append(_cd)
             filter_info = f"ℹ️ Viser {len(filtered_products)} av {len(data.products)} produkter (filtrert på \"{_filter_text}\")"
         else:
-            filtered_products = list(data.products)
-            filtered_bom_lines = list(data.bom_lines)
-            filtered_routing_lines = list(data.routing_lines)
-            filtered_byproduct_rules = list(data.byproduct_rules)
-            filtered_item_costs = list(data.item_costs)
-            filtered_scenarios = list(data.scenarios)
-            filtered_work_centers = list(data.work_centers)
-            filtered_locations = list(data.locations)
-            filtered_operations = list(data.operations)
-            filtered_capacity_days = list(data.capacity_days)
-    return (
-        filter_info, filtered_bom_lines, filtered_byproduct_rules, filtered_capacity_days,
-        filtered_item_costs, filtered_locations, filtered_operations, filtered_products,
-        filtered_routing_lines, filtered_scenarios, filtered_work_centers,
-    )
+            filtered_products = list(data.products); filtered_bom_lines = list(data.bom_lines); filtered_routing_lines = list(data.routing_lines); filtered_byproduct_rules = list(data.byproduct_rules); filtered_item_costs = list(data.item_costs); filtered_scenarios = list(data.scenarios); filtered_work_centers = list(data.work_centers); filtered_locations = list(data.locations); filtered_operations = list(data.operations); filtered_capacity_days = list(data.capacity_days)
+    return (filter_info, filtered_bom_lines, filtered_byproduct_rules, filtered_capacity_days, filtered_item_costs, filtered_locations, filtered_operations, filtered_products, filtered_routing_lines, filtered_scenarios, filtered_work_centers)
 
 
 # ═══════════════════════════════════
@@ -492,10 +457,8 @@ def _(overrides, rm_price_df):
             _varenr = _row["Varenr"]
             _org = _row["Org. pris"]
             _ny = _row["Ny pris"]
-            if abs(_ny - _org) > 0.001:
-                overrides["item_costs"][_varenr] = _ny
-            elif _varenr in overrides["item_costs"]:
-                del overrides["item_costs"][_varenr]
+            if abs(_ny - _org) > 0.001: overrides["item_costs"][_varenr] = _ny
+            elif _varenr in overrides["item_costs"]: del overrides["item_costs"][_varenr]
     return
 
 
@@ -527,16 +490,12 @@ def _(bom_scrap_df, overrides):
             _key = (_produkt, _komponent)
             _org_svinn = _row["Org. svinn %"]
             _ny_svinn = _row["Nytt svinn %"]
-            if abs(_ny_svinn - _org_svinn) > 0.001:
-                overrides["bom_scrap"][_key] = _ny_svinn
-            elif _key in overrides["bom_scrap"]:
-                del overrides["bom_scrap"][_key]
+            if abs(_ny_svinn - _org_svinn) > 0.001: overrides["bom_scrap"][_key] = _ny_svinn
+            elif _key in overrides["bom_scrap"]: del overrides["bom_scrap"][_key]
             _org_co = _row["Org. co-prod %"]
             _ny_co = _row["Ny co-prod %"]
-            if abs(_ny_co - _org_co) > 0.001:
-                overrides["bom_co_product"][_key] = _ny_co
-            elif _key in overrides["bom_co_product"]:
-                del overrides["bom_co_product"][_key]
+            if abs(_ny_co - _org_co) > 0.001: overrides["bom_co_product"][_key] = _ny_co
+            elif _key in overrides["bom_co_product"]: del overrides["bom_co_product"][_key]
     return
 
 
@@ -627,7 +586,6 @@ def _(mo):
 def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty, run_button):
     sim_results = None
     sim_overrides = None
-
     if run_button.value:
         if not data:
             mo.output.replace(mo.md("### ❌ Ingen data lastet. Last opp Excel-fil for å komme i gang."))
@@ -657,22 +615,10 @@ def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty
 @app.cell
 def _(mo):
     export_pdf_button = mo.ui.run_button(label="📄 Eksporter til PDF-rapport")
-    pdf_kommentar = mo.ui.text_area(
-        label="Ledelsessammendrag / Kommentar (vises øverst i PDF)",
-        placeholder="Skriv f.eks. anbefalinger eller en kort analyse av simuleringen her...",
-        rows=3,
-    )
-    pdf_inkluder_detaljer = mo.ui.checkbox(
-        label="Inkluder tekniske detaljer (material- og operasjonsdetaljer per produkt)",
-        value=False,
-    )
+    pdf_kommentar = mo.ui.text_area(label="Ledelsessammendrag / Kommentar (vises øverst i PDF)", placeholder="Skriv f.eks. anbefalinger eller en kort analyse...", rows=3)
+    pdf_inkluder_detaljer = mo.ui.checkbox(label="Inkluder tekniske detaljer (material- og operasjonsdetaljer per produkt)", value=False)
     export_excel_button = mo.ui.run_button(label="📊 Eksporter resultater til Excel", kind="neutral")
-    return (
-        export_excel_button,
-        export_pdf_button,
-        pdf_inkluder_detaljer,
-        pdf_kommentar,
-    )
+    return (export_excel_button, export_pdf_button, pdf_inkluder_detaljer, pdf_kommentar)
 
 
 # ── SIDEBAR ─────────────────────────
@@ -681,20 +627,17 @@ def _(mo):
 @app.cell
 def _(mo):
     vareFilter = mo.ui.text(label="🔍 Filtrer på varenummer og beskrivelse", full_width=True)
-    mo.sidebar(
-        mo.vstack([
-            mo.Html('<div class="fti-sidebar-section"><h3>Filter</h3></div>'),
-            vareFilter,
-            mo.Html('<div class="fti-sidebar-section"><h3>📑 Faner</h3></div>'),
-            mo.md("""- 📊 **Simulering & Analyse** — juster parametere, kjør simulering, se resultater
+    mo.sidebar(mo.vstack([
+        mo.Html('<div class="fti-sidebar-section"><h3>Filter</h3></div>'),
+        vareFilter,
+        mo.Html('<div class="fti-sidebar-section"><h3>📑 Faner</h3></div>'),
+        mo.md("""- 📊 **Simulering & Analyse** — juster parametere, kjør simulering, se resultater
 - 📁 **Dataimport & Versjoner** — last opp Excel, versjonshistorikk
 - 🔍 **Datamodell (Innsyn)** — se alle rådata-tabeller
 - 📜 **Endringslogg** — vis endringer over tid"""),
-            mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
-            mo.Html('Fram Treindustri - '),
-            mo.Html('v0.23.14 · Marimo'),
-        ]), width="260px",
-    )
+        mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
+        mo.Html('Fram Treindustri - '), mo.Html('v0.23.14 · Marimo'),
+    ]), width="260px")
     return (vareFilter,)
 
 
@@ -705,7 +648,7 @@ def _(mo):
 
 @app.cell
 def _(
-    DataRepo, baseline, data, excel_import_file, excel_import_kommentar,
+    DataRepo, baseline, data, db_download, excel_import_file, excel_import_kommentar,
     export_excel_db_button, export_pdf_button, filter_info, historikk_valg,
     import_excel_to_sqlite, mo, overrides, pd, planned_qty, rm_price_df,
     routing_df, run_button, set_reload, validate_excel, wc_cost_df, bom_scrap_df,
@@ -721,18 +664,10 @@ def _(
     if filter_info:
         _sim_parts.append(mo.md(f"> {filter_info}"))
     _sim_parts.append(mo.md("## 🔧 Simuleringsparametere"))
-    if rm_price_df is not None:
-        _sim_parts.append(mo.md("### 🪵 Råvarer"))
-        _sim_parts.append(rm_price_df)
-    if bom_scrap_df is not None:
-        _sim_parts.append(mo.md("### 🗑️ Svinn- og kapp-prosenter"))
-        _sim_parts.append(bom_scrap_df)
-    if wc_cost_df is not None:
-        _sim_parts.append(mo.md("### 🏭 Arbeidssentre (timekostnad)"))
-        _sim_parts.append(wc_cost_df)
-    if routing_df is not None:
-        _sim_parts.append(mo.md("### 📋 Routing (stykkpris)"))
-        _sim_parts.append(routing_df)
+    if rm_price_df is not None: _sim_parts.extend([mo.md("### 🪵 Råvarer"), rm_price_df])
+    if bom_scrap_df is not None: _sim_parts.extend([mo.md("### 🗑️ Svinn- og kapp-prosenter"), bom_scrap_df])
+    if wc_cost_df is not None: _sim_parts.extend([mo.md("### 🏭 Arbeidssentre (timekostnad)"), wc_cost_df])
+    if routing_df is not None: _sim_parts.extend([mo.md("### 📋 Routing (stykkpris)"), routing_df])
     _sim_parts.append(mo.md("### 📦 Planlagt kvantum"))
     _sim_parts.append(mo.md("Jo høyere kvantum, desto lavere oppstartskostnad per enhet."))
     _sim_parts.append(planned_qty)
@@ -766,15 +701,48 @@ def _(
             _sim_parts.append(mo.md("**📦 Scenariototaler**"))
             _sim_parts.append(mo.ui.table(pd.DataFrame(_sc_rows), selection=None))
 
-        # Eksportpanel
+        # Eksportpanel - generer PDF/Excel på stedet hvis knapp er trykket
+        _eksport_items = [export_pdf_button, pdf_kommentar, pdf_inkluder_detaljer, mo.Html('<hr style="margin: 12px 0; border-color: #E2E8F0;">'), export_excel_button]
+
+        if export_pdf_button.value:
+            try:
+                _sammenligninger = []
+                for _c in sim_results:
+                    _mat_det = [{"komponent": _md.component, "qty_per": _md.quantity_per, "scrap_pct": _md.scrap_pct, "enhetskost": _md.unit_cost, "total_kost": _md.total_cost} for _md in (_c.simulated_material_details or [])]
+                    _op_det = [{"operasjon": _od.operation_no, "arbeidssenter": _od.work_center, "run_time": _od.run_time_min, "batch": _od.batch_size, "kost_per_time": _od.cost_per_hour, "total_kost": _od.total_cost} for _od in (_c.simulated_operation_details or [])]
+                    _bp_det = [{"biprodukt": _bd.item_no, "kvantum": _bd.quantity, "markedsverdi": _bd.market_value, "total_verdi": _bd.total_value} for _bd in (_c.simulated_byproduct_details or [])]
+                    _co_det = [{"produkt": _co.product_no, "beskrivelse": _co.product_desc, "materialkost": _co.material_cost, "operasjonskost": _co.operation_cost, "setupkost": _co.setup_cost, "brutto": _co.gross_production_cost, "biproduktverdi": _co.by_product_value, "netto": _co.net_production_cost} for _co in (_c.simulated_co_product_results or [])]
+                    _sammenligninger.append({"produkt": _c.product_no, "beskrivelse": _c.product_desc, "org_netto": _c.original_net_cost, "sim_netto": _c.simulated_net_cost, "diff_netto": _c.net_diff, "materialdetaljer": _mat_det, "operasjonsdetaljer": _op_det, "biprodukter": _bp_det, "coprodukter": _co_det, "kvantum": _c.planned_quantity, "total_netto": _c.simulated_total_net_cost, "kost_per_enhet": _c.simulated_cost_per_unit, "timebehov": _c.simulated_total_hours})
+                _overrides_dict = {"item_costs": getattr(sim_overrides, 'item_costs', {}), "bom_scrap": dict(getattr(sim_overrides, 'bom_scrap', {})), "work_centers": getattr(sim_overrides, 'work_centers', {}), "routing": dict(getattr(sim_overrides, 'routing', {})), "planned_quantity": getattr(sim_overrides, 'planned_quantity', None)} if sim_overrides else {}
+                _wc_hours = {}
+                for _c in sim_results:
+                    if _c.simulated_operation_details and _c.planned_quantity:
+                        for _od in _c.simulated_operation_details:
+                            _wc = _od.work_center
+                            _wc_hours[_wc] = _wc_hours.get(_wc, 0.0) + ((_od.run_time_min / 60.0) * _c.planned_quantity) + ((_od.setup_time_min / 60.0) * (_c.planned_quantity / _od.batch_size) if _od.batch_size else 0.0)
+                registrer_fonter()
+                _output_path = os.path.join(tempfile.gettempdir(), "simuleringsrapport.pdf")
+                generer_rapport(_sammenligninger, _overrides_dict, _output_path,
+                                tittel="Produksjonskost Simulator - Simuleringsrapport",
+                                kommentar=pdf_kommentar.value, inkluder_detaljer=pdf_inkluder_detaljer.value, kapasitet_data=_wc_hours)
+                with open(_output_path, "rb") as _f:
+                    _pdf_content = _f.read()
+                _eksport_items.append(mo.download(label="📄 Last ned PDF-rapport", filename="simuleringsrapport.pdf", data=_pdf_content))
+            except Exception as _e:
+                import traceback as _traceback
+                _traceback.print_exc()
+
+        if export_excel_button.value:
+            try:
+                _output_path = os.path.join(tempfile.gettempdir(), "simuleringsresultater.xlsx")
+                _excel_data = generer_excel_rapport(sim_results, _output_path)
+                _eksport_items.append(mo.download(label="📊 Last ned Excel-rapport", filename="simuleringsresultater.xlsx", data=_excel_data))
+            except Exception as _e:
+                import traceback as _traceback
+                _traceback.print_exc()
+
         _sim_parts.append(mo.md("### 💾 Eksport"))
-        _sim_parts.append(mo.accordion({
-            "📥 Last ned rapporter (PDF / Excel)": mo.vstack([
-                export_pdf_button, pdf_kommentar, pdf_inkluder_detaljer,
-                mo.Html('<hr style="margin: 12px 0; border-color: #E2E8F0;">'),
-                export_excel_button,
-            ])
-        }))
+        _sim_parts.append(mo.accordion({"📥 Last ned rapporter (PDF / Excel)": mo.vstack(_eksport_items)}))
 
     _tab_simulering = mo.vstack(_sim_parts)
 
@@ -790,6 +758,8 @@ def _(
         _import_parts.append(historikk_valg)
     _import_parts.append(mo.md("**📥 Eksporter komplett datafil**"))
     _import_parts.append(export_excel_db_button)
+    if db_download is not None:
+        _import_parts.append(db_download)
     _tab_import = mo.vstack(_import_parts)
 
     # ── Fane 3: Datamodell (Innsyn) ────────────────────────────
@@ -853,57 +823,6 @@ def _(
         "📜 Endringslogg": _tab_changelog,
     }))
     return
-
-
-@app.cell
-def _(export_pdf_button, generer_rapport, mo, os, pdf_inkluder_detaljer,
-      pdf_kommentar, registrer_fonter, sim_overrides, sim_results, tempfile):
-    pdf_download = None
-    if export_pdf_button.value:
-        if sim_results:
-            try:
-                _sammenligninger = []
-                for _c in sim_results:
-                    _mat_det = [{"komponent": _md.component, "qty_per": _md.quantity_per, "scrap_pct": _md.scrap_pct, "enhetskost": _md.unit_cost, "total_kost": _md.total_cost} for _md in (_c.simulated_material_details or [])]
-                    _op_det = [{"operasjon": _od.operation_no, "arbeidssenter": _od.work_center, "run_time": _od.run_time_min, "batch": _od.batch_size, "kost_per_time": _od.cost_per_hour, "total_kost": _od.total_cost} for _od in (_c.simulated_operation_details or [])]
-                    _bp_det = [{"biprodukt": _bd.item_no, "kvantum": _bd.quantity, "markedsverdi": _bd.market_value, "total_verdi": _bd.total_value} for _bd in (_c.simulated_byproduct_details or [])]
-                    _co_det = [{"produkt": _co.product_no, "beskrivelse": _co.product_desc, "materialkost": _co.material_cost, "operasjonskost": _co.operation_cost, "setupkost": _co.setup_cost, "brutto": _co.gross_production_cost, "biproduktverdi": _co.by_product_value, "netto": _co.net_production_cost} for _co in (_c.simulated_co_product_results or [])]
-                    _sammenligninger.append({"produkt": _c.product_no, "beskrivelse": _c.product_desc, "org_netto": _c.original_net_cost, "sim_netto": _c.simulated_net_cost, "diff_netto": _c.net_diff, "materialdetaljer": _mat_det, "operasjonsdetaljer": _op_det, "biprodukter": _bp_det, "coprodukter": _co_det, "kvantum": _c.planned_quantity, "total_netto": _c.simulated_total_net_cost, "kost_per_enhet": _c.simulated_cost_per_unit, "timebehov": _c.simulated_total_hours})
-                _overrides_dict = {}
-                if sim_overrides:
-                    _overrides_dict = {"item_costs": getattr(sim_overrides, 'item_costs', {}), "bom_scrap": dict(getattr(sim_overrides, 'bom_scrap', {})), "work_centers": getattr(sim_overrides, 'work_centers', {}), "routing": dict(getattr(sim_overrides, 'routing', {})), "planned_quantity": getattr(sim_overrides, 'planned_quantity', None)}
-                _wc_hours = {}
-                for _c in sim_results:
-                    if _c.simulated_operation_details and _c.planned_quantity:
-                        for _od in _c.simulated_operation_details:
-                            _wc = _od.work_center
-                            _wc_hours[_wc] = _wc_hours.get(_wc, 0.0) + ((_od.run_time_min / 60.0) * _c.planned_quantity) + ((_od.setup_time_min / 60.0) * (_c.planned_quantity / _od.batch_size) if _od.batch_size else 0.0)
-                registrer_fonter()
-                _output_path = os.path.join(tempfile.gettempdir(), "simuleringsrapport.pdf")
-                generer_rapport(_sammenligninger, _overrides_dict, _output_path,
-                                tittel="Produksjonskost Simulator - Simuleringsrapport",
-                                kommentar=pdf_kommentar.value, inkluder_detaljer=pdf_inkluder_detaljer.value, kapasitet_data=_wc_hours)
-                with open(_output_path, "rb") as _f:
-                    _pdf_content = _f.read()
-                pdf_download = mo.download(label="📄 Last ned PDF-rapport", filename="simuleringsrapport.pdf", data=_pdf_content)
-            except Exception as _e:
-                import traceback as _traceback
-                _traceback.print_exc()
-    return (pdf_download,)
-
-
-@app.cell
-def _(export_excel_button, generer_excel_rapport, mo, os, sim_results, tempfile):
-    excel_download = None
-    if export_excel_button.value:
-        if sim_results:
-            try:
-                _output_path = os.path.join(tempfile.gettempdir(), "simuleringsresultater.xlsx")
-                excel_download = mo.download(label="📊 Last ned Excel-rapport", filename="simuleringsresultater.xlsx", data=generer_excel_rapport(sim_results, _output_path))
-            except Exception as _e:
-                import traceback as _traceback
-                _traceback.print_exc()
-    return (excel_download,)
 
 
 @app.cell
