@@ -16,6 +16,7 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.comments import Comment
 from openpyxl.worksheet.datavalidation import DataValidation
 from datetime import date
+import os
 import re
 import sys
 
@@ -568,7 +569,9 @@ style_auto(ws, len(scenario_data) + 1, 5)
 if "Sheet" in wb.sheetnames:
     del wb["Sheet"]
 
-OUTPUT_FILE = "Produksjonsmodell_Testdata_v3.xlsx"
+# Lagre til src/ (der kostberegning.py forventer filen)
+_SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUTPUT_FILE = os.path.join(_SRC_DIR, "Produksjonsmodell_Testdata_v3.xlsx")
 wb.save(OUTPUT_FILE)
 print(f"OK: Testdata lagret til {OUTPUT_FILE}")
 print(f"   {len(wb.sheetnames)} ark:")

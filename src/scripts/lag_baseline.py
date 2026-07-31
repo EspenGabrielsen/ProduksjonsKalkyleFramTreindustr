@@ -23,16 +23,21 @@ elif hasattr(sys.stdout, 'buffer'):
 from datetime import date, datetime
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from kostberegning import (
     ExcelData, CostCalculator, SimulationEngine, SimulationOverride,
     ProductCostResult, SimulationComparison, MaterialCostDetail,
     OperationCostDetail, ByProductDetail,
 )
 
-EXCEL_PATH = r"C:\Users\EspenGabrielsen\code\ProduksjonsKalkyle\Produksjonsmodell_Testdata_v3.xlsx"
-BASELINE_KALKYLE = "baseline_kalkyle.json"
-BASELINE_SIMULERING = "baseline_simulering.json"
+# Testdata-Excel ligger i src/ (ved siden av kostberegning.py)
+_SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EXCEL_PATH = os.path.join(_SRC_DIR, "Produksjonsmodell_Testdata_v3.xlsx")
+
+# Baseline-output legges i output/
+_OUTPUT_DIR = os.path.join(os.path.dirname(_SRC_DIR), "output")
+BASELINE_KALKYLE = os.path.join(_OUTPUT_DIR, "baseline_kalkyle.json")
+BASELINE_SIMULERING = os.path.join(_OUTPUT_DIR, "baseline_simulering.json")
 
 
 def _serialize(obj):

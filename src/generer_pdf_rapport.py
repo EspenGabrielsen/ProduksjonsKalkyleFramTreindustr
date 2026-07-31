@@ -823,6 +823,8 @@ def _parse_markdown_to_story(md_content, styles):
 
 def _md_to_html(tekst):
     """Konverter Markdown inline-formatering til HTML for ReportLab."""
+    # Fjern <img>-taggar (ReportLab Paragraph støtter ikke alt-attributt her)
+    tekst = re.sub(r"<img[^>]*?>", "", tekst, flags=re.IGNORECASE)
     # **fet**
     tekst = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", tekst)
     # *kursiv*
@@ -831,6 +833,8 @@ def _md_to_html(tekst):
     tekst = re.sub(r"``(.*?)``", r"<font face='Courier'>\1</font>", tekst)
     # `kode`
     tekst = re.sub(r"`(.*?)`", r"<font face='Courier'>\1</font>", tekst)
+    # Fjern gjenværende HTML-taggar som ReportLab ikke støtter (alt, class, etc.)
+    tekst = re.sub(r"<([a-zA-Z]+)[^>]*?(\/?)>", r"<\1\2>", tekst)
     return tekst
 
 

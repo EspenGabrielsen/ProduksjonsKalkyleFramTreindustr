@@ -453,12 +453,12 @@ totalt ressursbehov.
 ### Første gang — oppsett
 
 1. **Start med testdataene** som følger med. Åpne
-   `Produksjonsmodell_Testdata_v3.xlsx` for å se hvordan et ferdig oppsett
+   `src/Produksjonsmodell_Testdata_v3.xlsx` for å se hvordan et ferdig oppsett
    ser ut.
 2. **Erstatt testdataene** med dine egne produkter og priser.
 3. **Start Marimo web-appen:**
    ```bash
-   marimo run varekost_app.py
+   marimo run src/varekost_app.py
    ```
 4. **Last opp Excel-filen din:**
    - Gå til fanen **📁 Dataimport & Versjoner**

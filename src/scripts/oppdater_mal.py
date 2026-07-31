@@ -6,6 +6,7 @@ Kryss-referanser valideres av kostberegning.py under innlesing
 (ikke i Excel, for a unnga eksterne koblings-feil).
 """
 
+import os
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.comments import Comment
@@ -218,7 +219,9 @@ lag_ark(wb, "Production Scenario", [
 if "Sheet" in wb.sheetnames:
     del wb["Sheet"]
 
-output_path = "Produksjonsmodell_Mal.xlsx"
+# Lagre til src/ (der kostberegning.py forventer filen)
+_SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+output_path = os.path.join(_SRC_DIR, "Produksjonsmodell_Mal.xlsx")
 wb.save(output_path)
 print(f">>> Oppdatert mal lagret: {output_path}")
 print(f"    {len(wb.sheetnames)} ark med kolonnebeskrivelser:")

@@ -1,8 +1,10 @@
 import json, sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from kostberegning import ExcelData, CostCalculator, _serialize
 
-EXCEL_PATH = r"C:\Users\EspenGabrielsen\code\ProduksjonsKalkyle\Produksjonsmodell_Testdata_v3.xlsx"
+_SRC_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+EXCEL_PATH = os.path.join(_SRC_DIR, "Produksjonsmodell_Testdata_v3.xlsx")
+BASELINE_KALKYLE = os.path.join(os.path.dirname(_SRC_DIR), "output", "baseline_kalkyle.json")
 
 print("Laster data...")
 data = ExcelData(EXCEL_PATH)
@@ -14,7 +16,7 @@ ny = _serialize(results)
 
 print(f"Generert {len(ny)} resultater")
 
-with open('baseline_kalkyle.json', 'r', encoding='utf-8') as f:
+with open(BASELINE_KALKYLE, 'r', encoding='utf-8') as f:
     b_raw = json.load(f)
 # baseline har formatet {"results": [...]} eller rett liste
 if isinstance(b_raw, dict) and 'results' in b_raw:

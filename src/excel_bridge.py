@@ -604,10 +604,337 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
     except Exception:
         pass
 
+    # Synkroniser transportvarer (fler-høvleri-produksjon)
+    try:
+        _sync_stats = sync_transport_varer(db, source="import")
+        stats["tables_updated"].update({"transport_sync": _sync_stats})
+    except Exception as e:
+        stats["errors"].append(f"Feil ved transport-sync: {e}")
+
     if egen_db:
         db.close()
 
     return stats
+
+
+# ──────────────────────────────────────────────────────────────────────
+#  Transportvare-synkronisering (fler-høvleri-produksjon)
+# ──────────────────────────────────────────────────────────────────────
+
+# Aktive høvleri-lokasjoner som semi-finished genereres for
+HOVLERI_LOKASJONER = ["KOD", "KV", "EIK"]
+
+
+def _ensure_workcenter(db: DataRepo, code: str, description: str, location: str,
+                       labor: float, machine: float, overhead: float,
+                       source: str = "transport_sync"):
+    """Opprett et arbeidssenter hvis det ikke finnes."""
+    existing = db.conn.execute(
+        "SELECT id FROM work_centers WHERE code = ?", (code,)
+    ).fetchone()
+    if not existing:
+        db.upsert_work_centers([{
+            "code": code, "description": description, "location_code": location,
+            "labor_cost_hour": labor, "machine_cost_hour": machine,
+            "overhead_cost_hour": overhead, "capacity_hours_day": 24,
+            "effective_capacity_pct": 100,
+        }], source=source)
+
+
+def _ensure_operation(db: DataRepo, code: str, description: str,
+                      default_wc: str, source: str = "transport_sync"):
+    """Opprett TRANSPORT-operasjonen hvis den ikke finnes."""
+    existing = db.conn.execute(
+        "SELECT id FROM operations WHERE code = ?", (code,)
+    ).fetchone()
+    if not existing:
+        db.upsert_operations([{
+            "code": code, "description": description,
+            "default_work_center": default_wc, "standard_unit": "Minutes",
+        }], source=source)
+
+
+def _get_or_create_product(db: DataRepo, item_no: str, description: str,
+                           item_type: str, product_group: str, base_uom: str,
+                           source: str = "transport_sync") -> Optional[int]:
+    """Hent eller opprett et produkt. Returner id."""
+    existing = db.conn.execute(
+        "SELECT id FROM products WHERE item_no = ?", (item_no,)
+    ).fetchone()
+    if existing:
+        return existing["id"]
+    db.upsert_products([{
+        "item_no": item_no, "description": description,
+        "item_type": item_type, "product_group": product_group,
+        "base_uom": base_uom,
+    }], source=source)
+    row = db.conn.execute("SELECT id FROM products WHERE item_no = ?", (item_no,)).fetchone()
+    return row["id"] if row else None
+
+
+def _delete_product_by_no(db: DataRepo, item_no: str, source: str = "transport_sync"):
+    """Slett et produkt basert på varenummer (slett kun hvis det er semi-finished/transport-generert)."""
+    row = db.conn.execute("SELECT id FROM products WHERE item_no = ?", (item_no,)).fetchone()
+    if row:
+        db.delete_product(row["id"], source=source)
+
+
+def _delete_bom_by_parent(db: DataRepo, parent_item_no: str, component_item_no: str,
+                          source: str = "transport_sync"):
+    """Slett en BOM-linje basert på parent+component."""
+    row = db.conn.execute(
+        "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no = ?",
+        (parent_item_no, component_item_no),
+    ).fetchone()
+    if row:
+        db.delete_bom_line(row["id"], source=source)
+
+
+def _delete_routing_by_item(db: DataRepo, item_no: str, operation_no: int, wc: str,
+                            source: str = "transport_sync"):
+    """Slett en routing-linje basert på item+op+wc."""
+    row = db.conn.execute(
+        "SELECT id FROM routing_lines WHERE item_no = ? AND operation_no = ? AND work_center_code = ?",
+        (item_no, operation_no, wc),
+    ).fetchone()
+    if row:
+        db.delete_routing_line(row["id"], source=source)
+
+
+def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
+    """Synkroniser transportvarer — generer/fjern semi-finished varianter og transport-routing.
+
+    Når en vare flagges som transportvare (is_transport=1):
+      1. Oppretter semi-finished per høvleri-lokasjon: {vare}-KOD, {vare}-KV, {vare}-EIK
+      2. Kopierer original BOM til semi-finished (med co-prod-suffiks hvis aktuelt)
+      3. Legger til BOM på hovedvaren: {vare} → {vare}-{primær_lokasjon} (Qty=1)
+      4. Legger til TRANSPORT-routing for relevante ruter
+
+    Når flagget fjernes (is_transport=0):
+      1. Sletter alle genererte semi-finished produkter
+      2. Fjerner transport-BOM og transport-routing fra hovedvaren
+
+    Args:
+        db: DataRepo-instans
+        source: Kilde for endringslogg
+
+    Returns:
+        dict med statistikk: {"opprettet": int, "slettet": int, "produkter": [...]}
+    """
+    stats = {"opprettet": 0, "slettet": 0, "produkter": []}
+
+    # Sørg for at tabellen finnes
+    db.conn.execute(
+        """CREATE TABLE IF NOT EXISTS transport_flagg (
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               item_no TEXT NOT NULL UNIQUE,
+               is_transport INTEGER NOT NULL DEFAULT 0,
+               updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )"""
+    )
+    db.conn.commit()
+
+    # Les alle flagg-varer
+    flagged = db.conn.execute(
+        "SELECT item_no, is_transport FROM transport_flagg"
+    ).fetchall()
+
+    for row in flagged:
+        item_no = row["item_no"]
+        is_transport = bool(row["is_transport"])
+
+        # Hent produktdata for hovedvaren
+        prod = db.conn.execute(
+            "SELECT * FROM products WHERE item_no = ?", (item_no,)
+        ).fetchone()
+        if not prod:
+            continue
+
+        if is_transport:
+            # ── Generer semi-finished for hver høvleri-lokasjon ──
+            created_here = 0
+            for loc in HOVLERI_LOKASJONER:
+                semi_no = f"{item_no}-{loc}"
+                semi_id = _get_or_create_product(
+                    db, semi_no,
+                    f"{prod['description']} ({loc})",
+                    "Semi Finished", prod["product_group"], prod["base_uom"],
+                    source=source,
+                )
+                if semi_id:
+                    created_here += 1
+
+                    # Kopier original BOM til semi-finished
+                    orig_boms = db.conn.execute(
+                        "SELECT * FROM bom_lines WHERE parent_item_no = ?", (item_no,)
+                    ).fetchall()
+                    for bl in orig_boms:
+                        comp = bl["component_item_no"]
+                        # Hvis comp allerede har -suffiks, legg ikke til nytt
+                        if comp.startswith(f"{item_no}-"):
+                            continue
+                        db.upsert_bom_lines([{
+                            "parent_item_no": semi_no,
+                            "component_item_no": comp,
+                            "quantity_per": bl["quantity_per"],
+                            "uom": bl["uom"],
+                            "scrap_pct": bl["scrap_pct"],
+                            "co_product_pct": bl["co_product_pct"],
+                            "co_product_item_no": f"{bl['co_product_item_no']}-{loc}" if bl["co_product_item_no"] else "",
+                        }], source=source)
+
+                    # Kopier original routing til semi-finished
+                    orig_routings = db.conn.execute(
+                        "SELECT * FROM routing_lines WHERE item_no = ?", (item_no,)
+                    ).fetchall()
+                    for rl in orig_routings:
+                        rl_wc = rl["work_center_code"]
+                        # Oversett arbeidssenter til lokasjon (hvis mulig)
+                        wc_row = db.conn.execute(
+                            "SELECT * FROM work_centers WHERE code = ?", (rl_wc,)
+                        ).fetchone()
+                        if wc_row and wc_row["location_code"] == loc:
+                            db.upsert_routing_lines([{
+                                "item_no": semi_no,
+                                "operation_no": rl["operation_no"],
+                                "operation_code": rl["operation_code"],
+                                "work_center_code": rl_wc,
+                                "setup_time_minutes": rl["setup_time_minutes"],
+                                "run_time_minutes": rl["run_time_minutes"],
+                                "batch_size": rl["batch_size"],
+                            }], source=source)
+
+            # ── Legg til BOM på hovedvaren: {vare} → {vare}-{primær_lokasjon} ──
+            # Finner primær lokasjon ved å sjekke eksisterende routing
+            primary_loc = HOVLERI_LOKASJONER[0]
+            orig_routings = db.conn.execute(
+                "SELECT * FROM routing_lines WHERE item_no = ?", (item_no,)
+            ).fetchall()
+            if orig_routings:
+                for rl in orig_routings:
+                    wc_row = db.conn.execute(
+                        "SELECT * FROM work_centers WHERE code = ?", (rl["work_center_code"],)
+                    ).fetchone()
+                    if wc_row:
+                        primary_loc = wc_row["location_code"]
+                        break
+
+            # Bytt ut merket: legg til {vare}-{primary_loc} som komponent hvis den finnes
+            semi_primary = f"{item_no}-{primary_loc}"
+            existing_bom = db.conn.execute(
+                "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no = ?",
+                (item_no, semi_primary)
+            ).fetchone()
+            if not existing_bom:
+                db.upsert_bom_lines([{
+                    "parent_item_no": item_no,
+                    "component_item_no": semi_primary,
+                    "quantity_per": 1.0,
+                    "uom": prod["base_uom"],
+                    "scrap_pct": 0.0,
+                    "co_product_pct": 0.0,
+                    "co_product_item_no": "",
+                }], source=source)
+
+            # ── Legg til TRANSPORT-routing ──
+            # Sørg for at frakt-arbeidssentre finnes (rettledning)
+            for wc_code in ("FRAKT_KOD_KV", "FRAKT_KOD_EIK", "FRAKT_KV_KOD", "FRAKT_KV_EIK", "FRAKT_EIK_KOD", "FRAKT_EIK_KV"):
+                _ensure_workcenter(db, wc_code, f"Frakt {wc_code.replace('FRAKT_', '').replace('_', '→')}", wc_code.split("_")[1],
+                                   300.0, 400.0, 100.0, source=source)
+            _ensure_operation(db, "TRANSPORT", "Frakt mellom høvlerier", "FRAKT_KOD_KV", source=source)
+
+            # Legg til TRANSPORT-routing for relevante ruter (baseline)
+            if primary_loc != "KV":
+                _ensure_routing_entry(db, item_no, "TRANSPORT", "FRAKT_KOD_KV",
+                                      setup=30.0, run=0.15, batch=prod_batch(db, item_no),
+                                      source=source)
+
+            stats["opprettet"] += created_here
+            stats["produkter"].append(f"{item_no}: transport flagg satt")
+        else:
+            # ── Fjern alle genererte semi-finished for denne varen ──
+            deleted_here = 0
+            # Finn alle semi-finished for varen
+            semi_items = db.conn.execute(
+                "SELECT item_no FROM products WHERE item_no LIKE ?",
+                (f"{item_no}-%",)
+            ).fetchall()
+            for semi in semi_items:
+                semi_no = semi["item_no"]
+                # Slett BOM-linjer som refererer til semi-finished som komponent
+                _delete_bom_by_parent(db, item_no, semi_no, source=source)
+                # Slett BOM-linjer der semi-finished er parent
+                _delete_bom_by_parent(db, semi_no, semi_no, source=source)  # empty, placeholder
+                rows = db.conn.execute(
+                    "SELECT id FROM bom_lines WHERE parent_item_no = ?", (semi_no,)
+                ).fetchall()
+                for r in rows:
+                    db.delete_bom_line(r["id"], source=source)
+                # Slett routing-linjer for semi-finished
+                rt_rows = db.conn.execute(
+                    "SELECT id FROM routing_lines WHERE item_no = ?", (semi_no,)
+                ).fetchall()
+                for r in rt_rows:
+                    db.delete_routing_line(r["id"], source=source)
+                # Slett selve produktet
+                _delete_product_by_no(db, semi_no, source=source)
+                deleted_here += 1
+
+            # Fjern TRANSPORT-routing fra hovedvaren
+            rt_rows = db.conn.execute(
+                "SELECT id FROM routing_lines WHERE item_no = ? AND operation_code = 'TRANSPORT'",
+                (item_no,)
+            ).fetchall()
+            for r in rt_rows:
+                db.delete_routing_line(r["id"], source=source)
+
+            # Fjern semi-finished fra hovedvarens BOM
+            rows = db.conn.execute(
+                "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no LIKE ?",
+                (item_no, f"{item_no}-%")
+            ).fetchall()
+            for r in rows:
+                db.delete_bom_line(r["id"], source=source)
+
+            stats["slettet"] += deleted_here
+            stats["produkter"].append(f"{item_no}: transport flagg fjernet")
+
+    return stats
+
+
+def _ensure_routing_entry(db: DataRepo, item_no: str, op_code: str, wc: str,
+                          setup: float, run: float, batch: float,
+                          source: str = "transport_sync"):
+    """Legg til routing-linje hvis den ikke finnes."""
+    existing = db.conn.execute(
+        "SELECT id FROM routing_lines WHERE item_no = ? AND operation_code = ? AND work_center_code = ?",
+        (item_no, op_code, wc)
+    ).fetchone()
+    if not existing:
+        # Finn neste ledige operation_no
+        max_op = db.conn.execute(
+            "SELECT MAX(operation_no) as mx FROM routing_lines WHERE item_no = ?",
+            (item_no,)
+        ).fetchone()
+        next_op = int(max_op["mx"] or 0) + 10
+        db.upsert_routing_lines([{
+            "item_no": item_no,
+            "operation_no": next_op,
+            "operation_code": op_code,
+            "work_center_code": wc,
+            "setup_time_minutes": setup,
+            "run_time_minutes": run,
+            "batch_size": batch,
+        }], source=source)
+
+
+def prod_batch(db: DataRepo, item_no: str) -> float:
+    """Hent typisk batch-størrelse for et produkt."""
+    row = db.conn.execute(
+        "SELECT batch_size FROM routing_lines WHERE item_no = ? ORDER BY operation_no LIMIT 1",
+        (item_no,)
+    ).fetchone()
+    return row["batch_size"] if row else 500.0
 
 
 # ──────────────────────────────────────────────────────────────────────

@@ -17,6 +17,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Sørg for at src/ er på sys.path (siste sti er dette scriptets mappe)
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+
 from generer_pdf_rapport import generer_dokumentasjon_pdf, registrer_fonter
 
 # Mapping: filnavn → (tittel, undertittel)
@@ -89,14 +94,17 @@ def main():
     registrer_fonter()
 
     if args.all:
-        # Finn alle .md-filer (unntatt CLINE.md og diverse)
+        # Finn alle .md-filer i docs/ (og evt. rot)
         filer = []
+        for f in Path("docs").glob("*.md"):
+            filer.append(str(f))
+        # Også rot .md-filer (CLINE.md, README.md osv.)
         for f in Path(".").glob("*.md"):
             navn = f.name
-            if navn in ("CLINE.md", "STYLING.md", "stylingIMarimo.md", "TODO_filtrering_og_datoer.md",
-                        "ForslagSimulering.md", "BATCH_SIMULERING_PLAN.md", "VERDIKJEDE_PLAN.md"):
+            if navn == "CLINE.md":
                 continue
-            filer.append(str(f))
+            if str(f) not in filer:
+                filer.append(str(f))
         if not filer:
             print("Ingen dokumentasjonsfiler funnet.")
             return

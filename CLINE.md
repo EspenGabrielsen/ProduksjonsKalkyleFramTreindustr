@@ -16,29 +16,74 @@ Excel (.xlsx) ── import ──→ SQLite (endringslogg.db) ──→ Python-
 
 ### Filer og deres rolle
 
+## Mappestruktur
+
+```
+ProduksjonsKalkyle/
+├── src/                    # All Python-kode
+│   ├── kostberegning.py    # Kjernelogikk
+│   ├── data_repo.py        # SQLite-database
+│   ├── excel_bridge.py     # Excel ↔ SQLite
+│   ├── generer_pdf_rapport.py
+│   ├── generer_excel_rapport.py
+│   ├── generer_dokumentasjon.py
+│   ├── varekost_app.py     # Marimo web-app
+│   ├── __init__.py
+│   ├── produksjonskalkyle.db      # SQLite-database (DATA)
+│   ├── Produksjonsmodell_Testdata_v3.xlsx  # Testdata-Excel
+│   ├── Produksjonsmodell_Mal.xlsx          # Excel-mal
+│   └── scripts/            # Hjelpeverktøy
+│       ├── lag_testdata_v3.py
+│       ├── lag_baseline.py
+│       ├── sjekk_diff.py
+│       ├── oppdater_mal.py
+│       └── sqldatabaseTest.py
+├── docs/                   # Dokumentasjon
+│   ├── Brukermanual_Produksjonsmodell.md
+│   ├── Produksjonsmodell_Dokumentasjon.md
+│   ├── STYLING.md
+│   └── planer/             # Planleggingsdokumenter
+│       ├── ForslagSimulering.md
+│       ├── BATCH_SIMULERING_PLAN.md
+│       └── VERDIKJEDE_PLAN.md
+├── output/                 # Genererte filer
+│   ├── baseline_kalkyle.json
+│   ├── baseline_simulering.json
+│   └── test_log.txt
+├── layouts/                # Marimo layouts
+├── CLINE.md
+├── .gitignore
+└── requirements.txt
+```
+
+## Filer og deres rolle
+
 | Fil | Formål |
 |-----|--------|
-| `kostberegning.py` | **Kjernelogikk:** ExcelData-parsing, SQLite-datalasting, CostCalculator (kostnadskalkyle), SimulationEngine (what-if), SimulationOverride, export_product_costs_to_json |
-| `data_repo.py` | SQLite-databasehåndtering: DataRepo-klasse med CRUD, endringslogg, versjonering av opplastede filer |
-| `excel_bridge.py` | Import/eksport mellom Excel og SQLite. `validate_excel()` (validering), `import_excel_to_sqlite()` (import), `export_sqlite_to_excel()` (eksport til 11 ark inkl. endringslogg) |
-| `varekost_app.py` | **Marimo web-app** med 4 faner: simulering & analyse, dataimport & versjoner, datamodell-innsyn, endringslogg |
-| `generer_pdf_rapport.py` | PDF-rapportgenerering med ReportLab. Inneholder: `generer_rapport()` (simuleringsrapport med ledelsessammendrag, tabeller, kapasitetsdata), `generer_dokumentasjon_pdf()` (Markdown→PDF for dokumentasjonsfiler), `_parse_markdown_to_story()` (Markdown-parser), samt felles styling (farger, fonter, tittelside, header/footer, logo) |
-| `generer_excel_rapport.py` | Excel-rapportgenerering for simuleringsresultater |
-| `generer_dokumentasjon.py` | Wrapper-script for å generere stilede PDF-er fra Markdown-dokumentasjon. Støtter enkeltfiler, flere filer og `--all` |
-| `lag_testdata_v3.py` | Generer testdata-Excel (`Produksjonsmodell_Testdata_v3.xlsx`) |
-| `lag_baseline.py` | Beregn baseline-kalkyle (konsoll/JSON) |
-| `sjekk_diff.py` | Sjekk diff mellom to kjøringer |
-| `oppdater_mal.py` | Oppdater Excel-mal |
-| `produktkalkyle.json` | Eksportert JSON (fra `--json` flagg) |
-| `baseline_kalkyle.json` | Lagret baseline-kalkyle |
-| `baseline_simulering.json` | Lagret simuleringsresultat |
+| `src/kostberegning.py` | **Kjernelogikk:** ExcelData-parsing, SQLite-datalasting, CostCalculator (kostnadskalkyle), SimulationEngine (what-if), SimulationOverride, export_product_costs_to_json |
+| `src/data_repo.py` | SQLite-databasehåndtering: DataRepo-klasse med CRUD, endringslogg, versjonering av opplastede filer. Database: `src/produksjonskalkyle.db` |
+| `src/excel_bridge.py` | Import/eksport mellom Excel og SQLite. `validate_excel()` (validering), `import_excel_to_sqlite()` (import), `export_sqlite_to_excel()` (eksport til 11 ark inkl. endringslogg) |
+| `src/varekost_app.py` | **Marimo web-app** med 4 faner: simulering & analyse, dataimport & versjoner, datamodell-innsyn, endringslogg |
+| `src/generer_pdf_rapport.py` | PDF-rapportgenerering med ReportLab. Inneholder: `generer_rapport()` (simuleringsrapport med ledelsessammendrag, tabeller, kapasitetsdata), `generer_dokumentasjon_pdf()` (Markdown→PDF for dokumentasjonsfiler), `_parse_markdown_to_story()` (Markdown-parser), samt felles styling (farger, fonter, tittelside, header/footer, logo) |
+| `src/generer_excel_rapport.py` | Excel-rapportgenerering for simuleringsresultater |
+| `src/generer_dokumentasjon.py` | Wrapper-script for å generere stilede PDF-er fra Markdown-dokumentasjon. Støtter enkeltfiler, flere filer og `--all` |
+| `src/scripts/lag_testdata_v3.py` | Generer testdata-Excel (`src/Produksjonsmodell_Testdata_v3.xlsx`) |
+| `src/scripts/lag_baseline.py` | Beregn baseline-kalkyle (konsoll/JSON til `output/`) |
+| `src/scripts/sjekk_diff.py` | Sjekk diff mellom to kjøringer |
+| `src/scripts/oppdater_mal.py` | Oppdater Excel-mal (`src/Produksjonsmodell_Mal.xlsx`) |
+| `src/scripts/sqldatabaseTest.py` | Test-verktøy for SQLite-databasen |
+| `src/scripts/test_transport.py` | Test av transportvare-modulen (5 tester, in-memory DB — berører aldri produksjonsdatabasen) |
+| `TRANSPORTVARE_PLAN.md` | Implementeringsplan for fler-høvleri-produksjon via transportflagg |
+| `output/baseline_kalkyle.json` | Lagret baseline-kalkyle |
+| `output/baseline_simulering.json` | Lagret simuleringsresultat |
 | `requirements.txt` | Avhengigheter: marimo>=0.23.0, openpyxl>=3.1.0, pandas>=2.0.0, reportlab>=4.0.0 |
-| `STYLING.md` | Fargepalett, typografi, CSS-klasser for Marimo-app, PDF og Excel |
-| `Brukermanual_Produksjonsmodell.md` | Sluttbrukermanual for Excel-arket og Marimo web-app (for produksjonsledere, økonomi, innkjøp) |
-| `Brukermanual_Produksjonsmodell.pdf` | Generert PDF (85 KB) fra Brukermanual_Produksjonsmodell.md — stylet med Fram Treindustri-profil |
-| `Produksjonsmodell_Dokumentasjon.md` | Detaljert teknisk dokumentasjon av datamodellen, beregningslogikk, Marimo web-app og import/eksport |
-| `Produksjonsmodell_Dokumentasjon.pdf` | Generert PDF (116 KB) fra Produksjonsmodell_Dokumentasjon.md — stylet med Fram Treindustri-profil |
-| `TODO_filtrering_og_datoer.md` | Planlagte forbedringer for filtrering av aktive/tidsavgrensede data |
+| `docs/STYLING.md` | Fargepalett, typografi, CSS-klasser for Marimo-app, PDF og Excel |
+| `docs/Brukermanual_Produksjonsmodell.md` | Sluttbrukermanual for Excel-arket og Marimo web-app (for produksjonsledere, økonomi, innkjøp) |
+| `docs/Brukermanual_Produksjonsmodell.pdf` | Generert PDF fra Brukermanual_Produksjonsmodell.md — stylet med Fram Treindustri-profil |
+| `docs/Produksjonsmodell_Dokumentasjon.md` | Detaljert teknisk dokumentasjon av datamodellen, beregningslogikk, Marimo web-app og import/eksport |
+| `docs/Produksjonsmodell_Dokumentasjon.pdf` | Generert PDF fra Produksjonsmodell_Dokumentasjon.md — stylet med Fram Treindustri-profil |
+| `docs/planer/` | Planleggingsdokumenter (ForslagSimulering, BATCH_SIMULERING_PLAN, VERDIKJEDE_PLAN) |
+| `layouts/varekost_app.grid.json` | Marimo grid-layout |
 
 ---
 
@@ -151,7 +196,7 @@ vareFilter → filtered_products → filtered_bom_lines → filtered_work_center
 
 ### SQLite-database
 - DataRepo = context manager (`with DataRepo() as db:`)
-- `endringslogg.db` i prosjektroten
+- `src/produksjonskalkyle.db` (ved siden av `data_repo.py`)
 - Endringer loggføres felt-for-felt i `change_log`-tabellen
 - Excel-filer lagres som BLOB i `uploaded_files`-tabellen (versjonering)
 - `clear_all_data()` sletter stamdata, **bevarer** change_log
@@ -167,35 +212,43 @@ vareFilter → filtered_products → filtered_bom_lines → filtered_work_center
 ## Kommandolinje-verktøy
 
 ```bash
-# Full produktkalkyle
-python kostberegning.py --excel Produksjonsmodell_Testdata_v3.xlsx
+# Full produktkalkyle (fra src/)
+python src/kostberegning.py --excel src/Produksjonsmodell_Testdata_v3.xlsx
 
 # Ett spesifikt produkt
-python kostberegning.py --excel Produksjonsmodell_Testdata_v3.xlsx --product FG001
+python src/kostberegning.py --excel src/Produksjonsmodell_Testdata_v3.xlsx --product FG001
 
 # Innebygget testdata (uten Excel)
-python kostberegning.py --test
+python src/kostberegning.py --test
 
-# Generer testdata-Excel
-python lag_testdata_v3.py
+# Generer testdata-Excel (fra src/scripts/)
+python src/scripts/lag_testdata_v3.py
 
 # SQLite-administrasjon
-python data_repo.py --stats      # Vis tabell-statistikk
-python data_repo.py --changes    # Vis endringslogg
-python data_repo.py --clear      # Tøm data (bevar logg)
+python src/data_repo.py --stats      # Vis tabell-statistikk
+python src/data_repo.py --changes    # Vis endringslogg
+python src/data_repo.py --clear      # Tøm data (bevar logg)
 
 # Excel ↔ SQLite
-python excel_bridge.py --import data.xlsx
-python excel_bridge.py --export utdata.xlsx
+python src/excel_bridge.py --import data.xlsx
+python src/excel_bridge.py --export utdata.xlsx
+
+# Baseline-verktøy
+python src/scripts/lag_baseline.py              # Generer baseline
+python src/scripts/lag_baseline.py --sammenlign # Sammenlign mot baseline
+python src/scripts/sjekk_diff.py                # Sjekk diff
+
+# Transportvarer (fler-høvleri-produksjon)
+python src/scripts/test_transport.py            # Kjør 5 tester (in-memory DB)
 
 # Start Marimo-app
-marimo run varekost_app.py
+marimo run src/varekost_app.py
 
 # Generer stilede PDF-er fra Markdown-dokumentasjon
-python generer_dokumentasjon.py fil.md                        # Én fil
-python generer_dokumentasjon.py fil1.md fil2.md               # Flere filer
-python generer_dokumentasjon.py --all                         # Alle dokumentasjonsfiler
-python generer_dokumentasjon.py --all --output ./rapporter    # Til egen mappe
+python src/generer_dokumentasjon.py docs/fil.md                     # Én fil
+python src/generer_dokumentasjon.py docs/fil1.md docs/fil2.md       # Flere filer
+python src/generer_dokumentasjon.py --all                           # Alle dokumentasjonsfiler
+python src/generer_dokumentasjon.py --all --output ./rapporter      # Til egen mappe
 ```
 
 ## Marimo-dokumentasjon

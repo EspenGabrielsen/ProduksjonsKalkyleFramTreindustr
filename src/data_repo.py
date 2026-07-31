@@ -165,6 +165,14 @@ CREATE TABLE IF NOT EXISTS production_scenarios (
     UNIQUE(scenario_name, product)
 );
 
+-- Transportflagg for fler-høvleri-produksjon (transportvare-modul)
+CREATE TABLE IF NOT EXISTS transport_flagg (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_no TEXT NOT NULL UNIQUE,
+    is_transport INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Infrastruktur-tabeller
 
 CREATE TABLE IF NOT EXISTS change_log (
