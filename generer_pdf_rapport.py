@@ -11,6 +11,7 @@ Kjører frittstående:
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.request
 import tempfile
@@ -21,7 +22,8 @@ from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor, white
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Preformatted, HRFlowable, Spacer, Table, TableStyle, Image
+    SimpleDocTemplate, Paragraph, Preformatted, HRFlowable, Spacer, Table, TableStyle, Image,
+    KeepTogether, PageBreak
 )
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
@@ -594,14 +596,337 @@ def generer_rapport(sammenligninger, overrides, output_path, tittel="Simulerings
     return output_path
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  Markdown → PDF-dokumentasjon
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _parse_md_table(linjer, styles):
+    """Parse en Markdown-tabell (pipe-syntax) til ReportLab Table."""
+    if not linjer:
+        return None
+    # Fjern tomme linjer før/etter
+    while linjer and not linjer[0].strip():
+        linjer.pop(0)
+    while linjer and not linjer[-1].strip():
+        linjer.pop()
+    if len(linjer) < 2:
+        return None
+
+    # Første linje = header, andre linje = separator (|---|)
+    header = [c.strip() for c in linjer[0].split("|")[1:-1]]
+    if not header:
+        return None
+
+    # Data-rader
+    data_rows = []
+    for rad in linjer[2:]:
+        raden = rad.strip()
+        if not raden or raden.startswith("|--") or raden.startswith("|---"):
+            continue
+        celler = [c.strip() for c in raden.split("|")[1:-1]]
+        if celler:
+            # Fyll opp til samme antall kolonner
+            while len(celler) < len(header):
+                celler.append("")
+            data_rows.append(celler[:len(header)])
+
+    if not data_rows:
+        return None
+
+    # Lag tabell
+    kolonner = header
+    headers_par = [Paragraph(k, styles['table_header']) for k in kolonner]
+    rows_pdf = [headers_par]
+    for rad in data_rows:
+        celle_pars = []
+        for verdi in rad:
+            # Prøv tallformat
+            try:
+                v = verdi.replace(" ", "").replace(",", ".")
+                float(v)
+                celle_pars.append(Paragraph(verdi, styles['table_cell']))
+            except (ValueError, AttributeError):
+                celle_pars.append(Paragraph(verdi, styles['table_cell_left']))
+        while len(celle_pars) < len(kolonner):
+            celle_pars.append(Paragraph("", styles['table_cell']))
+        rows_pdf.append(celle_pars[:len(kolonner)])
+
+    # Kolonnebredder
+    tilgjengelig = A4[0] - 44*mm
+    kol_bredder = [tilgjengelig / len(kolonner)] * len(kolonner)
+
+    tbl = Table(rows_pdf, colWidths=kol_bredder, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), PRIMARY),
+        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
+        ('TOPPADDING', (0, 0), (-1, 0), 5),
+        ('BACKGROUND', (0, 1), (-1, -1), LIGHT_BG),
+        ('GRID', (0, 0), (-1, -1), 0.5, ACCENT),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 1), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+    ]))
+
+    # Wrap i KeepTogether for å unngå sidebrekk midt i tabell
+    return KeepTogether([tbl, Spacer(1, 3*mm)])
+
+
+def _parse_markdown_to_story(md_content, styles):
+    """Parse Markdown-innhold til en liste med ReportLab flowables."""
+    story = []
+
+    if not md_content or not md_content.strip():
+        return story
+
+    linjer = md_content.split("\n")
+
+    # State for kodeblokk og tabell
+    i = 0
+    in_code_block = False
+    code_buffer = []
+    in_table = False
+    table_buffer = []
+    in_list = False
+
+    while i < len(linjer):
+        linje = linjer[i]
+        linje_stripped = linje.strip()
+
+        # Kodeblokk (``` eller `````)
+        if linje_stripped.startswith("```"):
+            if in_code_block:
+                # Avslutt kodeblokk
+                in_code_block = False
+                code_text = "\n".join(code_buffer)
+                story.append(Paragraph(code_text, styles['code']))
+                story.append(Spacer(1, 2*mm))
+                code_buffer = []
+            else:
+                in_code_block = True
+                code_buffer = []
+            i += 1
+            continue
+
+        if in_code_block:
+            code_buffer.append(linje)
+            i += 1
+            continue
+
+        # Tom linje
+        if not linje_stripped:
+            # Avslutt tabell hvis vi var i en
+            if in_table and len(table_buffer) >= 2:
+                result = _parse_md_table(table_buffer, styles)
+                if result:
+                    story.append(result)
+                table_buffer = []
+                in_table = False
+            in_list = False
+            i += 1
+            continue
+
+        # Horisontal linje ---
+        if re.match(r"^---+$", linje_stripped):
+            story.append(Spacer(1, 1*mm))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=ACCENT, spaceAfter=3*mm))
+            i += 1
+            continue
+
+        # Sjekk om dette er en tabell (inneholder |)
+        if "|" in linje_stripped and linje_stripped.startswith("|"):
+            # Sjekk om neste linje er separator (|---|)
+            if (i + 1) < len(linjer) and re.match(r"^[\|\s\-:]+$", linjer[i + 1].strip()):
+                in_table = True
+                table_buffer.append(linje)
+                table_buffer.append(linjer[i + 1])
+                i += 2
+                continue
+            elif in_table:
+                table_buffer.append(linje)
+                i += 1
+                continue
+            else:
+                # Enkeltstående | er ikke en tabell, behandle som tekst
+                pass
+
+        # Avslutt tabell hvis vi var i en
+        if in_table and len(table_buffer) >= 2:
+            result = _parse_md_table(table_buffer, styles)
+            if result:
+                story.append(result)
+            table_buffer = []
+            in_table = False
+
+        # Blockquote (linje som starter med >)
+        if linje_stripped.startswith(">"):
+            quote_text = linje_stripped.lstrip("> ").strip()
+            if quote_text:
+                story.append(Paragraph(quote_text, styles['comment_box']))
+            i += 1
+            continue
+
+        # Overskrifter H1-H3
+        if linje_stripped.startswith("### "):
+            tekst = _md_to_html(linje_stripped[4:])
+            story.append(Paragraph(tekst, styles['h3']))
+            i += 1
+            continue
+        if linje_stripped.startswith("## "):
+            tekst = _md_to_html(linje_stripped[3:])
+            story.append(Paragraph(tekst, styles['h2']))
+            i += 1
+            continue
+        if linje_stripped.startswith("# "):
+            tekst = _md_to_html(linje_stripped[2:])
+            story.append(Paragraph(tekst, styles['h1']))
+            i += 1
+            continue
+
+        # Punktliste
+        if linje_stripped.startswith("- ") or linje_stripped.startswith("* "):
+            tekst = _md_to_html(linje_stripped[2:])
+            story.append(Paragraph(f"• {tekst}", styles['bullet']))
+            in_list = True
+            i += 1
+            continue
+
+        if linje_stripped.startswith("1. ") or linje_stripped.startswith("2. ") or linje_stripped.startswith("3. "):
+            # Nummerert liste
+            match = re.match(r"^(\d+)\.\s*(.*)", linje_stripped)
+            if match:
+                    nummer = match.group(1)
+                    tekst = _md_to_html(match.group(2))
+                    story.append(Paragraph(f"<b>{nummer}.</b> {tekst}", styles['bullet']))
+                    in_list = True
+            else:
+                story.append(Paragraph(_md_to_html(linje_stripped), styles['body']))
+            i += 1
+            continue
+
+        # Vanlig tekst
+        if linje_stripped:
+            tekst = _md_to_html(linje_stripped)
+            story.append(Paragraph(tekst, styles['body']))
+        i += 1
+
+    # Hvis vi slutter midt i en tabell, flush den
+    if in_table and len(table_buffer) >= 2:
+        result = _parse_md_table(table_buffer, styles)
+        if result:
+            story.append(result)
+
+    return story
+
+
+def _md_to_html(tekst):
+    """Konverter Markdown inline-formatering til HTML for ReportLab."""
+    # **fet**
+    tekst = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", tekst)
+    # *kursiv*
+    tekst = re.sub(r"\*(.*?)\*", r"<i>\1</i>", tekst)
+    # ``kode``
+    tekst = re.sub(r"``(.*?)``", r"<font face='Courier'>\1</font>", tekst)
+    # `kode`
+    tekst = re.sub(r"`(.*?)`", r"<font face='Courier'>\1</font>", tekst)
+    return tekst
+
+
+def generer_dokumentasjon_pdf(markdown_content, output_path, tittel="Dokumentasjon", undertittel=None, kommentar=None):
+    """
+    Generer en stylet PDF fra Markdown-dokumentasjon.
+
+    Gjenbruker all styling fra generer_pdf_rapport.py (farger, fonter, stiler,
+    tittelside, header/footer, tabeller).
+
+    Args:
+        markdown_content: Rå Markdown-tekst
+        output_path: Sti til output PDF
+        tittel: Tittel på dokumentet (vises på tittelsiden)
+        undertittel: Valgfri undertittel
+        kommentar: Valgfri beskrivelse/ingress øverst
+    """
+    registrer_fonter()
+    styles = bygg_stiler()
+    dato_str = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    doc = SimpleDocTemplate(
+        output_path, pagesize=A4,
+        topMargin=22*mm, bottomMargin=22*mm,
+        leftMargin=22*mm, rightMargin=22*mm,
+    )
+
+    story = []
+
+    # Tittel
+    story.append(Paragraph(tittel, styles['h1']))
+    story.append(Paragraph(f"Generert: {dato_str}", styles['small']))
+    if undertittel:
+        story.append(Paragraph(undertittel, styles['body_bold']))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=ACCENT, spaceAfter=4*mm))
+
+    # Kommentar/ingress
+    if kommentar:
+        story.append(Paragraph(kommentar, styles['comment_box']))
+        story.append(Spacer(1, 4*mm))
+
+    # Inline-til innholdsfortegnelse — pars H1 og H2 for TOC
+    _linjer = markdown_content.split("\n")
+    toc_items = []
+    for _l in _linjer:
+        _s = _l.strip()
+        if _s.startswith("## "):
+            toc_items.append((2, _s[3:].replace("**", "").replace("`", "")))
+        elif _s.startswith("# ") and not _s.startswith("# "):
+            toc_items.append((1, _s[2:].replace("**", "").replace("`", "")))
+
+    if toc_items:
+        story.append(Paragraph("Innholdsfortegnelse", styles['h2']))
+        for _niv, _navn in toc_items:
+            if _niv == 1:
+                story.append(Paragraph(f"<b>{_navn}</b>", styles['bullet']))
+            else:
+                story.append(Paragraph(f"  {_navn}", styles['small']))
+        story.append(Spacer(1, 3*mm))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=ACCENT, spaceAfter=4*mm))
+
+    # Parse Markdown
+    story.extend(_parse_markdown_to_story(markdown_content, styles))
+
+    # Footer
+    story.append(Spacer(1, 10*mm))
+    story.append(HRFlowable(width="100%", thickness=0.3, color=MUTED_TEXT, spaceAfter=2*mm))
+    story.append(Paragraph(
+        f"{tittel} — Generert {dato_str}",
+        styles['small']
+    ))
+
+    # Bygg PDF
+    _full_tittel = tittel + (" — " + undertittel if undertittel else "")
+    doc.build(story,
+              onFirstPage=lambda c, d: lag_tittelside(c, d, _full_tittel, dato_str, None),
+              onLaterPages=lambda c, d: lag_header_footer(c, d, _full_tittel))
+
+    return output_path
+
+
 def main():
     parser = argparse.ArgumentParser(description='Generer PDF-rapport fra simuleringsdata')
     parser.add_argument('--data', help='JSON-fil med simuleringsdata')
     parser.add_argument('--output', '-o', default='simuleringsrapport.pdf', help='Output PDF-fil')
     parser.add_argument('--tittel', '-t', default='Simuleringsrapport', help='Tittel på rapporten')
+    parser.add_argument('--dokumentasjon', '-d', metavar='FIL', help='Generer dokumentasjon-PDF fra Markdown-fil')
+    parser.add_argument('--undertittel', '-u', help='Undertittel for dokumentasjon-PDF')
     args = parser.parse_args()
 
-    if args.data:
+    if args.dokumentasjon:
+        with open(args.dokumentasjon, 'r', encoding='utf-8') as f:
+            md_content = f.read()
+        generer_dokumentasjon_pdf(md_content, args.output, args.tittel, args.undertittel)
+        print(f"Dokumentasjon-PDF generert: {args.output}")
+    elif args.data:
         with open(args.data, 'r', encoding='utf-8') as f:
             data = json.load(f)
         generer_rapport(data.get('sammenligninger', []),
@@ -611,6 +936,7 @@ def main():
         print(f"Rapport generert: {args.output}")
     else:
         print("Bruk: python generer_simuleringsrapport.py --data data.json --output rapport.pdf")
+        print("  eller: python generer_simuleringsrapport.py --dokumentasjon fil.md --output dokumentasjon.pdf --tittel 'Min Tittel'")
 
 
 if __name__ == "__main__":

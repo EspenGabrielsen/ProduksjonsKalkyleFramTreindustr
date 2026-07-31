@@ -2,7 +2,7 @@
 ## For produksjonsledere, økonomi og innkjøp
 
 > **Formål:** Denne manualen forklarer hvilke tall du skal legge inn i Excel-arket,
-> slik at modellen kan beregne kostnader for produktene dine.
+> og hvordan du bruker Marimo web-appen til å simulere, analysere og eksportere rapporter.
 
 ---
 
@@ -27,21 +27,28 @@
 
 ## 1. Hva er produksjonsmodellen?
 
-Produksjonsmodellen er et Excel-ark som beregner **hva det koster å produsere
-produktene dine**. Den gjør tre ting:
+Produksjonsmodellen er et system for kostnadsberegning og simulering.
+Den består av tre deler som jobber sammen:
 
-1. **Beregner standardkost** per produkt (hva koster det å lage én enhet?)
-2. **Analyserer lønnsomhet** (hvilke produkter tjener vi penger på?)
-3. **Simulerer produksjon** (hva koster det å produsere 100 000 enheter?)
+1. **Excel-ark** — der du fyller inn alle data (produkter, priser, maskiner, tider)
+2. **Marimo web-app** — der du laster opp Excel, simulerer "what-if"-scenarioer og eksporterer rapporter
+3. **Python-beregningsmotor** — som regner ut standardkost for hvert produkt
+
+Systemet gjør fire ting:
+- **Beregner standardkost** per produkt (hva koster det å lage én enhet?)
+- **Analyserer lønnsomhet** (hvilke produkter tjener vi penger på?)
+- **Simulerer endringer** (hva skjer hvis råvareprisen går opp 10%? eller hvis vi reduserer svinnet?)
+- **Eksporterer rapporter** til PDF (for ledelsen) og Excel (for videre analyse i Power BI)
 
 ### Hvem gjør hva?
 
-| Rolle | Ansvarsområde | Fyller inn i disse arkene |
-|-------|---------------|---------------------------|
-| **Produksjonsleder** | Maskiner, operasjonstider, produksjonsflyt | Work Centers, Routing |
-| **Innkjøp** | Råvarepriser, leverandørdata | Item Costs |
-| **Økonomi** | Timekostnader, biproduktverdi, produktregister | Product Master, Item Costs, By Product Rules |
-| **Produksjonsteknikk** | Stykkliste, operasjonsrekkefølge | BOM, Routing, Operation Master |
+| Rolle | Ansvarsområde | I Excel-arket | I Marimo web-appen |
+|-------|---------------|--------------|-------------------|
+| **Produksjonsleder** | Maskiner, operasjonstider, produksjonsflyt | Fyller inn i Work Centers, Routing, Capacity Calendar | Justerer parametere, kjører simulering, eksporterer PDF-rapport |
+| **Innkjøp** | Råvarepriser, leverandørdata | Oppdaterer Unit Cost i Item Costs | Laster opp Excel, ser konsekvens av prisendringer i simulering |
+| **Økonomi / Controller** | Timekostnader, biproduktverdi, produktregister | Fyller inn i Product Master, Item Costs, By Product Rules | Laster opp Excel, eksporterer rapporter til PDF og Excel |
+| **Produksjonsteknikk** | Stykkliste, operasjonsrekkefølge | Fyller inn i BOM, Routing, Operation Master | Verifiserer data i "Datamodell (Innsyn)"-fanen |
+| **IT / Superbruker** | Database, versjonshistorikk, feilsøking | - | Gjeninnlaster tidligere versjoner, overvåker endringslogg |
 
 ---
 
@@ -61,6 +68,8 @@ Excel-filen har **10 ark** som må fylles ut. Her er en kort forklaring:
 | **By Product Rules** | Biprodukter som oppstår (spon, flis, bark) og hva de er verdt | Økonomi |
 | **Capacity Calendar** | Kapasitetskalender per arbeidssenter | Produksjonsleder |
 | **Production Scenario** | Forhåndsdefinerte produksjonsscenarioer | Produksjonsleder + Økonomi |
+
+Når Excel-arket er fylt ut, **laster du det opp i Marimo-appen** — da blir alle data tilgjengelige for simulering og analyse.
 
 ---
 
@@ -299,9 +308,11 @@ hvilken maskin, og hvor lang tid det tar.
 | **Setup Time Minutes** | Hvor lang tid tar det å rigge til? (omstilling, knivbytte, innkjøring) | Produksjonsleder | `15.0` |
 | **Run Time Minutes** | Hvor lang tid tar det å produsere ÉN enhet? | Produksjonsleder | `0.15` (minutter per LM) |
 | **Batch Size** | Hvor mange enheter lager dere per ordre? | Produksjonsleder | `500` |
-| **Changeover Time Minutes** | Hvor lang tid tar det å stille om til et annet produkt? (valgfri, kun for scenario-simulering) | Produksjonsleder | `45.0` |
 | **Valid From** | Fra hvilken dato gjelder denne routingen? | Produksjonsleder | `2026-01-01` |
 | **Valid To** | Til hvilken dato gjelder denne routingen? | Produksjonsleder | `2026-12-31` |
+
+> **Merk:** `Changeover Time Minutes` er fjernet fra datamodellen.
+> Omstillingskost håndteres gjennom `Setup Time Minutes`.
 
 ### Slik finner du tidene
 
@@ -416,7 +427,8 @@ Available Production Hours = Available Hours - Planned Downtime
 
 **Dette arket er for produksjonslederen og økonomi.** Her definerer du
 forhåndsdefinerte produksjonsscenarioer med planlagt kvantum per produkt.
-Scenarioene brukes til å simulere produksjon og beregne totalt ressursbehov.
+Scenarioene brukes i Marimo-appen til å simulere produksjon og beregne
+totalt ressursbehov.
 
 ### Kolonner du må fylle ut
 
@@ -438,15 +450,28 @@ Scenarioene brukes til å simulere produksjon og beregne totalt ressursbehov.
 
 ## 13. Slik kommer du i gang
 
-### Første gang - oppsett
+### Første gang — oppsett
 
 1. **Start med testdataene** som følger med. Åpne
    `Produksjonsmodell_Testdata_v3.xlsx` for å se hvordan et ferdig oppsett
    ser ut.
 2. **Erstatt testdataene** med dine egne produkter og priser.
-3. **Kjør beregningen** med Python-skriptet (se teknisk dokumentasjon).
-   - `python kostberegning.py --excel DittArk.xlsx` — full kalkyle
-   - `python kostberegning.py --excel DittArk.xlsx --product FG001` — kun ett produkt
+3. **Start Marimo web-appen:**
+   ```bash
+   marimo run varekost_app.py
+   ```
+4. **Last opp Excel-filen din:**
+   - Gå til fanen **📁 Dataimport & Versjoner**
+   - Klikk **📄 Velg Excel-fil** og velg din .xlsx-fil
+   - Skriv en kommentar (f.eks. "Første import av egne data")
+   - Systemet validerer automatisk og importerer
+5. **Simulér og analyser:**
+   - Gå til fanen **📊 Simulering & Analyse**
+   - Juster parametere (råvarepriser, svinn, timekostnader, produksjonstider)
+   - Angi planlagt kvantum
+   - Trykk **⚡ Start simulering**
+6. **Eksporter rapport:**
+   - Under **💾 Eksport**: last ned PDF-rapport eller Excel-fil
 
 ### Fremgangsmåte for å legge til et nytt produkt
 
@@ -457,6 +482,7 @@ Scenarioene brukes til å simulere produksjon og beregne totalt ressursbehov.
 | 3 | **BOM** | Hva består produktet av? (stykkliste) | Produksjonsteknikk |
 | 4 | **Routing** | Hvordan produseres det? (operasjoner, tider) | Produksjonsleder |
 | 5 | **By Product Rules** | Oppstår det biprodukter? | Økonomi |
+| 6 | **Marimo-app** | Last opp Excel-filen på nytt | Hvem som helst |
 
 ### Oppdatere priser
 
@@ -468,11 +494,19 @@ Når priser endrer seg (f.eks. ny innkjøpspris på skrulast):
 | Ny timekostnad på maskin | **Work Centers** | Økonomi |
 | Ny markedsverdi på biprodukt | **Item Costs** | Økonomi |
 
+Etter endringene: last opp Excel-filen på nytt i Marimo-appen for å få oppdaterte data.
+
+### Versjonshistorikk
+
+Marimo-appen lagrer alle tidligere Excel-filer du har lastet opp.
+Gå til **📁 Dataimport & Versjoner** og velg en tidligere versjon for å
+gjeninnlaste den. Dette er nyttig hvis du har gjort feil og vil gå tilbake.
+
 ---
 
 ## 14. Vanlige feil og tips
 
-### ❌ Vanlige feil
+### ❌ Vanlige feil i Excel-arket
 
 | Feil | Problem | Løsning |
 |------|---------|---------|
@@ -484,6 +518,14 @@ Når priser endrer seg (f.eks. ny innkjøpspris på skrulast):
 | **Manglende Routing** | Produktet har ingen produksjonsflyt | Legg til operasjoner i Routing |
 | **Feil Quantity Per** | Forbruket blir feil | Sjekk: Quantity Per = output per input. Hvis 1 M3 gir 400 LM, skriv 400 |
 | **Scrap % for høy/lav** | Materialkost blir feil | Sjekk faktisk svinn i produksjonen |
+
+### ❌ Vanlige feil ved import i Marimo
+
+| Feilmelding | Årsak | Løsning |
+|-------------|-------|---------|
+| "Validering fant feil — ingenting importert" | Excel-filen mangler ark eller kolonner | Sjekk at filen har alle 10 ark med korrekte kolonnenavn |
+| "Kryssreferanse-feil" | En varekode i BOM finnes ikke i Product Master | Sjekk at alle Item No er registrert |
+| "Ingen data lastet" | Databasen er tom | Last opp en Excel-fil via "Dataimport & Versjoner" |
 
 ### ⚠️ Kjente begrensninger i dagens kalkyle
 
@@ -505,12 +547,14 @@ hvis du har inaktive produkter eller tidsbegrensede priser i datasettet ditt.
 1. **Start enkelt.** Legg inn 2-3 produkter først, sjekk at tallene gir
    mening, så utvider du.
 2. **Sjekk at summen stemmer.** Beregn for hånd et enkelt produkt og
-   sammenlign med modellens resultat.
-3. **Oppdater jevnlig.** Priser endrer seg - sett av tid til å oppdatere
+   sammenlign med modellens resultat i Marimo.
+3. **Oppdater jevnlig.** Priser endrer seg — sett av tid til å oppdatere
    modellen hvert kvartal.
-4. **Bruk kommentarene.** Hold musepekeren over kolonneoverskriftene i
-   Excel for å se forklaringer.
-5. **Spør om hjelp.** Hvis tallene ser rare ut, sjekk om alle arkene er
+4. **Bruk kommentarfeltet.** Når du laster opp Excel i Marimo, skriv hva
+   som er endret — da kan du senere se i endringsloggen hva som skjedde.
+5. **Bruk versjonshistorikken.** Hvis noe går galt, kan du alltid gå
+   tilbake til en tidligere versjon.
+6. **Spør om hjelp.** Hvis tallene ser rare ut, sjekk om alle arkene er
    fylt ut riktig.
 
 ---

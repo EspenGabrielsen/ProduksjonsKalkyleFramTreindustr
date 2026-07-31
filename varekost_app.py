@@ -659,7 +659,7 @@ def _(
     routing_df, run_button, set_reload, validate_excel, wc_cost_df, bom_scrap_df,
     os, tempfile, generer_rapport, registrer_fonter, pdf_kommentar,
     pdf_inkluder_detaljer, sim_results, sim_overrides, export_sqlite_to_excel,
-    generer_excel_rapport, export_excel_button,
+    generer_excel_rapport, export_excel_button, vareFilter,
     filtered_bom_lines, filtered_byproduct_rules, filtered_capacity_days,
     filtered_item_costs, filtered_locations, filtered_operations, filtered_products,
     filtered_routing_lines, filtered_scenarios, filtered_work_centers,
@@ -717,10 +717,19 @@ def _(
         # Eksportpanel med spinner (Trinn 3)
         _eksport_items = [export_pdf_button, pdf_kommentar, pdf_inkluder_detaljer, mo.Html('<hr style="margin: 12px 0; border-color: #E2E8F0;">'), export_excel_button]
 
+        # Bestem hvilke produkter som skal inkluderes i PDF (respekter filteret)
+        _filter_text = vareFilter.value.strip().lower() if vareFilter.value else ""
+        if _filter_text:
+            _pdf_filtered_fg_set = {_p.item_no for _p in filtered_products if _p.item_type in ('Finished Good', 'Semi Finished')}
+            _pdf_sim_results = [_c for _c in sim_results if _c.product_no in _pdf_filtered_fg_set]
+        else:
+            _pdf_sim_results = list(sim_results)
+        _pdf_info = f"ℹ️ PDF inkluderer {len(_pdf_sim_results)} av {len(sim_results)} produkter" + (f" (filtrert på \"{_filter_text}\")" if _filter_text else "")
+
         if export_pdf_button.value:
             try:
                 _sammenligninger = []
-                for _c in sim_results:
+                for _c in _pdf_sim_results:
                     _mat_det = [{"komponent": _md.component, "qty_per": _md.quantity_per, "scrap_pct": _md.scrap_pct, "enhetskost": _md.unit_cost, "total_kost": _md.total_cost} for _md in (_c.simulated_material_details or [])]
                     _op_det = [{"operasjon": _od.operation_no, "arbeidssenter": _od.work_center, "run_time": _od.run_time_min, "batch": _od.batch_size, "kost_per_time": _od.cost_per_hour, "total_kost": _od.total_cost} for _od in (_c.simulated_operation_details or [])]
                     _bp_det = [{"biprodukt": _bd.item_no, "kvantum": _bd.quantity, "markedsverdi": _bd.market_value, "total_verdi": _bd.total_value} for _bd in (_c.simulated_byproduct_details or [])]
@@ -728,7 +737,7 @@ def _(
                     _sammenligninger.append({"produkt": _c.product_no, "beskrivelse": _c.product_desc, "org_netto": _c.original_net_cost, "sim_netto": _c.simulated_net_cost, "diff_netto": _c.net_diff, "materialdetaljer": _mat_det, "operasjonsdetaljer": _op_det, "biprodukter": _bp_det, "coprodukter": _co_det, "kvantum": _c.planned_quantity, "total_netto": _c.simulated_total_net_cost, "kost_per_enhet": _c.simulated_cost_per_unit, "timebehov": _c.simulated_total_hours})
                 _overrides_dict = {"item_costs": getattr(sim_overrides, 'item_costs', {}), "bom_scrap": dict(getattr(sim_overrides, 'bom_scrap', {})), "work_centers": getattr(sim_overrides, 'work_centers', {}), "routing": dict(getattr(sim_overrides, 'routing', {})), "planned_quantity": getattr(sim_overrides, 'planned_quantity', None)} if sim_overrides else {}
                 _wc_hours = {}
-                for _c in sim_results:
+                for _c in _pdf_sim_results:
                     if _c.simulated_operation_details and _c.planned_quantity:
                         for _od in _c.simulated_operation_details:
                             _wc = _od.work_center
@@ -755,6 +764,8 @@ def _(
                 _traceback.print_exc()
 
         _sim_parts.append(mo.md("### 💾 Eksport"))
+        if _filter_text:
+            _eksport_items.insert(0, mo.md(f"> {_pdf_info}"))
         _sim_parts.append(mo.accordion({"📥 Last ned rapporter (PDF / Excel)": mo.vstack(_eksport_items)}))
 
     _tab_simulering = mo.vstack(_sim_parts)

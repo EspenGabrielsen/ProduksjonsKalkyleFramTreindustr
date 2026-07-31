@@ -21,9 +21,10 @@ Excel (.xlsx) ── import ──→ SQLite (endringslogg.db) ──→ Python-
 | `kostberegning.py` | **Kjernelogikk:** ExcelData-parsing, SQLite-datalasting, CostCalculator (kostnadskalkyle), SimulationEngine (what-if), SimulationOverride, export_product_costs_to_json |
 | `data_repo.py` | SQLite-databasehåndtering: DataRepo-klasse med CRUD, endringslogg, versjonering av opplastede filer |
 | `excel_bridge.py` | Import/eksport mellom Excel og SQLite. `validate_excel()` (validering), `import_excel_to_sqlite()` (import), `export_sqlite_to_excel()` (eksport til 11 ark inkl. endringslogg) |
-| `varekost_app.py` | **Marimo web-app** med sanntids: datalasting, varefilter, baseline-kostnader, parameterjustering (råvarepriser, svinn, timelønn, run-time, batch-størrelse), simulering, PDF/Excel-eksport |
-| `generer_pdf_rapport.py` | PDF-rapportgenerering med ReportLab. Ledelsessammendrag, detaljert kostnadsoversikt, tabeller |
+| `varekost_app.py` | **Marimo web-app** med 4 faner: simulering & analyse, dataimport & versjoner, datamodell-innsyn, endringslogg |
+| `generer_pdf_rapport.py` | PDF-rapportgenerering med ReportLab. Inneholder: `generer_rapport()` (simuleringsrapport med ledelsessammendrag, tabeller, kapasitetsdata), `generer_dokumentasjon_pdf()` (Markdown→PDF for dokumentasjonsfiler), `_parse_markdown_to_story()` (Markdown-parser), samt felles styling (farger, fonter, tittelside, header/footer, logo) |
 | `generer_excel_rapport.py` | Excel-rapportgenerering for simuleringsresultater |
+| `generer_dokumentasjon.py` | Wrapper-script for å generere stilede PDF-er fra Markdown-dokumentasjon. Støtter enkeltfiler, flere filer og `--all` |
 | `lag_testdata_v3.py` | Generer testdata-Excel (`Produksjonsmodell_Testdata_v3.xlsx`) |
 | `lag_baseline.py` | Beregn baseline-kalkyle (konsoll/JSON) |
 | `sjekk_diff.py` | Sjekk diff mellom to kjøringer |
@@ -33,8 +34,10 @@ Excel (.xlsx) ── import ──→ SQLite (endringslogg.db) ──→ Python-
 | `baseline_simulering.json` | Lagret simuleringsresultat |
 | `requirements.txt` | Avhengigheter: marimo>=0.23.0, openpyxl>=3.1.0, pandas>=2.0.0, reportlab>=4.0.0 |
 | `STYLING.md` | Fargepalett, typografi, CSS-klasser for Marimo-app, PDF og Excel |
-| `Brukermanual_Produksjonsmodell.md` | Sluttbrukermanual for Excel-arket (for produksjonsledere, økonomi, innkjøp) |
-| `Produksjonsmodell_Dokumentasjon.md` | Detaljert teknisk dokumentasjon av datamodellen og beregningslogikk |
+| `Brukermanual_Produksjonsmodell.md` | Sluttbrukermanual for Excel-arket og Marimo web-app (for produksjonsledere, økonomi, innkjøp) |
+| `Brukermanual_Produksjonsmodell.pdf` | Generert PDF (85 KB) fra Brukermanual_Produksjonsmodell.md — stylet med Fram Treindustri-profil |
+| `Produksjonsmodell_Dokumentasjon.md` | Detaljert teknisk dokumentasjon av datamodellen, beregningslogikk, Marimo web-app og import/eksport |
+| `Produksjonsmodell_Dokumentasjon.pdf` | Generert PDF (116 KB) fra Produksjonsmodell_Dokumentasjon.md — stylet med Fram Treindustri-profil |
 | `TODO_filtrering_og_datoer.md` | Planlagte forbedringer for filtrering av aktive/tidsavgrensede data |
 
 ---
@@ -187,6 +190,12 @@ python excel_bridge.py --export utdata.xlsx
 
 # Start Marimo-app
 marimo run varekost_app.py
+
+# Generer stilede PDF-er fra Markdown-dokumentasjon
+python generer_dokumentasjon.py fil.md                        # Én fil
+python generer_dokumentasjon.py fil1.md fil2.md               # Flere filer
+python generer_dokumentasjon.py --all                         # Alle dokumentasjonsfiler
+python generer_dokumentasjon.py --all --output ./rapporter    # Til egen mappe
 ```
 
 ## Marimo-dokumentasjon
