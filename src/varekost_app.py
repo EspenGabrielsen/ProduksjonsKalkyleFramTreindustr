@@ -41,6 +41,7 @@ def _():
     from generer_excel_rapport import generer_excel_rapport
     from data_repo import DataRepo
     from excel_bridge import import_excel_to_sqlite, export_sqlite_to_excel, validate_excel
+    from testdata_for_app import seed_test_db, er_test_modus, reset_test_db
 
     return (
         CostCalculator,
@@ -48,6 +49,7 @@ def _():
         SimulationEngine,
         SimulationOverride,
         SqliteData,
+        er_test_modus,
         export_sqlite_to_excel,
         generer_excel_rapport,
         generer_rapport,
@@ -56,6 +58,8 @@ def _():
         os,
         pd,
         registrer_fonter,
+        reset_test_db,
+        seed_test_db,
         tempfile,
         validate_excel,
     )
@@ -172,7 +176,7 @@ def _(mo):
 
 
 @app.cell
-def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
+def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo, seed_test_db, er_test_modus, reset_test_db):
     _db = DataRepo()
     _db.initialize()
     data = None
@@ -180,6 +184,14 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo):
     baseline = None
     db_stats = None
     _reload_verdi = get_reload()
+
+    # Test-modus: slett gammel test-DB, opprett ny og fyll med testdata
+    if er_test_modus():
+        try:
+            _db = reset_test_db()  # ny tom test-DB
+            seed_test_db(_db)
+        except Exception as _e:
+            mo.output.replace(mo.md(f"### ❌ Feil ved seeding av testdata: {_e}"))
     if _db.is_empty():
         mo.output.replace(mo.md("""
         ### Velkommen!

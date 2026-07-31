@@ -241,6 +241,16 @@ python src/scripts/sjekk_diff.py                # Sjekk diff
 # Transportvarer (fler-høvleri-produksjon)
 python src/scripts/test_transport.py            # Kjør 5 tester (in-memory DB)
 
+# Test-modus for Marimo-appen (in-memory DB med testdata, berører ALDRI produksjonsdata)
+# PowerShell
+$env:PRODUKSJONSKALKYLE_TEST="true"; marimo run src/varekost_app.py
+# Bash (Git Bash / WSL)
+PRODUKSJONSKALKYLE_TEST=true marimo run src/varekost_app.py
+# CMD
+set PRODUKSJONSKALKYLE_TEST=true && marimo run src/varekost_app.py
+# Normal modus (ekte database)
+marimo run src/varekost_app.py
+
 # Start Marimo-app
 marimo run src/varekost_app.py
 

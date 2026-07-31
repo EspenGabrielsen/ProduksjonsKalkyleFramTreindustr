@@ -56,9 +56,22 @@ DB_FILENAME = "produksjonskalkyle.db"
 
 
 def _get_db_path(db_path: Optional[str] = None) -> str:
-    """Finn stien til databasen. Default: ved siden av data_repo.py."""
+    """Finn stien til databasen.
+
+    Spesiell logikk for test-modus:
+      - PRODUKSJONSKALKYLE_TEST=true → midlertidig fil-database i temp-mappe.
+        Bruker en EKTE fil (ikke :memory:) slik at DataRepo og SqliteData
+        (som har to separate tilkoblinger) deler samme data.
+      - Ellers: ved siden av data_repo.py
+
+    Args:
+        db_path: Eksplisitt sti (valgfri) — prioriteres før test-modus
+    """
     if db_path:
         return db_path
+    if os.environ.get("PRODUKSJONSKALKYLE_TEST", "").lower() in ("true", "1", "yes"):
+        import tempfile
+        return os.path.join(tempfile.gettempdir(), "produksjonskalkyle_test.db")
     return str(Path(__file__).parent / DB_FILENAME)
 
 
