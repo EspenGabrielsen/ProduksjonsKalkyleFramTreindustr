@@ -73,7 +73,6 @@ ProduksjonsKalkyle/
 | `src/scripts/oppdater_mal.py` | Oppdater Excel-mal (`src/Produksjonsmodell_Mal.xlsx`) |
 | `src/scripts/sqldatabaseTest.py` | Test-verktøy for SQLite-databasen |
 | `src/scripts/test_transport.py` | Test av transportvare-modulen (5 tester, in-memory DB — berører aldri produksjonsdatabasen) |
-| `TRANSPORTVARE_PLAN.md` | Implementeringsplan for fler-høvleri-produksjon via transportflagg |
 | `output/baseline_kalkyle.json` | Lagret baseline-kalkyle |
 | `output/baseline_simulering.json` | Lagret simuleringsresultat |
 | `requirements.txt` | Avhengigheter: marimo>=0.23.0, openpyxl>=3.1.0, pandas>=2.0.0, reportlab>=4.0.0 |

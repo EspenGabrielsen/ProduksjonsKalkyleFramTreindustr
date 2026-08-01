@@ -8,7 +8,6 @@ som representerer de vanligste kostnadsscenariene.
 
 Relaterte filer:
   - test_transport.py  (samtlige 5 automatiske tester)
-  - TRANSPORTVARE_PLAN.md (full implementeringsplan)
 """
 
 from data_repo import DataRepo
