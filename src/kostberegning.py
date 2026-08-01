@@ -1986,6 +1986,248 @@ class SimulationEngine:
 
 
 # ──────────────────────────────────────────────────────────────────────
+#  5B. TRANSPORTVARE-UTVIDELSE (visuelt simuleringslag)
+#
+#  Transport beregnes som et RENT VISUELT LAG oppå den eksisterende
+#  datamodellen. Datamodellen (products, bom_lines, routing_lines) muteres
+#  ALDRI. For flaggede varer (transport_flagg.is_transport=1) lages det
+#  fiktive rader med location_code f.eks. "KOD→KV" som inkluderer frakt.
+#
+#  Den gamle muterende logikken (sync_transport_varer i excel_bridge.py)
+#  er beholdt urørt som LEGACY for fremtidig Business Central-integrasjon.
+# ──────────────────────────────────────────────────────────────────────
+
+TRANSPORT_FALLBACK_HOURLY_COST = 800.0
+
+
+def _transport_hourly_cost(data) -> float:
+    """Finn TRANSPORT-arbeidssenterets timekost (fallback 800 kr/t)."""
+    wc = data.work_center("TRANSPORT")
+    if wc:
+        return wc.total_cost_hour
+    for w in data.work_centers:
+        if "TRANSPORT" in w.code.upper() or "FRAKT" in w.code.upper():
+            return w.total_cost_hour
+    return TRANSPORT_FALLBACK_HOURLY_COST
+
+
+def _prod_locations_from_data(data, item_no: str) -> set[str]:
+    """Finn produksjonslokasjoner for et produkt via routing → work_centers."""
+    locs: set[str] = set()
+    for rl in data.routing_for(item_no):
+        wc = data.work_center(rl.work_center_code)
+        if wc and wc.location_code:
+            locs.add(wc.location_code)
+    return locs
+
+
+def _load_transport_konfig(data, db=None) -> tuple[set[str], dict[tuple[str, str], tuple[float, float, float]]]:
+    """Les transport_flagg + transport_ruter fra databasen."""
+    if db is None:
+        db = getattr(data, "db", None)
+    if db is None:
+        return set(), {}
+    try:
+        flagged = {r["item_no"] for r in db.conn.execute(
+            "SELECT item_no FROM transport_flagg WHERE is_transport=1"
+        ).fetchall()}
+        ruter: dict[tuple[str, str], tuple[float, float, float]] = {}
+        for r in db.conn.execute(
+            "SELECT from_loc, to_loc, run_time_minutes, setup_time_minutes, batch_size "
+            "FROM transport_ruter"
+        ).fetchall():
+            ruter[(r["from_loc"], r["to_loc"])] = (
+                r["run_time_minutes"], r["setup_time_minutes"], r["batch_size"],
+            )
+        return flagged, ruter
+    except Exception:
+        return set(), {}
+
+
+def _beregn_transportkost(rute: tuple[float, float, float],
+                          hourly_cost: float) -> tuple[float, float, float]:
+    """Beregn transportkost per enhet fra en rute.
+
+    Returns:
+        (run_cost, setup_cost_per_unit, total_transport_kost)
+    """
+    run_time, setup_time, batch = rute
+    batch = batch if batch and batch > 0 else 1.0
+    run_cost = (run_time / 60.0) * hourly_cost
+    setup_cost_per_unit = (setup_time / 60.0) * hourly_cost / batch
+    total = run_cost + setup_cost_per_unit
+    return run_cost, setup_cost_per_unit, total
+
+
+def _transport_operation_detail(from_loc: str, to_loc: str, rute, hourly_cost: float) -> OperationCostDetail:
+    """Bygg en OPERASJONSDETALJ som representerer frakt mellom to lokasjoner."""
+    run_time, setup_time, batch = rute
+    run_cost, setup_cost_per_unit, _ = _beregn_transportkost(rute, hourly_cost)
+    return OperationCostDetail(
+        operation_no=999,
+        operation_desc="Frakt {f} -> {t}".format(f=from_loc, t=to_loc),
+        work_center="TRANSPORT",
+        run_time_min=float(run_time),
+        setup_time_min=float(setup_time),
+        batch_size=float(batch),
+        cost_per_hour=hourly_cost,
+        run_cost=round(run_cost, 4),
+        setup_cost_per_unit=round(setup_cost_per_unit, 4),
+        total_cost=round(run_cost + setup_cost_per_unit, 4),
+    )
+
+
+def expand_product_costs_with_transport(results: list[ProductCostResult], data, db=None
+                                        ) -> list[ProductCostResult]:
+    """Utvid en baseline-liste med fiktive transportrader for flaggede varer."""
+    flagged, ruter = _load_transport_konfig(data, db)
+    if not flagged or not ruter:
+        return list(results)
+
+    expanded = list(results)
+    factory_locs = {l.code for l in data.locations if l.location_type == "Factory"}
+    hourly_cost = _transport_hourly_cost(data)
+
+    by_product: dict[str, list[ProductCostResult]] = {}
+    for r in results:
+        by_product.setdefault(r.product_no, []).append(r)
+
+    for prod_no, prod_results in by_product.items():
+        if prod_no not in flagged:
+            continue
+        prod_locs = _prod_locations_from_data(data, prod_no)
+        if not prod_locs:
+            continue
+        from_loc = sorted(prod_locs)[0]
+        base = next((r for r in prod_results if r.location_code == from_loc), None)
+        if base is None:
+            continue
+
+        for to_loc in sorted(factory_locs - prod_locs):
+            rute = ruter.get((from_loc, to_loc))
+            if rute is None:
+                continue
+            _, _, transport_kost = _beregn_transportkost(rute, hourly_cost)
+
+            ny = ProductCostResult(
+                product_no=base.product_no,
+                product_desc=base.product_desc,
+                product_group=base.product_group,
+                base_uom=base.base_uom,
+                location_code="{f}->{t}".format(f=from_loc, t=to_loc),
+                location_name="{f} -> {t}".format(f=from_loc, t=to_loc),
+                material_cost=base.material_cost,
+                operation_cost=round(base.operation_cost + transport_kost, 4),
+                setup_cost=base.setup_cost,
+                gross_production_cost=round(base.gross_production_cost + transport_kost, 4),
+                by_product_value=base.by_product_value,
+                net_production_cost=round(base.net_production_cost + transport_kost, 4),
+                material_details=list(base.material_details),
+                operation_details=list(base.operation_details) + [
+                    _transport_operation_detail(from_loc, to_loc, rute, hourly_cost)
+                ],
+                byproduct_details=list(base.byproduct_details),
+            )
+
+            gross = ny.gross_production_cost
+            if gross:
+                ny.cost_breakdown = [
+                    {"category": "Materialkost", "amount": round(ny.material_cost, 4),
+                     "pct_of_gross": round(ny.material_cost / gross * 100, 1)},
+                    {"category": "Operasjonskost", "amount": round(ny.operation_cost, 4),
+                     "pct_of_gross": round(ny.operation_cost / gross * 100, 1)},
+                    {"category": "Setupkost", "amount": round(ny.setup_cost, 4),
+                     "pct_of_gross": round(ny.setup_cost / gross * 100, 1)},
+                ]
+                if ny.by_product_value > 0:
+                    ny.cost_breakdown.append(
+                        {"category": "Biproduktverdi", "amount": -round(ny.by_product_value, 4),
+                         "pct_of_gross": -round(ny.by_product_value / gross * 100, 1)}
+                    )
+                ny.cost_breakdown.append(
+                    {"category": "Netto kost", "amount": round(ny.net_production_cost, 4),
+                     "pct_of_gross": round(ny.net_production_cost / gross * 100, 1)}
+                )
+
+            expanded.append(ny)
+
+    return expanded
+
+
+def expand_simulations_with_transport(comparisons: list[SimulationComparison], data, db=None
+                                      ) -> list[SimulationComparison]:
+    """Utvid en simuleringssammenligningsliste med fiktive transportrader."""
+    flagged, ruter = _load_transport_konfig(data, db)
+    if not flagged or not ruter:
+        return list(comparisons)
+
+    expanded = list(comparisons)
+    factory_locs = {l.code for l in data.locations if l.location_type == "Factory"}
+    hourly_cost = _transport_hourly_cost(data)
+
+    by_product: dict[str, list[SimulationComparison]] = {}
+    for c in comparisons:
+        by_product.setdefault(c.product_no, []).append(c)
+
+    for prod_no, comps in by_product.items():
+        if prod_no not in flagged:
+            continue
+        prod_locs = _prod_locations_from_data(data, prod_no)
+        if not prod_locs:
+            continue
+        from_loc = sorted(prod_locs)[0]
+        base = next((c for c in comps if c.location_code == from_loc), None)
+        if base is None:
+            continue
+
+        for to_loc in sorted(factory_locs - prod_locs):
+            rute = ruter.get((from_loc, to_loc))
+            if rute is None:
+                continue
+            _, _, transport_kost = _beregn_transportkost(rute, hourly_cost)
+            transport_detail = _transport_operation_detail(from_loc, to_loc, rute, hourly_cost)
+
+            ny = SimulationComparison(
+                product_no=base.product_no,
+                product_desc=base.product_desc,
+                product_group=base.product_group,
+                base_uom=base.base_uom,
+                location_code="{f}->{t}".format(f=from_loc, t=to_loc),
+                location_name="{f} -> {t}".format(f=from_loc, t=to_loc),
+                original_material_cost=base.original_material_cost,
+                original_operation_cost=round(base.original_operation_cost + transport_kost, 4),
+                original_setup_cost=base.original_setup_cost,
+                original_gross_cost=round(base.original_gross_cost + transport_kost, 4),
+                original_byproduct_value=base.original_byproduct_value,
+                original_net_cost=round(base.original_net_cost + transport_kost, 4),
+                simulated_material_cost=base.simulated_material_cost,
+                simulated_operation_cost=round(base.simulated_operation_cost + transport_kost, 4),
+                simulated_setup_cost=base.simulated_setup_cost,
+                simulated_gross_cost=round(base.simulated_gross_cost + transport_kost, 4),
+                simulated_byproduct_value=base.simulated_byproduct_value,
+                simulated_net_cost=round(base.simulated_net_cost + transport_kost, 4),
+                original_material_details=list(base.original_material_details),
+                simulated_material_details=list(base.simulated_material_details),
+                original_operation_details=list(base.original_operation_details) + [transport_detail],
+                simulated_operation_details=list(base.simulated_operation_details) + [transport_detail],
+                original_byproduct_details=list(base.original_byproduct_details),
+                simulated_byproduct_details=list(base.simulated_byproduct_details),
+                original_co_product_results=list(base.original_co_product_results),
+                simulated_co_product_results=list(base.simulated_co_product_results),
+                co_product_pct=base.co_product_pct,
+                co_product_item_no=base.co_product_item_no,
+                planned_quantity=base.planned_quantity,
+                simulated_total_net_cost=base.simulated_total_net_cost,
+                simulated_cost_per_unit=base.simulated_cost_per_unit,
+                simulated_total_hours=base.simulated_total_hours,
+                simulated_work_center_hours=base.simulated_work_center_hours,
+            )
+            expanded.append(ny)
+
+    return expanded
+
+
+# ──────────────────────────────────────────────────────────────────────
 #  6. JSON-EKSPORT
 # ──────────────────────────────────────────────────────────────────────
 

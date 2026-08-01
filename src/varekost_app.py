@@ -36,6 +36,8 @@ def _():
         OperationCostDetail,
         ByProductDetail,
         export_product_costs_to_json,
+        expand_product_costs_with_transport,
+        expand_simulations_with_transport,
     )
     from generer_pdf_rapport import generer_rapport, registrer_fonter, _hent_logo
     from generer_excel_rapport import generer_excel_rapport
@@ -63,6 +65,8 @@ def _():
         sync_transport_varer,
         tempfile,
         validate_excel,
+        expand_product_costs_with_transport,
+        expand_simulations_with_transport,
     )
 
 
@@ -179,7 +183,7 @@ def _(mo):
 
 
 @app.cell
-def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, get_test_seeded, mo, seed_test_db, er_test_modus, reset_test_db, set_test_seeded, sync_transport_varer):
+def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, expand_product_costs_with_transport, get_reload, get_test_seeded, mo, seed_test_db, er_test_modus, reset_test_db, set_test_seeded):
     _db = DataRepo()
     _db.initialize()
     data = None
@@ -198,12 +202,9 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, get_te
             set_test_seeded(True)
         except Exception as _e:
             mo.output.replace(mo.md(f"### ❌ Feil ved seeding av testdata: {_e}"))
-    # Synkroniser transportflagg (generer/fjern semi-finished basert på flagg)
-    # Ved hver data-last, uavhengig av om Excel er importert eller ikke.
-    try:
-        sync_transport_varer(_db, source="app")
-    except Exception as _e:
-        mo.output.append(mo.md(f"⚠️ Transport-sync advarsel: {_e}"))
+    # LEGACY (inaktiviert): sync_transport_varer() muterte datamodellen med semi-finished.
+    # Den logikken er beholdt i excel_bridge.py for fremtidig Business Central-integrasjon.
+    # Transport vises nå KUN i simuleringen via expand_product_costs_with_transport().
 
     if _db.is_empty():
         mo.output.replace(mo.md("""
@@ -217,6 +218,8 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, get_te
             engine = SimulationEngine(data)
             _calculator = CostCalculator(data)
             baseline = _calculator.calculate_all()
+            # Utvid baseline med fiktive transportrader (KOD→KV, KOD→EIK osv.)
+            baseline = expand_product_costs_with_transport(baseline, data, _db)
             db_stats = _db.stats
         except Exception as _e:
             mo.output.replace(mo.md(f"### ❌ Feil ved lasting: {_e}"))
@@ -605,7 +608,7 @@ def _(mo):
 
 
 @app.cell
-def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty, run_button):
+def _(SimulationEngine, SimulationOverride, data, expand_simulations_with_transport, mo, overrides, pd, planned_qty, run_button):
     sim_results = None
     sim_overrides = None
     if run_button.value:
@@ -622,6 +625,8 @@ def _(SimulationEngine, SimulationOverride, data, mo, overrides, pd, planned_qty
                 _engine = SimulationEngine(data)
                 _comparisons = _engine.compare_all(_overrides)
                 if _comparisons:
+                    # Utvid med fiktive transportrader (KOD→KV, KOD→EIK osv.)
+                    _comparisons = expand_simulations_with_transport(_comparisons, data)
                     sim_results = _comparisons
                     sim_overrides = _overrides
             except Exception as _e:
