@@ -127,10 +127,9 @@ KOLONNER = {
     "Transport Ruter": {
         "From Loc": "Fra-lokasjon. Eksempel: KOD",
         "To Loc": "Til-lokasjon. Eksempel: KV",
-        "Distance Km": "Distanse i kilometer",
-        "Run Time Minutes": "Kjøretid i minutter (en vei)",
-        "Setup Time Minutes": "Laste-/lossetid i minutter",
-        "Batch Size": "Antall enheter per transport",
+        "Cost Per M3": "Fraktpris per M3 på denne ruten (eneste beregningsfelt)",
+        "Distance Km": "Distanse i kilometer (informasjon — påvirker ikke kost)",
+        "Hours": "Kjøretid i timer (informasjon — påvirker ikke kost)",
     },
 }
 
@@ -577,7 +576,7 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
         "By Product Rules": (_import_byproduct_rules, ["Parent Item No", "By Product Item No"]),
         "Capacity Calendar": (_import_capacity, ["Work Center", "Date"]),
         "Production Scenario": (_import_scenarios, ["Scenario Name", "Product"]),
-        "Transport Ruter": (_import_transport_ruter, ["From Loc", "To Loc"]),
+    "Transport Ruter": (_import_transport_ruter, ["From Loc", "To Loc"]),
     }
 
     for sheet_name, (import_func, required_cols) in sheet_map.items():
@@ -616,12 +615,10 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
     except Exception:
         pass
 
-    # Synkroniser transportvarer (fler-høvleri-produksjon)
-    try:
-        _sync_stats = sync_transport_varer(db, source="import")
-        stats["tables_updated"].update({"transport_sync": _sync_stats})
-    except Exception as e:
-        stats["errors"].append(f"Feil ved transport-sync: {e}")
+    # NB! sync_transport_varer() er LEGACY og er bevisst IKKE kalt her.
+    # Transport vises nå KUN i simuleringen via expand_*_with_transport()
+    # i kostberegning.py — datamodellen (semi-finished) muteres aldri.
+    # Se sync_transport_varer() for legacy-guard.
 
     if egen_db:
         db.close()
@@ -736,26 +733,37 @@ def _delete_routing_by_item(db: DataRepo, item_no: str, operation_no: int, wc: s
         db.delete_routing_line(row["id"], source=source)
 
 
-def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
+def sync_transport_varer(db: DataRepo, source: str = "import",
+                         raise_if_called: bool = True) -> dict:
     """Synkroniser transportvarer — generer/fjern semi-finished varianter og transport-routing.
 
-    Når en vare flagges som transportvare (is_transport=1):
-      1. Oppretter semi-finished per høvleri-lokasjon: {vare}-KOD, {vare}-KV, {vare}-EIK
-      2. Kopierer original BOM til semi-finished (med co-prod-suffiks hvis aktuelt)
-      3. Legger til BOM på hovedvaren: {vare} → {vare}-{primær_lokasjon} (Qty=1)
-      4. Legger til TRANSPORT-routing for relevante ruter
+    ⚠️ LEGACY — IKKE kalt fra import eller app lenger.
+    Transport vises nå KUN i simuleringen via expand_*_with_transport()
+    i kostberegning.py — datamodellen (semi-finished) muteres aldri.
 
-    Når flagget fjernes (is_transport=0):
-      1. Sletter alle genererte semi-finished produkter
-      2. Fjerner transport-BOM og transport-routing fra hovedvaren
+    Denne funksjonen beholdes urørt for fremtidig Business Central-integrasjon.
+    For å aktivere den på nytt: bruk raise_if_called=False og koble den inn
+    der det er ønskelig (f.eks. i import_excel_to_sqlite).
 
     Args:
         db: DataRepo-instans
         source: Kilde for endringslogg
+        raise_if_called: True (default) kaster RuntimeError hvis funksjonen
+            kalles — beskytter mot uønsket gjenoppretting av semi-finished.
 
     Returns:
         dict med statistikk: {"opprettet": int, "slettet": int, "produkter": [...]}
+
+    Raises:
+        RuntimeError: hvis raise_if_called=True (default) — funksjonen er legacy.
     """
+    if raise_if_called:
+        raise RuntimeError(
+            "sync_transport_varer() er LEGACY og inaktiv. "
+            "Transport vises nå kun i simuleringen via expand_*_with_transport(). "
+            "For å bruke legacy-logikken: kall med raise_if_called=False."
+        )
+
     stats = {"opprettet": 0, "slettet": 0, "produkter": []}
 
     # Sørg for at tabellen finnes
@@ -835,16 +843,17 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
                 }], source=source)
 
                 # TRANSPORT-routing på semi-finished (ikke hovedprodukt)
-                # Rute-data hentes fra transport_ruter-tabellen (from_loc → loc)
+                # NB: transport_ruter har nå kun cost_per_m3/distance_km/hours.
+                # Legacy-estimat: hours → run_time minutter, standard setup/batch.
                 rute = db.conn.execute(
                     "SELECT * FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
                     (_from_loc, loc)
                 ).fetchone()
                 if rute:
+                    _hours = float(rute["hours"] or 0) if "hours" in rute.keys() else 0
+                    _run = _hours * 60.0 if _hours > 0 else 45.0
                     _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
-                                          setup=rute["setup_time_minutes"],
-                                          run=rute["run_time_minutes"],
-                                          batch=rute["batch_size"],
+                                          setup=30.0, run=_run, batch=prod_batch(db, item_no),
                                           source=source)
                 else:
                     _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
@@ -1398,38 +1407,33 @@ def _import_transport_ruter(db: DataRepo, rows: list[dict], sheet_name: str) -> 
             (from_loc, to_loc),
         ).fetchone()
 
+        cost_per_m3 = _f(row.get("Cost Per M3", 0))
         distance = _f(row.get("Distance Km", 0))
-        run_time = _f(row.get("Run Time Minutes", 0))
-        setup_time = _f(row.get("Setup Time Minutes", 30))
-        batch = _f(row.get("Batch Size", 3000))
+        hours = _f(row.get("Hours", 0))
 
         if existing:
             # Sammenlign for endringslogg
             old = dict(db.conn.execute(
                 "SELECT * FROM transport_ruter WHERE id = ?", (existing["id"],)
             ).fetchone())
+            if abs(old.get("cost_per_m3", 0) - cost_per_m3) > 0.001:
+                db.log_change("transport_ruter", str(existing["id"]), "cost_per_m3",
+                              old.get("cost_per_m3"), cost_per_m3, source="import")
             if abs(old.get("distance_km", 0) - distance) > 0.001:
                 db.log_change("transport_ruter", str(existing["id"]), "distance_km",
                               old.get("distance_km"), distance, source="import")
-            if abs(old.get("run_time_minutes", 0) - run_time) > 0.001:
-                db.log_change("transport_ruter", str(existing["id"]), "run_time_minutes",
-                              old.get("run_time_minutes"), run_time, source="import")
-            if abs(old.get("setup_time_minutes", 0) - setup_time) > 0.001:
-                db.log_change("transport_ruter", str(existing["id"]), "setup_time_minutes",
-                              old.get("setup_time_minutes"), setup_time, source="import")
-            if abs(old.get("batch_size", 0) - batch) > 0.001:
-                db.log_change("transport_ruter", str(existing["id"]), "batch_size",
-                              old.get("batch_size"), batch, source="import")
+            if abs(old.get("hours", 0) - hours) > 0.001:
+                db.log_change("transport_ruter", str(existing["id"]), "hours",
+                              old.get("hours"), hours, source="import")
             db.conn.execute(
-                """UPDATE transport_ruter SET distance_km = ?, run_time_minutes = ?,
-                   setup_time_minutes = ?, batch_size = ? WHERE id = ?""",
-                (distance, run_time, setup_time, batch, existing["id"]),
+                """UPDATE transport_ruter SET cost_per_m3 = ?, distance_km = ?, hours = ? WHERE id = ?""",
+                (cost_per_m3, distance, hours, existing["id"]),
             )
         else:
             db.conn.execute(
-                """INSERT INTO transport_ruter (from_loc, to_loc, distance_km, run_time_minutes, setup_time_minutes, batch_size)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (from_loc, to_loc, distance, run_time, setup_time, batch),
+                """INSERT INTO transport_ruter (from_loc, to_loc, cost_per_m3, distance_km, hours)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (from_loc, to_loc, cost_per_m3, distance, hours),
             )
             db.log_change("transport_ruter", f"{from_loc}:{to_loc}", "_created",
                           None, f"{from_loc}→{to_loc}", source="import")
@@ -1740,10 +1744,8 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
     # (Før Endringslogg så antallet ruter er lett å finne)
     ws11 = wb.create_sheet()
     _write_sheet(ws11, "Transport Ruter", data.get("transport_ruter", []),
-                 ["From Loc", "To Loc", "Distance Km", "Run Time Minutes",
-                  "Setup Time Minutes", "Batch Size"],
-                 db_keys=["from_loc", "to_loc", "distance_km", "run_time_minutes",
-                          "setup_time_minutes", "batch_size"])
+                 ["From Loc", "To Loc", "Cost Per M3", "Distance Km", "Hours"],
+                 db_keys=["from_loc", "to_loc", "cost_per_m3", "distance_km", "hours"])
 
     # ── Ark 12: Endringslogg ────────────────────────────────
     # Endringsloggen har IKKE ACTION/ID kolonner

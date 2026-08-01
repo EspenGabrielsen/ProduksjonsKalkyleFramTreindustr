@@ -186,15 +186,14 @@ CREATE TABLE IF NOT EXISTS transport_flagg (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- Transportruter mellom høvlerier (from → to, med distanse og tider)
+-- Transportruter mellom høvlerier (from → to, med kost per M3 som eneste beregningsfelt)
 CREATE TABLE IF NOT EXISTS transport_ruter (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     from_loc TEXT NOT NULL,
     to_loc TEXT NOT NULL,
+    cost_per_m3 REAL NOT NULL DEFAULT 0,
     distance_km REAL NOT NULL DEFAULT 0,
-    run_time_minutes REAL NOT NULL DEFAULT 0,
-    setup_time_minutes REAL NOT NULL DEFAULT 30,
-    batch_size REAL NOT NULL DEFAULT 3000,
+    hours REAL NOT NULL DEFAULT 0,
     UNIQUE(from_loc, to_loc)
 );
 
@@ -319,6 +318,32 @@ class DataRepo:
 
         self.conn.executescript(SCHEMA_SQL)
         self.conn.commit()
+
+        # Migrering: oppgrader transport_ruter til ny struktur (cost_per_m3).
+        # Gammel struktur hadde run_time_minutes/setup_time_minutes/batch_size.
+        # Ny struktur: cost_per_m3 (eneste beregningsfelt) + distance_km/hours (info).
+        try:
+            cols = [r["name"] for r in self.conn.execute(
+                "PRAGMA table_info(transport_ruter)").fetchall()]
+            if "run_time_minutes" in cols:
+                # Drop og bygg på nytt - gamle ruter må tastes inn på nytt med cost_per_m3
+                self.conn.execute("DROP TABLE transport_ruter")
+                self.conn.execute("""
+                    CREATE TABLE transport_ruter (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        from_loc TEXT NOT NULL,
+                        to_loc TEXT NOT NULL,
+                        cost_per_m3 REAL NOT NULL DEFAULT 0,
+                        distance_km REAL NOT NULL DEFAULT 0,
+                        hours REAL NOT NULL DEFAULT 0,
+                        UNIQUE(from_loc, to_loc)
+                    )
+                """)
+                self.conn.commit()
+                print("[*] transport_ruter migrert til ny struktur (cost_per_m3)")
+        except sqlite3.OperationalError:
+            pass  # tabellen finnes ikke (forste kjoring) - SCHEMA_SQL har allerede opprettet den
+
         # Migrer: legg til comment-kolonne hvis den ikke finnes
         try:
             self.conn.execute("ALTER TABLE uploaded_files ADD COLUMN comment TEXT NOT NULL DEFAULT ''")

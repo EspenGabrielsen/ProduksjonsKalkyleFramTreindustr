@@ -73,9 +73,9 @@ WORK_CENTERS = [
      "capacity_hours_day": 24.0, "effective_capacity_pct": 100.0},
 ]
 
-# Transportruter (KOD → KV: 45 min, batch 3200)
+# Transportruter (KOD → KV: 180 kr/M3)
 TRANSPORT_RUTER = [
-    {"from_loc": "KOD", "to_loc": "KV", "run_time_minutes": 45.0, "setup_time_minutes": 30.0, "batch_size": 3200.0},
+    {"from_loc": "KOD", "to_loc": "KV", "cost_per_m3": 180.0, "distance_km": 35.0, "hours": 1.5},
 ]
 
 # Lokasjoner
@@ -139,10 +139,10 @@ def _setup_test_db() -> DataRepo:
     for tr in TRANSPORT_RUTER:
         db.conn.execute(
             """INSERT OR IGNORE INTO transport_ruter
-               (from_loc, to_loc, distance_km, run_time_minutes, setup_time_minutes, batch_size)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (tr["from_loc"], tr["to_loc"], tr.get("distance_km", 35.0),
-             tr["run_time_minutes"], tr["setup_time_minutes"], tr["batch_size"]),
+               (from_loc, to_loc, cost_per_m3, distance_km, hours)
+               VALUES (?, ?, ?, ?, ?)""",
+            (tr["from_loc"], tr["to_loc"], tr["cost_per_m3"],
+             tr.get("distance_km", 0), tr.get("hours", 0)),
         )
     db.conn.commit()
 
@@ -169,7 +169,8 @@ def test_1_sett_flagg_enkelt_produkt():
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('BL98520', 1)"
     )
     db.conn.commit()
-    stats = sync_transport_varer(db, source="test")
+    # Test legacy-logikken bevisst med raise_if_called=False
+    stats = sync_transport_varer(db, source="test", raise_if_called=False)
 
     # Verifiser semi-finished produkter.
     # BL98520 produseres på KOD (HOVEDHOVEL) → kun KV og EIK får semi-finished.
@@ -184,11 +185,11 @@ def test_1_sett_flagg_enkelt_produkt():
     assert _count(db, "products", "item_no='BL98520-KOD'") == 0, "KOD produserer selv — skal ikke ha semi-finished"
     # Hovedproduktet har ingen TRANSPORT-routing
     assert _count(db, "routing_lines", "item_no='BL98520' AND operation_code='TRANSPORT'") == 0
-    # Verifiser at run_time hentes fra transport_ruter-tabellen (45 min, ikke fallback)
+    # Verifiser at run_time-estimat hentes fra hours i transport_ruter-tabellen (1.5 t = 90 min)
     rt_row = db.conn.execute(
         "SELECT run_time_minutes FROM routing_lines WHERE item_no='BL98520-KV' AND operation_code='TRANSPORT'"
     ).fetchone()
-    assert rt_row["run_time_minutes"] == 45.0, f"Skulle være 45.0 fra rutetabellen, var {rt_row['run_time_minutes']}"
+    assert rt_row["run_time_minutes"] == 90.0, f"Skulle være 90.0 fra hours-estimat, var {rt_row['run_time_minutes']}"
     # TRANSPORT bruker ett felles arbeidssenter
     assert _count(db, "work_centers", "code='TRANSPORT'") == 1
     assert _count(db, "work_centers", "code LIKE 'FRAKT_%'") == 0
@@ -210,7 +211,7 @@ def test_2_fjern_flagg_restaurerer():
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('BL98520', 1)"
     )
     db.conn.commit()
-    sync_transport_varer(db, source="test")
+    sync_transport_varer(db, source="test", raise_if_called=False)
     assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 2
 
     # Fjern flagg
@@ -218,7 +219,7 @@ def test_2_fjern_flagg_restaurerer():
         "UPDATE transport_flagg SET is_transport = 0 WHERE item_no = 'BL98520'"
     )
     db.conn.commit()
-    sync_transport_varer(db, source="test")
+    sync_transport_varer(db, source="test", raise_if_called=False)
 
     # Verifiser alt er fjernet
     assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 0, "Semi-finished skal være slettet"
@@ -242,7 +243,7 @@ def test_3_co_produkt_overlever():
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('JD16073', 1)"
     )
     db.conn.commit()
-    sync_transport_varer(db, source="test")
+    sync_transport_varer(db, source="test", raise_if_called=False)
 
     # Semi-finished er laget (JD16073 produseres på KOD → kun KV og EIK)
     assert _count(db, "products", "item_no LIKE 'JD16073-%'") == 2, "Skulle ha 2 semi-finished (KV, EIK)"
@@ -268,7 +269,7 @@ def test_4_produksjonskjede():
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('JD16098TF', 1)"
     )
     db.conn.commit()
-    sync_transport_varer(db, source="test")
+    sync_transport_varer(db, source="test", raise_if_called=False)
 
     # JD16098TF har ingen egen routing → alle 3 fabrikklokasjoner får semi-finished
     assert _count(db, "products", "item_no LIKE 'JD16098TF-%'") == 3
@@ -301,7 +302,7 @@ def test_5_alle_samtidig():
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('JD16098TF', 1)"
     )
     db.conn.commit()
-    sync_transport_varer(db, source="test")
+    sync_transport_varer(db, source="test", raise_if_called=False)
 
     # Totalt semi-finished:
     #   BL98520:  2 (KV, EIK — KOD produserer)

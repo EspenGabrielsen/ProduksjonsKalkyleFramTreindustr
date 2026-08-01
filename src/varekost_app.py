@@ -175,6 +175,8 @@ def _(mo):
         "bom_co_product": {},
         "work_centers": {},
         "routing": {},
+        "transport_ruter": {},
+        "byproduct_values": {},
     }
     get_reload, set_reload = mo.state(0)
     # Test-seed state: sikrer at testdata kun opprettes én gang
@@ -593,6 +595,73 @@ def _(overrides, routing_df):
 
 
 @app.cell
+def _(DataRepo, mo, overrides, pd):
+    transport_df = None
+    _db = DataRepo()
+    _db.initialize()
+    _tr_rows = []
+    try:
+        _tr_rows_db = _db.conn.execute(
+            "SELECT from_loc, to_loc, cost_per_m3, distance_km, hours FROM transport_ruter ORDER BY from_loc, to_loc"
+        ).fetchall()
+    except Exception:
+        _tr_rows_db = []
+    for _r in _tr_rows_db:
+        _key = (_r["from_loc"], _r["to_loc"])
+        _saved = overrides["transport_ruter"].get(_key, {})
+        _ny_cost = _saved.get("cost_per_m3", _r["cost_per_m3"])
+        _tr_rows.append({"Fra": _r["from_loc"], "Til": _r["to_loc"], "Org. kost/m³": _r["cost_per_m3"], "Ny kost/m³": _ny_cost, "Km": _r["distance_km"], "Timer": _r["hours"]})
+    if _tr_rows:
+        _df = pd.DataFrame(_tr_rows)
+        transport_df = mo.ui.data_editor(_df, editable_columns=["Ny kost/m³"])
+    return (transport_df,)
+
+
+@app.cell
+def _(overrides, transport_df):
+    if transport_df is not None and transport_df.value is not None:
+        _df = transport_df.value
+        for _, _row in _df.iterrows():
+            _key = (_row["Fra"], _row["Til"])
+            _org = _row["Org. kost/m³"]
+            _ny = _row["Ny kost/m³"]
+            if abs(_ny - _org) > 0.001: overrides["transport_ruter"][_key] = {"cost_per_m3": _ny}
+            elif _key in overrides["transport_ruter"]: del overrides["transport_ruter"][_key]
+    return
+
+
+@app.cell
+def _(data, filtered_byproduct_rules, mo, overrides, pd):
+    byproduct_df = None
+    if data and filtered_byproduct_rules:
+        _rows = []
+        for _br in filtered_byproduct_rules:
+            _key = (_br.parent_item_no, _br.by_product_item_no)
+            _ny_verdi = overrides["byproduct_values"].get(_key, _br.market_value)
+            _bp_desc = next((p.description for p in data.products if p.item_no == _br.by_product_item_no), _br.by_product_item_no)
+            _rows.append({"Produkt": _br.parent_item_no, "Biprodukt": f"{_br.by_product_item_no} · {_bp_desc}", "Org. markedsverdi": _br.market_value, "Ny markedsverdi": _ny_verdi, "Forventet qty": _br.expected_quantity, "Enhet": _br.uom})
+        if _rows:
+            _df = pd.DataFrame(_rows)
+            byproduct_df = mo.ui.data_editor(_df, editable_columns=["Ny markedsverdi"])
+    return (byproduct_df,)
+
+
+@app.cell
+def _(byproduct_df, overrides):
+    if byproduct_df is not None and byproduct_df.value is not None:
+        _df = byproduct_df.value
+        for _, _row in _df.iterrows():
+            _produkt = _row["Produkt"]
+            _biprodukt = str(_row["Biprodukt"]).split(" · ")[0]
+            _key = (_produkt, _biprodukt)
+            _org = _row["Org. markedsverdi"]
+            _ny = _row["Ny markedsverdi"]
+            if abs(_ny - _org) > 0.001: overrides["byproduct_values"][_key] = _ny
+            elif _key in overrides["byproduct_values"]: del overrides["byproduct_values"][_key]
+    return
+
+
+@app.cell
 def _(mo):
     planned_qty = mo.ui.number(label="Planlagt kvantum (stk)", start=1, stop=100000, step=1, value=1000)
     return (planned_qty,)
@@ -622,11 +691,16 @@ def _(SimulationEngine, SimulationOverride, data, expand_simulations_with_transp
                 for _kode, _wc_overrides in overrides["work_centers"].items(): _overrides.work_centers[_kode] = _wc_overrides
                 for _key, _rt_overrides in overrides["routing"].items(): _overrides.routing[_key] = _rt_overrides
                 for _key, _ny_co in overrides["bom_co_product"].items(): _overrides.bom_co_product[_key] = _ny_co
+                for _key, _ny_verdi in overrides["byproduct_values"].items(): _overrides.byproduct_values[_key] = _ny_verdi
+                for _key, _tr_overrides in overrides["transport_ruter"].items(): _overrides.transport_ruter[_key] = _tr_overrides
                 _engine = SimulationEngine(data)
                 _comparisons = _engine.compare_all(_overrides)
                 if _comparisons:
                     # Utvid med fiktive transportrader (KOD→KV, KOD→EIK osv.)
-                    _comparisons = expand_simulations_with_transport(_comparisons, data)
+                    _comparisons = expand_simulations_with_transport(
+                        _comparisons, data,
+                        transport_ruter_overrides=overrides["transport_ruter"],
+                    )
                     sim_results = _comparisons
                     sim_overrides = _overrides
             except Exception as _e:
@@ -687,6 +761,7 @@ def _(
     export_excel_db_button, export_pdf_button, filter_info, historikk_valg,
     import_excel_to_sqlite, mo, overrides, pd, planned_qty, rm_price_df,
     routing_df, run_button, set_reload, validate_excel, wc_cost_df, bom_scrap_df,
+    transport_df, byproduct_df,
     os, tempfile, generer_rapport, registrer_fonter, pdf_kommentar,
     pdf_inkluder_detaljer, sim_results, sim_overrides, export_sqlite_to_excel,
     generer_excel_rapport, export_excel_button, vareFilter,
@@ -707,6 +782,8 @@ def _(
     if bom_scrap_df is not None: _parameter_accordions["🗑️ Svinn- og kapp-prosenter"] = bom_scrap_df
     if wc_cost_df is not None: _parameter_accordions["🏭 Arbeidssentre (timekostnad)"] = wc_cost_df
     if routing_df is not None: _parameter_accordions["📋 Routing (stykkpris/tider)"] = routing_df
+    if transport_df is not None: _parameter_accordions["🚛 Transport (kr/m³)"] = transport_df
+    if byproduct_df is not None: _parameter_accordions["♻️ Biproduktverdier"] = byproduct_df
     if _parameter_accordions:
         _sim_parts.append(mo.accordion(_parameter_accordions))
 
@@ -817,7 +894,7 @@ def _(
     _tab_import = mo.vstack(_import_parts)
 
     # ── Fane 3: Datamodell (Innsyn) ────────────────────────────
-    _modell_parts = [mo.md("Modellen består av **10 ark** i Excel.\n\n| # | Arknavn | Innhold |\n|---|---------|---------|\n| 1 | **Product Master** | Vareregister |\n| 2 | **Locations** | Fabrikker og lagre |\n| 3 | **Work Centers** | Arbeidssentre med kostsatser |\n| 4 | **Operation Master** | Standardoperasjoner |\n| 5 | **Item Costs** | Kostpriser per vare |\n| 6 | **BOM** | Stykkliste |\n| 7 | **Routing** | Produksjonsflyt |\n| 8 | **By Product Rules** | Biprodukter og verdsetting |\n| 9 | **Capacity Calendar** | Kapasitetskalender |\n| 10 | **Production Scenario** | Produksjonsscenarioer |")]
+    _modell_parts = [mo.md("Modellen består av **10 stamdata-ark + 2 transport-ark** i Excel.\n\n| # | Arknavn | Innhold |\n|---|---------|---------|\n| 1 | **Product Master** | Vareregister |\n| 2 | **Locations** | Fabrikker og lagre |\n| 3 | **Work Centers** | Arbeidssentre med kostsatser |\n| 4 | **Operation Master** | Standardoperasjoner |\n| 5 | **Item Costs** | Kostpriser per vare |\n| 6 | **BOM** | Stykkliste |\n| 7 | **Routing** | Produksjonsflyt |\n| 8 | **By Product Rules** | Biprodukter og verdsetting |\n| 9 | **Capacity Calendar** | Kapasitetskalender *(legacy)* |\n| 10 | **Production Scenario** | Produksjonsscenarioer *(legacy – kvantum styres nå fra UI)* |\n| 11 | **Transport Flagg** | Transportvarer mellom høvlerier |\n| 12 | **Transport Ruter** | Fraktkost per M3 mellom lokasjoner |")]
     if data:
         _data_outputs = []
         _data_outputs.append(mo.md("**📦 Product Master**"))
@@ -852,8 +929,25 @@ def _(
             _data_outputs.append(mo.md("**📅 Capacity Calendar**"))
             _data_outputs.append(mo.ui.table(pd.DataFrame([{"Arbeidssenter": _cd.work_center, "Dato": _cd.date, "Prod. timer": _cd.available_production_hours} for _cd in filtered_capacity_days]), selection=None))
         if filtered_scenarios:
-            _data_outputs.append(mo.md("**🎯 Production Scenario**"))
+            _data_outputs.append(mo.md("**🎯 Production Scenario** *(legacy – ikke i aktiv bruk)*"))
             _data_outputs.append(mo.ui.table(pd.DataFrame([{"Scenario": _sc.scenario_name, "Produkt": _sc.product, "Kvantum": _sc.planned_quantity} for _sc in filtered_scenarios]), selection=None))
+        _db_model = DataRepo()
+        _db_model.initialize()
+        try:
+            _tr_ruter = _db_model.conn.execute(
+                "SELECT from_loc, to_loc, cost_per_m3, distance_km, hours FROM transport_ruter ORDER BY from_loc, to_loc"
+            ).fetchall()
+            if _tr_ruter:
+                _data_outputs.append(mo.md("**🚛 Transport Ruter**"))
+                _data_outputs.append(mo.ui.table(pd.DataFrame([{"Fra": _r["from_loc"], "Til": _r["to_loc"], "Kost/m³": _r["cost_per_m3"], "Km": _r["distance_km"], "Timer": _r["hours"]} for _r in _tr_ruter]), selection=None))
+            _tr_flagg = _db_model.conn.execute(
+                "SELECT item_no, is_transport, updated_at FROM transport_flagg ORDER BY item_no"
+            ).fetchall()
+            if _tr_flagg:
+                _data_outputs.append(mo.md("**🏷️ Transport Flagg**"))
+                _data_outputs.append(mo.ui.table(pd.DataFrame([{"Varenr": _f["item_no"], "Transport": "Ja" if _f["is_transport"] else "Nei", "Oppdatert": _f["updated_at"]} for _f in _tr_flagg]), selection=None))
+        except Exception:
+            pass
         _modell_parts.append(mo.accordion({"🔍 Vis alle data": mo.vstack(_data_outputs)}))
     _tab_modell = mo.vstack(_modell_parts)
 

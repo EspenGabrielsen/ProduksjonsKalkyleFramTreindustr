@@ -1481,6 +1481,11 @@ class SimulationOverride:
     # key: (parent_item_no, by_product_item_no), value: ny market_value
     byproduct_values: dict[tuple[str, str], float] = field(default_factory=dict)
     
+    # Overstyring av Transport Ruter (cost_per_m3)
+    # key: (from_loc, to_loc), value: dict med felter som skal overstyres
+    # Støttede felter: cost_per_m3
+    transport_ruter: dict[tuple[str, str], dict[str, float]] = field(default_factory=dict)
+    
     # Scenario-parametere
     planned_quantity: Optional[float] = None
 
@@ -1997,20 +2002,6 @@ class SimulationEngine:
 #  er beholdt urørt som LEGACY for fremtidig Business Central-integrasjon.
 # ──────────────────────────────────────────────────────────────────────
 
-TRANSPORT_FALLBACK_HOURLY_COST = 800.0
-
-
-def _transport_hourly_cost(data) -> float:
-    """Finn TRANSPORT-arbeidssenterets timekost (fallback 800 kr/t)."""
-    wc = data.work_center("TRANSPORT")
-    if wc:
-        return wc.total_cost_hour
-    for w in data.work_centers:
-        if "TRANSPORT" in w.code.upper() or "FRAKT" in w.code.upper():
-            return w.total_cost_hour
-    return TRANSPORT_FALLBACK_HOURLY_COST
-
-
 def _prod_locations_from_data(data, item_no: str) -> set[str]:
     """Finn produksjonslokasjoner for et produkt via routing → work_centers."""
     locs: set[str] = set()
@@ -2019,6 +2010,27 @@ def _prod_locations_from_data(data, item_no: str) -> set[str]:
         if wc and wc.location_code:
             locs.add(wc.location_code)
     return locs
+
+
+def _finn_lm_per_m3(data, item_no: str):
+    """Finn antall LM per M3 for en vare ved å følge BOM-kjeden til råvare.
+
+    Rekursiv traversering: hvis en BOM-komponent er Raw Material, returneres
+    dens quantity_per (LM/M3). Ellers går vi rekursivt ned i komponenten
+    (f.eks. Semi Finished → Raw Material).
+
+    Returns:
+        float (LM/M3) eller None hvis ingen råvarekomponent finnes.
+    """
+    for bl in data.bom_for(item_no):
+        comp = data.product(bl.component_item_no)
+        if comp and comp.item_type == "Raw Material":
+            return bl.quantity_per if bl.quantity_per and bl.quantity_per > 0 else None
+        # Rekursivt nedover i kjeden (følg semi-finished/ferdigvare-komponent)
+        result = _finn_lm_per_m3(data, bl.component_item_no)
+        if result:
+            return result
+    return None
 
 
 def _load_transport_konfig(data, db=None) -> tuple[set[str], dict[tuple[str, str], tuple[float, float, float]]]:
@@ -2033,47 +2045,52 @@ def _load_transport_konfig(data, db=None) -> tuple[set[str], dict[tuple[str, str
         ).fetchall()}
         ruter: dict[tuple[str, str], tuple[float, float, float]] = {}
         for r in db.conn.execute(
-            "SELECT from_loc, to_loc, run_time_minutes, setup_time_minutes, batch_size "
-            "FROM transport_ruter"
+            "SELECT from_loc, to_loc, cost_per_m3, distance_km, hours FROM transport_ruter"
         ).fetchall():
             ruter[(r["from_loc"], r["to_loc"])] = (
-                r["run_time_minutes"], r["setup_time_minutes"], r["batch_size"],
+                r["cost_per_m3"], r["distance_km"], r["hours"],
             )
         return flagged, ruter
     except Exception:
         return set(), {}
 
 
-def _beregn_transportkost(rute: tuple[float, float, float],
-                          hourly_cost: float) -> tuple[float, float, float]:
-    """Beregn transportkost per enhet fra en rute.
+def _beregn_transportkost_per_lm(rute: tuple[float, float, float],
+                                 lm_per_m3: float) -> float:
+    """Beregn transportkost per LM fra en rute.
+
+    Args:
+        rute: (cost_per_m3, distance_km, hours)
+        lm_per_m3: antall LM per M3 for varen
 
     Returns:
-        (run_cost, setup_cost_per_unit, total_transport_kost)
+        transportkost per LM. Returnerer 0.0 hvis lm_per_m3 mangler/<= 0.
     """
-    run_time, setup_time, batch = rute
-    batch = batch if batch and batch > 0 else 1.0
-    run_cost = (run_time / 60.0) * hourly_cost
-    setup_cost_per_unit = (setup_time / 60.0) * hourly_cost / batch
-    total = run_cost + setup_cost_per_unit
-    return run_cost, setup_cost_per_unit, total
+    cost_per_m3, _, _ = rute
+    if lm_per_m3 and lm_per_m3 > 0:
+        return cost_per_m3 / lm_per_m3
+    return 0.0
 
 
-def _transport_operation_detail(from_loc: str, to_loc: str, rute, hourly_cost: float) -> OperationCostDetail:
+def _transport_operation_detail(from_loc: str, to_loc: str, rute,
+                                transport_kost: float, lm_per_m3: float) -> OperationCostDetail:
     """Bygg en OPERASJONSDETALJ som representerer frakt mellom to lokasjoner."""
-    run_time, setup_time, batch = rute
-    run_cost, setup_cost_per_unit, _ = _beregn_transportkost(rute, hourly_cost)
+    cost_per_m3, distance_km, hours = rute
+    opp_desc = "Frakt {f} -> {t}".format(f=from_loc, t=to_loc)
+    if lm_per_m3 and lm_per_m3 > 0:
+        opp_desc = "{d} ({c:.2f} kr/M3 / {l} LM/M3)".format(
+            d=opp_desc, c=cost_per_m3, l=round(lm_per_m3, 1))
     return OperationCostDetail(
         operation_no=999,
-        operation_desc="Frakt {f} -> {t}".format(f=from_loc, t=to_loc),
+        operation_desc=opp_desc,
         work_center="TRANSPORT",
-        run_time_min=float(run_time),
-        setup_time_min=float(setup_time),
-        batch_size=float(batch),
-        cost_per_hour=hourly_cost,
-        run_cost=round(run_cost, 4),
-        setup_cost_per_unit=round(setup_cost_per_unit, 4),
-        total_cost=round(run_cost + setup_cost_per_unit, 4),
+        run_time_min=float(hours),
+        setup_time_min=0.0,
+        batch_size=1.0,
+        cost_per_hour=round(cost_per_m3, 2),
+        run_cost=round(transport_kost, 4),
+        setup_cost_per_unit=0.0,
+        total_cost=round(transport_kost, 4),
     )
 
 
@@ -2086,7 +2103,6 @@ def expand_product_costs_with_transport(results: list[ProductCostResult], data, 
 
     expanded = list(results)
     factory_locs = {l.code for l in data.locations if l.location_type == "Factory"}
-    hourly_cost = _transport_hourly_cost(data)
 
     by_product: dict[str, list[ProductCostResult]] = {}
     for r in results:
@@ -2102,12 +2118,17 @@ def expand_product_costs_with_transport(results: list[ProductCostResult], data, 
         base = next((r for r in prod_results if r.location_code == from_loc), None)
         if base is None:
             continue
+        lm_per_m3 = _finn_lm_per_m3(data, prod_no)
+        if not lm_per_m3 or lm_per_m3 <= 0:
+            continue  # Uten LM/M3-konvertering kan vi ikke beregne frakt per LM
 
         for to_loc in sorted(factory_locs - prod_locs):
             rute = ruter.get((from_loc, to_loc))
             if rute is None:
                 continue
-            _, _, transport_kost = _beregn_transportkost(rute, hourly_cost)
+            transport_kost = _beregn_transportkost_per_lm(rute, lm_per_m3)
+            if transport_kost <= 0:
+                continue
 
             ny = ProductCostResult(
                 product_no=base.product_no,
@@ -2124,7 +2145,7 @@ def expand_product_costs_with_transport(results: list[ProductCostResult], data, 
                 net_production_cost=round(base.net_production_cost + transport_kost, 4),
                 material_details=list(base.material_details),
                 operation_details=list(base.operation_details) + [
-                    _transport_operation_detail(from_loc, to_loc, rute, hourly_cost)
+                    _transport_operation_detail(from_loc, to_loc, rute, transport_kost, lm_per_m3)
                 ],
                 byproduct_details=list(base.byproduct_details),
             )
@@ -2154,16 +2175,24 @@ def expand_product_costs_with_transport(results: list[ProductCostResult], data, 
     return expanded
 
 
-def expand_simulations_with_transport(comparisons: list[SimulationComparison], data, db=None
+def expand_simulations_with_transport(comparisons: list[SimulationComparison], data, db=None,
+                                      transport_ruter_overrides: Optional[dict] = None
                                       ) -> list[SimulationComparison]:
-    """Utvid en simuleringssammenligningsliste med fiktive transportrader."""
+    """Utvid en simuleringssammenligningsliste med fiktive transportrader.
+
+    Args:
+        comparisons: liste med SimulationComparison fra SimulationEngine
+        data: datakilde (SqliteData/ExcelData)
+        db: valgfri database (DataRepo). Standard: data.db
+        transport_ruter_overrides: dict {(from_loc, to_loc): dict[str, float]}
+            Overstyrer cost_per_m3 for transportrutene i simuleringen.
+    """
     flagged, ruter = _load_transport_konfig(data, db)
     if not flagged or not ruter:
         return list(comparisons)
 
     expanded = list(comparisons)
     factory_locs = {l.code for l in data.locations if l.location_type == "Factory"}
-    hourly_cost = _transport_hourly_cost(data)
 
     by_product: dict[str, list[SimulationComparison]] = {}
     for c in comparisons:
@@ -2179,13 +2208,25 @@ def expand_simulations_with_transport(comparisons: list[SimulationComparison], d
         base = next((c for c in comps if c.location_code == from_loc), None)
         if base is None:
             continue
+        lm_per_m3 = _finn_lm_per_m3(data, prod_no)
+        if not lm_per_m3 or lm_per_m3 <= 0:
+            continue
 
         for to_loc in sorted(factory_locs - prod_locs):
-            rute = ruter.get((from_loc, to_loc))
-            if rute is None:
+            rute_orig = ruter.get((from_loc, to_loc))
+            if rute_orig is None:
                 continue
-            _, _, transport_kost = _beregn_transportkost(rute, hourly_cost)
-            transport_detail = _transport_operation_detail(from_loc, to_loc, rute, hourly_cost)
+            # Bruk evt. overstyrt cost_per_m3 fra simuleringen
+            cost_per_m3 = rute_orig[0]
+            if transport_ruter_overrides:
+                ovr = transport_ruter_overrides.get((from_loc, to_loc))
+                if ovr and "cost_per_m3" in ovr:
+                    cost_per_m3 = ovr["cost_per_m3"]
+            rute = (cost_per_m3, rute_orig[1], rute_orig[2])
+            transport_kost = _beregn_transportkost_per_lm(rute, lm_per_m3)
+            if transport_kost <= 0:
+                continue
+            transport_detail = _transport_operation_detail(from_loc, to_loc, rute, transport_kost, lm_per_m3)
 
             ny = SimulationComparison(
                 product_no=base.product_no,
