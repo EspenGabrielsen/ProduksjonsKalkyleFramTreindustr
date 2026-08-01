@@ -633,8 +633,24 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
 #  Transportvare-synkronisering (fler-høvleri-produksjon)
 # ──────────────────────────────────────────────────────────────────────
 
-# Aktive høvleri-lokasjoner som semi-finished genereres for
-HOVLERI_LOKASJONER = ["KOD", "KV", "EIK"]
+def _aktive_factory_locations(db: DataRepo) -> list[str]:
+    """Hent alle aktive fabrikk-lokasjoner (location_type = 'Factory')."""
+    rows = db.conn.execute(
+        "SELECT code FROM locations WHERE location_type = 'Factory' ORDER BY code"
+    ).fetchall()
+    return [r["code"] for r in rows]
+
+
+def _produksjons_locations(db: DataRepo, item_no: str) -> set[str]:
+    """Finn hvilke lokasjoner som produserer en vare (via routing → work_centers)."""
+    rows = db.conn.execute(
+        """SELECT DISTINCT wc.location_code
+           FROM routing_lines rl
+           JOIN work_centers wc ON rl.work_center_code = wc.code
+           WHERE rl.item_no = ?""",
+        (item_no,),
+    ).fetchall()
+    return {r["location_code"] for r in rows}
 
 
 def _ensure_workcenter(db: DataRepo, code: str, description: str, location: str,
@@ -668,20 +684,27 @@ def _ensure_operation(db: DataRepo, code: str, description: str,
 
 def _get_or_create_product(db: DataRepo, item_no: str, description: str,
                            item_type: str, product_group: str, base_uom: str,
-                           source: str = "transport_sync") -> Optional[int]:
-    """Hent eller opprett et produkt. Returner id."""
+                           source: str = "transport_sync") -> Optional[tuple[int, bool]]:
+    """Hent eller opprett et produkt.
+
+    Returns:
+        (id, var_ny) — id til produktet, og True hvis det ble nyopprettet,
+        ellers None hvis opprettelsen mislyktes.
+    """
     existing = db.conn.execute(
         "SELECT id FROM products WHERE item_no = ?", (item_no,)
     ).fetchone()
     if existing:
-        return existing["id"]
+        return (existing["id"], False)
     db.upsert_products([{
         "item_no": item_no, "description": description,
         "item_type": item_type, "product_group": product_group,
         "base_uom": base_uom,
     }], source=source)
     row = db.conn.execute("SELECT id FROM products WHERE item_no = ?", (item_no,)).fetchone()
-    return row["id"] if row else None
+    if row is None:
+        return None
+    return (row["id"], True)
 
 
 def _delete_product_by_no(db: DataRepo, item_no: str, source: str = "transport_sync"):
@@ -763,26 +786,41 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
             continue
 
         if is_transport:
-            # ── Generer semi-finished for hver høvleri-lokasjon ──
+            # ── Generer semi-finished for fabrikker som IKKE produserer varen ──
             # NB! Hovedproduktet (item_no) forblir fullstendig URØRT.
             # Semi-finished refererer TIL hovedproduktet og legger kun på
             # TRANSPORT-routing — original BOM/routing på hovedproduktet endres aldri.
+            #
+            # Regler:
+            #   - Fabrikklokasjoner som allerede har routing for varen produserer
+            #     den selv → ingen semi-finished, ingen transport.
+            #   - Øvrige fabrikklokasjoner får semi-finished med TRANSPORT fra
+            #     FØRSTE produksjonslokasjon (sortert alfabetisk).
             created_here = 0
-            _ensure_workcenter(db, "TRANSPORT", "Frakt mellom høvlerier", HOVLERI_LOKASJONER[0],
+            factory_locs = _aktive_factory_locations(db)
+            prod_locs = _produksjons_locations(db, item_no)
+            _from_loc = sorted(prod_locs)[0] if prod_locs else (factory_locs[0] if factory_locs else "KOD")
+
+            _ensure_workcenter(db, "TRANSPORT", "Frakt mellom høvlerier", _from_loc,
                                300.0, 300.0, 200.0, source=source)
             _ensure_operation(db, "TRANSPORT", "Frakt mellom høvlerier", "TRANSPORT", source=source)
 
-            for loc in HOVLERI_LOKASJONER:
+            for loc in factory_locs:
+                if loc in prod_locs:
+                    continue  # Lokasjonen produserer allerede — trenger ikke transport
+
                 semi_no = f"{item_no}-{loc}"
-                semi_id = _get_or_create_product(
+                semi_res = _get_or_create_product(
                     db, semi_no,
                     f"{prod['description']} ({loc})",
                     "Semi Finished", prod["product_group"], prod["base_uom"],
                     source=source,
                 )
-                if not semi_id:
+                if semi_res is None:
                     continue
-                created_here += 1
+                semi_id, var_ny = semi_res
+                if var_ny:
+                    created_here += 1
 
                 # BOM: semi-finished → hovedprodukt (Qty Per = 1)
                 # Materialkost rulles dynamisk opp fra hovedproduktets netto produksjonskost
@@ -797,25 +835,25 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
                 }], source=source)
 
                 # TRANSPORT-routing på semi-finished (ikke hovedprodukt)
-                # Rute-data hentes fra transport_ruter-tabellen (loc → KV)
-                if loc != "KV":
-                    rute = db.conn.execute(
-                        "SELECT * FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
-                        (loc, "KV")
-                    ).fetchone()
-                    if rute:
-                        _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
-                                              setup=rute["setup_time_minutes"],
-                                              run=rute["run_time_minutes"],
-                                              batch=rute["batch_size"],
-                                              source=source)
-                    else:
-                        _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
-                                              setup=30.0, run=45.0, batch=prod_batch(db, item_no),
-                                              source=source)
+                # Rute-data hentes fra transport_ruter-tabellen (from_loc → loc)
+                rute = db.conn.execute(
+                    "SELECT * FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
+                    (_from_loc, loc)
+                ).fetchone()
+                if rute:
+                    _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
+                                          setup=rute["setup_time_minutes"],
+                                          run=rute["run_time_minutes"],
+                                          batch=rute["batch_size"],
+                                          source=source)
+                else:
+                    _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
+                                          setup=30.0, run=45.0, batch=prod_batch(db, item_no),
+                                          source=source)
 
             stats["opprettet"] += created_here
-            stats["produkter"].append(f"{item_no}: transport flagg satt")
+            if created_here > 0:
+                stats["produkter"].append(f"{item_no}: transport flagg satt")
         else:
             # ── Fjern alle genererte semi-finished for denne varen ──
             # Hovedproduktet (item_no) er aldri blitt rørt — kun semi-finished
@@ -846,7 +884,8 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
                 deleted_here += 1
 
             stats["slettet"] += deleted_here
-            stats["produkter"].append(f"{item_no}: transport flagg fjernet")
+            if deleted_here > 0:
+                stats["produkter"].append(f"{item_no}: transport flagg fjernet")
 
     return stats
 
@@ -991,16 +1030,22 @@ def _import_products(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         }
         product_list.append(entry)
 
-        # Is Transport: skriv til transport_flagg-tabellen
+        # Is Transport: skriv til transport_flagg-tabellen.
+        # Kun når flag=1, eller når raden allerede finnes (for å kunne nedgradere 1→0).
+        # Nye varer med is_transport=0 trenger ingen rad — fravær av rad = ikke transportvare.
         is_transport = row.get("Is Transport")
         if is_transport is not None and not pd.isna(is_transport):
             flag = 1 if str(is_transport).strip().lower() in ("1", "ja", "true", "yes") else 0
-            db.conn.execute(
-                """INSERT INTO transport_flagg (item_no, is_transport)
-                   VALUES (?, ?)
-                   ON CONFLICT(item_no) DO UPDATE SET is_transport = excluded.is_transport, updated_at = datetime('now')""",
-                (item_no, flag),
-            )
+            har_rad = db.conn.execute(
+                "SELECT 1 FROM transport_flagg WHERE item_no = ?", (item_no,)
+            ).fetchone()
+            if flag == 1 or har_rad:
+                db.conn.execute(
+                    """INSERT INTO transport_flagg (item_no, is_transport)
+                       VALUES (?, ?)
+                       ON CONFLICT(item_no) DO UPDATE SET is_transport = excluded.is_transport, updated_at = datetime('now')""",
+                    (item_no, flag),
+                )
 
     if product_list:
         db.upsert_products(product_list, source="import")

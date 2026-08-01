@@ -1114,31 +1114,32 @@ All historikk bevares i `change_log`-tabellen, også etter `clear_all_data()`.
 
 Dersom en vare produseres på ett høvleri men viderebearbeides/fraktes til et annet, kan varen flagges som **transportvare** i `transport_flagg`-tabellen i SQLite.
 
-Når flagget settes (`is_transport = 1`), genereres automatisk semi-finished varianter for hver aktiv høvleri-lokasjon (KOD, KV, EIK):
+Når flagget settes (`is_transport = 1`), genereres automatisk semi-finished varianter for hver **fabrikklokasjon** (`location_type = 'Factory'`) som **ikke allerede produserer varen** (vurdert ut fra varens routing → arbeidssentre → lokasjon).
 
 ```
-Varenummer-suffiks:   {VARE}-KOD, {VARE}-KV, {VARE}-EIK
+Varenummer-suffiks:   {VARE}-{lokasjon} — kun for ikke-produksjonslokasjoner
 ```
 
 **Ved flagging:**
 
 | Handling | Beskrivelse |
 |----------|-------------|
-| Semi-finished opprettes | `products`: {VARE}-KOD, {VARE}-KV, {VARE}-EIK som Semi Finished |
+| Produksjonslokasjoner identifiseres | Fra varens routing: {VARE} → work_centers → deres lokasjoner |
+| Semi-finished opprettes | Kun for fabrikklokasjoner som IKKE står på varens egen routing (f.eks. {VARE}-KV, {VARE}-EIK hvis varen produseres på KOD) |
 | BOM på semi-finished | Semi-finished refererer TIL hovedproduktet: {Semi} → {VARE} (Qty Per = 1) |
-| TRANSPORT-routing | Semi-finished får TRANSPORT-operasjon, run_time hentes fra `transport_ruter` |
+| TRANSPORT-routing | Semi-finished får TRANSPORT fra FØRSTE produksjonslokasjon (alfabetisk) til {lokasjon}, run_time hentes fra `transport_ruter` |
 | **Hovedproduktet** | **Forblir fullstendig urørt** — original BOM/routing endres aldri |
 
-Eksempel (JD16073):
+Eksempel (JD16073VF — produseres på KOD via SPESIALHOVEL):
 
 ```
-JD16073        → RM_50x75 (Qty 533,05, Co 0,5%, JD16073B)   ← urørt
-JD16073-KOD    → JD16073  (Qty 1)                            ← materialkost rulles opp
-JD16073-KOD    → TRANSPORT (run 45 min fra transport_ruter)
-
-JD16073        → HOVLING @ SPESIALHOVEL                      ← urørt
-JD16073-KOD    → TRANSPORT @ TRANSPORT
+JD16073VF      → HOVLING @ SPESIALHOVEL (KOD)                ← urørt, ingen semi-finished-KOD
+JD16073VF-KV   → JD16073VF  (Qty 1)                           ← materialkost rulles opp
+JD16073VF-KV   → TRANSPORT @ TRANSPORT (run 45 min: KOD → KV)
+JD16073VF-EIK  → JD16073VF  (Qty 1)
+JD16073VF-EIK  → TRANSPORT @ TRANSPORT (run 65 min: KOD → EIK)
 ```
+> **Merk:** Lagre (`location_type = 'Warehouse'` etc.) inkluderes aldri. Hvis varen produseres på flere fabrikker, brukes den første (alfabetisk) som fraktkilde.
 
 **Ved avflagging (`is_transport = 0`):**
 

@@ -171,19 +171,22 @@ def test_1_sett_flagg_enkelt_produkt():
     db.conn.commit()
     stats = sync_transport_varer(db, source="test")
 
-    # Verifiser semi-finished produkter
-    assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 3, "Skulle ha 3 semi-finished"
+    # Verifiser semi-finished produkter.
+    # BL98520 produseres på KOD (HOVEDHOVEL) → kun KV og EIK får semi-finished.
+    assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 2, "Skulle ha 2 semi-finished (KV, EIK)"
     # Hovedproduktets BOM er URØRT — original BOM-linje finnes fortsatt
     assert _count(db, "bom_lines", "parent_item_no='BL98520' AND component_item_no='RM_50x75_US_V_Gran'") == 1
     # Semi-finished refererer TIL hovedproduktet (Qty=1)
-    assert _count(db, "bom_lines", "parent_item_no='BL98520-KOD' AND component_item_no='BL98520'") == 1
+    assert _count(db, "bom_lines", "parent_item_no='BL98520-KV' AND component_item_no='BL98520'") == 1
     # TRANSPORT-routing ligger på semi-finished (ikke hovedprodukt)
-    assert _count(db, "routing_lines", "item_no='BL98520-KOD' AND operation_code='TRANSPORT'") >= 1
+    assert _count(db, "routing_lines", "item_no='BL98520-KV' AND operation_code='TRANSPORT'") >= 1
+    # KOD produserer selv → ingen semi-finished navngitt -KOD, ingen TRANSPORT-routing der
+    assert _count(db, "products", "item_no='BL98520-KOD'") == 0, "KOD produserer selv — skal ikke ha semi-finished"
     # Hovedproduktet har ingen TRANSPORT-routing
     assert _count(db, "routing_lines", "item_no='BL98520' AND operation_code='TRANSPORT'") == 0
     # Verifiser at run_time hentes fra transport_ruter-tabellen (45 min, ikke fallback)
     rt_row = db.conn.execute(
-        "SELECT run_time_minutes FROM routing_lines WHERE item_no='BL98520-KOD' AND operation_code='TRANSPORT'"
+        "SELECT run_time_minutes FROM routing_lines WHERE item_no='BL98520-KV' AND operation_code='TRANSPORT'"
     ).fetchone()
     assert rt_row["run_time_minutes"] == 45.0, f"Skulle være 45.0 fra rutetabellen, var {rt_row['run_time_minutes']}"
     # TRANSPORT bruker ett felles arbeidssenter
@@ -208,7 +211,7 @@ def test_2_fjern_flagg_restaurerer():
     )
     db.conn.commit()
     sync_transport_varer(db, source="test")
-    assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 3
+    assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 2
 
     # Fjern flagg
     db.conn.execute(
@@ -219,7 +222,7 @@ def test_2_fjern_flagg_restaurerer():
 
     # Verifiser alt er fjernet
     assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 0, "Semi-finished skal være slettet"
-    assert _count(db, "bom_lines", "parent_item_no='BL98520-KOD'") == 0
+    assert _count(db, "bom_lines", "parent_item_no LIKE 'BL98520-%'") == 0
     assert _count(db, "routing_lines", "item_no LIKE 'BL98520-%'") == 0
     # Hovedproduktet er URØRT — original BOM og routing beholdt
     assert _count(db, "bom_lines", "parent_item_no='BL98520' AND component_item_no='RM_50x75_US_V_Gran'") == 1
@@ -241,10 +244,10 @@ def test_3_co_produkt_overlever():
     db.conn.commit()
     sync_transport_varer(db, source="test")
 
-    # Semi-finished er laget
-    assert _count(db, "products", "item_no LIKE 'JD16073-%'") == 3
+    # Semi-finished er laget (JD16073 produseres på KOD → kun KV og EIK)
+    assert _count(db, "products", "item_no LIKE 'JD16073-%'") == 2, "Skulle ha 2 semi-finished (KV, EIK)"
     # Semi-finished refererer til hovedproduktet
-    assert _count(db, "bom_lines", "parent_item_no='JD16073-KOD' AND component_item_no='JD16073'") == 1
+    assert _count(db, "bom_lines", "parent_item_no='JD16073-KV' AND component_item_no='JD16073'") == 1
     # Hovedprodukts co-prod er URØRT (JD16073B ligger på hovedproduktet)
     assert _count(db, "bom_lines", "parent_item_no='JD16073' AND co_product_item_no='JD16073B'") == 1
 
@@ -267,7 +270,7 @@ def test_4_produksjonskjede():
     db.conn.commit()
     sync_transport_varer(db, source="test")
 
-    # JD16098TF-KOD/KV/EIK genereres
+    # JD16098TF har ingen egen routing → alle 3 fabrikklokasjoner får semi-finished
     assert _count(db, "products", "item_no LIKE 'JD16098TF-%'") == 3
     # JD16098 skal IKKE få -suffiks (den er allerede Semi Finished, ikke Finished Good)
     # Presis sjekk: kun eksakt 'JD16098' + genererte 'JD16098TF-*'
@@ -300,13 +303,16 @@ def test_5_alle_samtidig():
     db.conn.commit()
     sync_transport_varer(db, source="test")
 
-    # Totalt 9 semi-finished (3 produkter x 3 lokasjoner)
+    # Totalt semi-finished:
+    #   BL98520:  2 (KV, EIK — KOD produserer)
+    #   JD16073:  2 (KV, EIK — KOD produserer)
+    #   JD16098TF: 3 (ingen egen routing → alle fabrikklokasjoner)
     total_semi = (
         _count(db, "products", "item_no LIKE 'BL98520-%'") 
         + _count(db, "products", "item_no LIKE 'JD16073-%'")
         + _count(db, "products", "item_no LIKE 'JD16098TF-%'")
     )
-    assert total_semi == 9, f"Skulle ha 9 semi-finished, har {total_semi}"
+    assert total_semi == 7, f"Skulle ha 7 semi-finished, har {total_semi}"
 
     # CostCalculator kan kjøre uten feil (bruk samme db-instans)
     data = SqliteData(db_path=db.db_path)  # NOTE: :memory: skaper ny DB hver gang
@@ -314,7 +320,7 @@ def test_5_alle_samtidig():
     results = calculator.calculate_all()
     # I test-miljø er det OK at resultatet er tomt hvis db er isolert — vi validerer
     # hovedsakelig at sync ikke kræsjer og at ingen duplikater finnes.
-    assert total_semi == 9
+    assert total_semi == 7
 
     print("OK ✅")
     db.close()
