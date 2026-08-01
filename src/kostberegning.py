@@ -2216,17 +2216,19 @@ def expand_simulations_with_transport(comparisons: list[SimulationComparison], d
             rute_orig = ruter.get((from_loc, to_loc))
             if rute_orig is None:
                 continue
-            # Bruk evt. overstyrt cost_per_m3 fra simuleringen
-            cost_per_m3 = rute_orig[0]
+            # Original transportkost (uendret cost_per_m3 fra databasen)
+            transport_kost_orig = _beregn_transportkost_per_lm(rute_orig, lm_per_m3)
+            if transport_kost_orig <= 0:
+                continue
+            # Overstyrt transportkost (fra simuleringen, hvis brukeren har endret cost_per_m3)
+            cost_per_m3_sim = rute_orig[0]
             if transport_ruter_overrides:
                 ovr = transport_ruter_overrides.get((from_loc, to_loc))
                 if ovr and "cost_per_m3" in ovr:
-                    cost_per_m3 = ovr["cost_per_m3"]
-            rute = (cost_per_m3, rute_orig[1], rute_orig[2])
-            transport_kost = _beregn_transportkost_per_lm(rute, lm_per_m3)
-            if transport_kost <= 0:
-                continue
-            transport_detail = _transport_operation_detail(from_loc, to_loc, rute, transport_kost, lm_per_m3)
+                    cost_per_m3_sim = ovr["cost_per_m3"]
+            rute_sim = (cost_per_m3_sim, rute_orig[1], rute_orig[2])
+            transport_kost_sim = _beregn_transportkost_per_lm(rute_sim, lm_per_m3)
+            transport_detail = _transport_operation_detail(from_loc, to_loc, rute_sim, transport_kost_sim, lm_per_m3)
 
             ny = SimulationComparison(
                 product_no=base.product_no,
@@ -2236,17 +2238,17 @@ def expand_simulations_with_transport(comparisons: list[SimulationComparison], d
                 location_code="{f}->{t}".format(f=from_loc, t=to_loc),
                 location_name="{f} -> {t}".format(f=from_loc, t=to_loc),
                 original_material_cost=base.original_material_cost,
-                original_operation_cost=round(base.original_operation_cost + transport_kost, 4),
+                original_operation_cost=round(base.original_operation_cost + transport_kost_orig, 4),
                 original_setup_cost=base.original_setup_cost,
-                original_gross_cost=round(base.original_gross_cost + transport_kost, 4),
+                original_gross_cost=round(base.original_gross_cost + transport_kost_orig, 4),
                 original_byproduct_value=base.original_byproduct_value,
-                original_net_cost=round(base.original_net_cost + transport_kost, 4),
+                original_net_cost=round(base.original_net_cost + transport_kost_orig, 4),
                 simulated_material_cost=base.simulated_material_cost,
-                simulated_operation_cost=round(base.simulated_operation_cost + transport_kost, 4),
+                simulated_operation_cost=round(base.simulated_operation_cost + transport_kost_sim, 4),
                 simulated_setup_cost=base.simulated_setup_cost,
-                simulated_gross_cost=round(base.simulated_gross_cost + transport_kost, 4),
+                simulated_gross_cost=round(base.simulated_gross_cost + transport_kost_sim, 4),
                 simulated_byproduct_value=base.simulated_byproduct_value,
-                simulated_net_cost=round(base.simulated_net_cost + transport_kost, 4),
+                simulated_net_cost=round(base.simulated_net_cost + transport_kost_sim, 4),
                 original_material_details=list(base.original_material_details),
                 simulated_material_details=list(base.simulated_material_details),
                 original_operation_details=list(base.original_operation_details) + [transport_detail],
