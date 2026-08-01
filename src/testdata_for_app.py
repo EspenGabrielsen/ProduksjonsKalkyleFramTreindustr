@@ -54,6 +54,29 @@ WORK_CENTERS = [
     {"code": "KVHOVEL", "description": "Kvaas hovel", "location_code": "KV",
      "labor_cost_hour": 500.0, "machine_cost_hour": 200.0, "overhead_cost_hour": 100.0,
      "capacity_hours_day": 16.0, "effective_capacity_pct": 92.0},
+    {"code": "EIKHOVEL", "description": "Eikaas hovel", "location_code": "EIK",
+     "labor_cost_hour": 550.0, "machine_cost_hour": 250.0, "overhead_cost_hour": 120.0,
+     "capacity_hours_day": 16.0, "effective_capacity_pct": 90.0},
+    {"code": "TRANSPORT", "description": "Frakt mellom høvlerier", "location_code": "KOD",
+     "labor_cost_hour": 300.0, "machine_cost_hour": 300.0, "overhead_cost_hour": 200.0,
+     "capacity_hours_day": 24.0, "effective_capacity_pct": 100.0},
+]
+
+# ── Operasjoner ──────────────────────────────────────────────────
+OPERATIONS = [
+    {"code": "HOVLING", "description": "Hovling (oppdeling + hovling + profilering)", "default_work_center": "HOVEDHOVEL", "standard_unit": "Minutes"},
+    {"code": "MALING", "description": "Overflatebehandling/maling", "default_work_center": "MALINGSLINJE", "standard_unit": "Minutes"},
+    {"code": "TRANSPORT", "description": "Frakt mellom høvlerier", "default_work_center": "TRANSPORT", "standard_unit": "Minutes"},
+]
+
+# ── Transportruter ───────────────────────────────────────────────
+TRANSPORT_RUTER = [
+    {"from_loc": "KOD", "to_loc": "KV", "distance_km": 35.0, "run_time_minutes": 45.0, "setup_time_minutes": 30.0, "batch_size": 3200.0},
+    {"from_loc": "KOD", "to_loc": "EIK", "distance_km": 60.0, "run_time_minutes": 65.0, "setup_time_minutes": 30.0, "batch_size": 4000.0},
+    {"from_loc": "KV", "to_loc": "KOD", "distance_km": 35.0, "run_time_minutes": 45.0, "setup_time_minutes": 30.0, "batch_size": 2000.0},
+    {"from_loc": "KV", "to_loc": "EIK", "distance_km": 80.0, "run_time_minutes": 90.0, "setup_time_minutes": 30.0, "batch_size": 3000.0},
+    {"from_loc": "EIK", "to_loc": "KOD", "distance_km": 60.0, "run_time_minutes": 65.0, "setup_time_minutes": 30.0, "batch_size": 2500.0},
+    {"from_loc": "EIK", "to_loc": "KV", "distance_km": 80.0, "run_time_minutes": 90.0, "setup_time_minutes": 30.0, "batch_size": 2500.0},
 ]
 
 # ── Lokasjoner ───────────────────────────────────────────────────
@@ -118,6 +141,18 @@ def seed_test_db(db: DataRepo) -> bool:
     db.upsert_locations(LOCATIONS, source="seed")
     # Work centers
     db.upsert_work_centers(WORK_CENTERS, source="seed")
+    # Operations
+    db.upsert_operations(OPERATIONS, source="seed")
+    # Transportruter
+    for tr in TRANSPORT_RUTER:
+        db.conn.execute(
+            """INSERT OR IGNORE INTO transport_ruter
+               (from_loc, to_loc, distance_km, run_time_minutes, setup_time_minutes, batch_size)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (tr["from_loc"], tr["to_loc"], tr["distance_km"],
+             tr["run_time_minutes"], tr["setup_time_minutes"], tr["batch_size"]),
+        )
+    db.conn.commit()
     # Produkter
     products = []
     for k, v in TEST_VARER.items():

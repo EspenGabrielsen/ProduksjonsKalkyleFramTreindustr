@@ -40,7 +40,7 @@ def _():
     from generer_pdf_rapport import generer_rapport, registrer_fonter, _hent_logo
     from generer_excel_rapport import generer_excel_rapport
     from data_repo import DataRepo
-    from excel_bridge import import_excel_to_sqlite, export_sqlite_to_excel, validate_excel
+    from excel_bridge import import_excel_to_sqlite, export_sqlite_to_excel, validate_excel, sync_transport_varer
     from testdata_for_app import seed_test_db, er_test_modus, reset_test_db
 
     return (
@@ -60,6 +60,7 @@ def _():
         registrer_fonter,
         reset_test_db,
         seed_test_db,
+        sync_transport_varer,
         tempfile,
         validate_excel,
     )
@@ -172,11 +173,13 @@ def _(mo):
         "routing": {},
     }
     get_reload, set_reload = mo.state(0)
-    return get_reload, overrides, set_reload
+    # Test-seed state: sikrer at testdata kun opprettes én gang
+    get_test_seeded, set_test_seeded = mo.state(False)
+    return get_reload, get_test_seeded, overrides, set_reload, set_test_seeded
 
 
 @app.cell
-def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo, seed_test_db, er_test_modus, reset_test_db):
+def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, get_test_seeded, mo, seed_test_db, er_test_modus, reset_test_db, set_test_seeded, sync_transport_varer):
     _db = DataRepo()
     _db.initialize()
     data = None
@@ -185,13 +188,23 @@ def _(CostCalculator, DataRepo, SimulationEngine, SqliteData, get_reload, mo, se
     db_stats = None
     _reload_verdi = get_reload()
 
-    # Test-modus: slett gammel test-DB, opprett ny og fyll med testdata
-    if er_test_modus():
+    # Test-modus: seed testdata KUN én gang per app-livssyklus.
+    # Uten denne staten ville hver ctrl+F5-refresh slette alle
+    # transport-flagg/semi-finished brukeren har opprettet.
+    if er_test_modus() and not get_test_seeded():
         try:
             _db = reset_test_db()  # ny tom test-DB
             seed_test_db(_db)
+            set_test_seeded(True)
         except Exception as _e:
             mo.output.replace(mo.md(f"### ❌ Feil ved seeding av testdata: {_e}"))
+    # Synkroniser transportflagg (generer/fjern semi-finished basert på flagg)
+    # Ved hver data-last, uavhengig av om Excel er importert eller ikke.
+    try:
+        sync_transport_varer(_db, source="app")
+    except Exception as _e:
+        mo.output.append(mo.md(f"⚠️ Transport-sync advarsel: {_e}"))
+
     if _db.is_empty():
         mo.output.replace(mo.md("""
         ### Velkommen!

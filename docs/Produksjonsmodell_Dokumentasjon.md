@@ -1125,33 +1125,52 @@ Varenummer-suffiks:   {VARE}-KOD, {VARE}-KV, {VARE}-EIK
 | Handling | Beskrivelse |
 |----------|-------------|
 | Semi-finished opprettes | `products`: {VARE}-KOD, {VARE}-KV, {VARE}-EIK som Semi Finished |
-| BOM kopieres | Original BOM kopieres til hver semi-finished (co-produkt får lokasjon-suffiks) |
-| Routing kopieres | Routing kopieres der arbeidssenterets lokasjon matcher |
-| BOM på hovedvaren | {VARE} får BOM-linje → {VARE}-{primær_lokasjon} (Qty Per = 1) |
-| TRANSPORT-routing | {VARE} får TRANSPORT-operasjon på frakt-arbeidssenter |
+| BOM på semi-finished | Semi-finished refererer TIL hovedproduktet: {Semi} → {VARE} (Qty Per = 1) |
+| TRANSPORT-routing | Semi-finished får TRANSPORT-operasjon, run_time hentes fra `transport_ruter` |
+| **Hovedproduktet** | **Forblir fullstendig urørt** — original BOM/routing endres aldri |
 
-**Ved avflagging (`is_transport = 0`) reverseres alt automatisk:**
+Eksempel (JD16073):
 
-- Alle semi-finished varianter slettes
-- Transport-BOM og TRANSPORT-routing fjernes
-- Varen returnerer til original struktur
+```
+JD16073        → RM_50x75 (Qty 533,05, Co 0,5%, JD16073B)   ← urørt
+JD16073-KOD    → JD16073  (Qty 1)                            ← materialkost rulles opp
+JD16073-KOD    → TRANSPORT (run 45 min fra transport_ruter)
+
+JD16073        → HOVLING @ SPESIALHOVEL                      ← urørt
+JD16073-KOD    → TRANSPORT @ TRANSPORT
+```
+
+**Ved avflagging (`is_transport = 0`):**
+
+- Alle semi-finished varianter og deres BOM/routing slettes
+- Hovedproduktet er aldri rørt — ingen gjenoppretting nødvendig
 - Endringsloggen fanger opp alle CREATE/DELETE
+
+**Transportruter (`transport_ruter`-tabellen):**
+
+| Kolonne | Beskrivelse |
+|---------|-------------|
+| from_loc | Fra-lokasjon (KOD, KV, EIK) |
+| to_loc | Til-lokasjon |
+| distance_km | Distanse i kilometer |
+| run_time_minutes | Kjøretid en vei |
+| setup_time_minutes | Laste-/lossetid |
+| batch_size | Antall enheter per lass |
+
+Eksporteres til Excel som ark "Transport Ruter". Én TRANSPORT-arbeidssenter brukes for alle ruter — run_time hentes fra rutetabellen per strekning.
 
 **Kjøring:**
 
 ```bash
-# Synkroniser alle transportflagg (kjøres også automatisk ved Excel-import)
-python src/scripts/test_transport.py
-
 # Test at modulen fungerer (in-memory DB, påvirker ikke aktiv database)
 python src/scripts/test_transport.py
 ```
 
 **Testdekning (5/5 bestått):**
 
-1. Sett flagg på enkelt produkt → semi-finished + BOM + TRANSPORT opprettes
-2. Fjern flagg → varen restaureres fullstendig
-3. Co-produkt (JD16073/JD16073B) overlever sync med lokasjon-suffiks
+1. Sett flagg → semi-finished opprettes, hovedproduktets BOM/routing er urørt, TRANSPORT på semi-finished med run_time fra rutetabell
+2. Fjern flagg → semi-finished slettes, hovedproduktet er intakt — ingen gjenoppretting nødvendig
+3. Co-produkt (JD16073/JD16073B) forblir på hovedproduktet
 4. Produksjonskjede (JD16098TF/Eksisterende semi-finished) dobles ikke
 5. Alle tre varer flagges samtidig → ingen kollisjoner eller duplikater
 

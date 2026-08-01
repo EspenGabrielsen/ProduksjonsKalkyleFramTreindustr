@@ -48,6 +48,7 @@ KOLONNER = {
         "Product Group": "Gruppering av varer. Eksempel: Skrulast, Panel, Kledning, Spon",
         "Base Unit of Measure": "Standard maleenhet. Eksempel: LM, M3, KG, PCS",
         "Active": "Er varen aktiv? Ja / Nei",
+        "Is Transport": "Transportvare? 1=Ja (frakt mellom høvlerier), 0=Nei",
     },
     "Locations": {
         "Location Code": "Unik kode for lokasjonen. Eksempel: KOD",
@@ -123,11 +124,21 @@ KOLONNER = {
         "Start Date": "Startdato for scenario",
         "End Date": "Sluttdato for scenario",
     },
+    "Transport Ruter": {
+        "From Loc": "Fra-lokasjon. Eksempel: KOD",
+        "To Loc": "Til-lokasjon. Eksempel: KV",
+        "Distance Km": "Distanse i kilometer",
+        "Run Time Minutes": "Kjøretid i minutter (en vei)",
+        "Setup Time Minutes": "Laste-/lossetid i minutter",
+        "Batch Size": "Antall enheter per transport",
+    },
 }
 
 STATISKE_DROPDOWNS = [
     ("Product Master", "C", '"Raw Material,Semi Finished,Finished Good,By Product,Trading Item"'),
-    ("Product Master", "F", '"Ja,Nei"'),
+    # "F" peker på Active sin posisjon i ark-uten-action, men Active eksporteres ikke.
+    # Eksport-flytter F→H, som er "Is Transport"-kolonnen i Product Master-eksporten.
+    ("Product Master", "F", '"1,0"'),
     ("Locations", "A", ""),
     ("Locations", "C", '"Factory,Warehouse,Distribution Center,Sales Office"'),
     ("Locations", "D", '"Ja,Nei"'),
@@ -566,6 +577,7 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
         "By Product Rules": (_import_byproduct_rules, ["Parent Item No", "By Product Item No"]),
         "Capacity Calendar": (_import_capacity, ["Work Center", "Date"]),
         "Production Scenario": (_import_scenarios, ["Scenario Name", "Product"]),
+        "Transport Ruter": (_import_transport_ruter, ["From Loc", "To Loc"]),
     }
 
     for sheet_name, (import_func, required_cols) in sheet_map.items():
@@ -752,7 +764,14 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
 
         if is_transport:
             # ── Generer semi-finished for hver høvleri-lokasjon ──
+            # NB! Hovedproduktet (item_no) forblir fullstendig URØRT.
+            # Semi-finished refererer TIL hovedproduktet og legger kun på
+            # TRANSPORT-routing — original BOM/routing på hovedproduktet endres aldri.
             created_here = 0
+            _ensure_workcenter(db, "TRANSPORT", "Frakt mellom høvlerier", HOVLERI_LOKASJONER[0],
+                               300.0, 300.0, 200.0, source=source)
+            _ensure_operation(db, "TRANSPORT", "Frakt mellom høvlerier", "TRANSPORT", source=source)
+
             for loc in HOVLERI_LOKASJONER:
                 semi_no = f"{item_no}-{loc}"
                 semi_id = _get_or_create_product(
@@ -761,74 +780,15 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
                     "Semi Finished", prod["product_group"], prod["base_uom"],
                     source=source,
                 )
-                if semi_id:
-                    created_here += 1
+                if not semi_id:
+                    continue
+                created_here += 1
 
-                    # Kopier original BOM til semi-finished
-                    orig_boms = db.conn.execute(
-                        "SELECT * FROM bom_lines WHERE parent_item_no = ?", (item_no,)
-                    ).fetchall()
-                    for bl in orig_boms:
-                        comp = bl["component_item_no"]
-                        # Hvis comp allerede har -suffiks, legg ikke til nytt
-                        if comp.startswith(f"{item_no}-"):
-                            continue
-                        db.upsert_bom_lines([{
-                            "parent_item_no": semi_no,
-                            "component_item_no": comp,
-                            "quantity_per": bl["quantity_per"],
-                            "uom": bl["uom"],
-                            "scrap_pct": bl["scrap_pct"],
-                            "co_product_pct": bl["co_product_pct"],
-                            "co_product_item_no": f"{bl['co_product_item_no']}-{loc}" if bl["co_product_item_no"] else "",
-                        }], source=source)
-
-                    # Kopier original routing til semi-finished
-                    orig_routings = db.conn.execute(
-                        "SELECT * FROM routing_lines WHERE item_no = ?", (item_no,)
-                    ).fetchall()
-                    for rl in orig_routings:
-                        rl_wc = rl["work_center_code"]
-                        # Oversett arbeidssenter til lokasjon (hvis mulig)
-                        wc_row = db.conn.execute(
-                            "SELECT * FROM work_centers WHERE code = ?", (rl_wc,)
-                        ).fetchone()
-                        if wc_row and wc_row["location_code"] == loc:
-                            db.upsert_routing_lines([{
-                                "item_no": semi_no,
-                                "operation_no": rl["operation_no"],
-                                "operation_code": rl["operation_code"],
-                                "work_center_code": rl_wc,
-                                "setup_time_minutes": rl["setup_time_minutes"],
-                                "run_time_minutes": rl["run_time_minutes"],
-                                "batch_size": rl["batch_size"],
-                            }], source=source)
-
-            # ── Legg til BOM på hovedvaren: {vare} → {vare}-{primær_lokasjon} ──
-            # Finner primær lokasjon ved å sjekke eksisterende routing
-            primary_loc = HOVLERI_LOKASJONER[0]
-            orig_routings = db.conn.execute(
-                "SELECT * FROM routing_lines WHERE item_no = ?", (item_no,)
-            ).fetchall()
-            if orig_routings:
-                for rl in orig_routings:
-                    wc_row = db.conn.execute(
-                        "SELECT * FROM work_centers WHERE code = ?", (rl["work_center_code"],)
-                    ).fetchone()
-                    if wc_row:
-                        primary_loc = wc_row["location_code"]
-                        break
-
-            # Bytt ut merket: legg til {vare}-{primary_loc} som komponent hvis den finnes
-            semi_primary = f"{item_no}-{primary_loc}"
-            existing_bom = db.conn.execute(
-                "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no = ?",
-                (item_no, semi_primary)
-            ).fetchone()
-            if not existing_bom:
+                # BOM: semi-finished → hovedprodukt (Qty Per = 1)
+                # Materialkost rulles dynamisk opp fra hovedproduktets netto produksjonskost
                 db.upsert_bom_lines([{
-                    "parent_item_no": item_no,
-                    "component_item_no": semi_primary,
+                    "parent_item_no": semi_no,
+                    "component_item_no": item_no,
                     "quantity_per": 1.0,
                     "uom": prod["base_uom"],
                     "scrap_pct": 0.0,
@@ -836,35 +796,40 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
                     "co_product_item_no": "",
                 }], source=source)
 
-            # ── Legg til TRANSPORT-routing ──
-            # Sørg for at frakt-arbeidssentre finnes (rettledning)
-            for wc_code in ("FRAKT_KOD_KV", "FRAKT_KOD_EIK", "FRAKT_KV_KOD", "FRAKT_KV_EIK", "FRAKT_EIK_KOD", "FRAKT_EIK_KV"):
-                _ensure_workcenter(db, wc_code, f"Frakt {wc_code.replace('FRAKT_', '').replace('_', '→')}", wc_code.split("_")[1],
-                                   300.0, 400.0, 100.0, source=source)
-            _ensure_operation(db, "TRANSPORT", "Frakt mellom høvlerier", "FRAKT_KOD_KV", source=source)
-
-            # Legg til TRANSPORT-routing for relevante ruter (baseline)
-            if primary_loc != "KV":
-                _ensure_routing_entry(db, item_no, "TRANSPORT", "FRAKT_KOD_KV",
-                                      setup=30.0, run=0.15, batch=prod_batch(db, item_no),
-                                      source=source)
+                # TRANSPORT-routing på semi-finished (ikke hovedprodukt)
+                # Rute-data hentes fra transport_ruter-tabellen (loc → KV)
+                if loc != "KV":
+                    rute = db.conn.execute(
+                        "SELECT * FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
+                        (loc, "KV")
+                    ).fetchone()
+                    if rute:
+                        _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
+                                              setup=rute["setup_time_minutes"],
+                                              run=rute["run_time_minutes"],
+                                              batch=rute["batch_size"],
+                                              source=source)
+                    else:
+                        _ensure_routing_entry(db, semi_no, "TRANSPORT", "TRANSPORT",
+                                              setup=30.0, run=45.0, batch=prod_batch(db, item_no),
+                                              source=source)
 
             stats["opprettet"] += created_here
             stats["produkter"].append(f"{item_no}: transport flagg satt")
         else:
             # ── Fjern alle genererte semi-finished for denne varen ──
+            # Hovedproduktet (item_no) er aldri blitt rørt — kun semi-finished
+            # og deres BOM/routing slettes her.
             deleted_here = 0
             # Finn alle semi-finished for varen
             semi_items = db.conn.execute(
                 "SELECT item_no FROM products WHERE item_no LIKE ?",
                 (f"{item_no}-%",)
             ).fetchall()
+
             for semi in semi_items:
                 semi_no = semi["item_no"]
-                # Slett BOM-linjer som refererer til semi-finished som komponent
-                _delete_bom_by_parent(db, item_no, semi_no, source=source)
                 # Slett BOM-linjer der semi-finished er parent
-                _delete_bom_by_parent(db, semi_no, semi_no, source=source)  # empty, placeholder
                 rows = db.conn.execute(
                     "SELECT id FROM bom_lines WHERE parent_item_no = ?", (semi_no,)
                 ).fetchall()
@@ -879,22 +844,6 @@ def sync_transport_varer(db: DataRepo, source: str = "import") -> dict:
                 # Slett selve produktet
                 _delete_product_by_no(db, semi_no, source=source)
                 deleted_here += 1
-
-            # Fjern TRANSPORT-routing fra hovedvaren
-            rt_rows = db.conn.execute(
-                "SELECT id FROM routing_lines WHERE item_no = ? AND operation_code = 'TRANSPORT'",
-                (item_no,)
-            ).fetchall()
-            for r in rt_rows:
-                db.delete_routing_line(r["id"], source=source)
-
-            # Fjern semi-finished fra hovedvarens BOM
-            rows = db.conn.execute(
-                "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no LIKE ?",
-                (item_no, f"{item_no}-%")
-            ).fetchall()
-            for r in rows:
-                db.delete_bom_line(r["id"], source=source)
 
             stats["slettet"] += deleted_here
             stats["produkter"].append(f"{item_no}: transport flagg fjernet")
@@ -1042,8 +991,20 @@ def _import_products(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         }
         product_list.append(entry)
 
+        # Is Transport: skriv til transport_flagg-tabellen
+        is_transport = row.get("Is Transport")
+        if is_transport is not None and not pd.isna(is_transport):
+            flag = 1 if str(is_transport).strip().lower() in ("1", "ja", "true", "yes") else 0
+            db.conn.execute(
+                """INSERT INTO transport_flagg (item_no, is_transport)
+                   VALUES (?, ?)
+                   ON CONFLICT(item_no) DO UPDATE SET is_transport = excluded.is_transport, updated_at = datetime('now')""",
+                (item_no, flag),
+            )
+
     if product_list:
         db.upsert_products(product_list, source="import")
+    db.conn.commit()
     return len(product_list) + deletions
 
 
@@ -1365,6 +1326,73 @@ def _import_capacity(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     return len(cap_list) + deletions
 
 
+def _import_transport_ruter(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
+    """Importer transportruter mellom høvlerier."""
+    deletions = 0
+    for row in rows:
+        action = _get_action(row)
+        if action == "DELETE":
+            # Slett rute basert på from_loc + to_loc
+            existing = db.conn.execute(
+                "SELECT id FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
+                (_s(row.get("From Loc", "")), _s(row.get("To Loc", ""))),
+            ).fetchone()
+            if existing:
+                db.conn.execute("DELETE FROM transport_ruter WHERE id = ?", (existing["id"],))
+                db.conn.commit()
+                deletions += 1
+            continue
+
+        from_loc = _s(row.get("From Loc", ""))
+        to_loc = _s(row.get("To Loc", ""))
+        if not from_loc or not to_loc:
+            continue
+
+        existing = db.conn.execute(
+            "SELECT id FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
+            (from_loc, to_loc),
+        ).fetchone()
+
+        distance = _f(row.get("Distance Km", 0))
+        run_time = _f(row.get("Run Time Minutes", 0))
+        setup_time = _f(row.get("Setup Time Minutes", 30))
+        batch = _f(row.get("Batch Size", 3000))
+
+        if existing:
+            # Sammenlign for endringslogg
+            old = dict(db.conn.execute(
+                "SELECT * FROM transport_ruter WHERE id = ?", (existing["id"],)
+            ).fetchone())
+            if abs(old.get("distance_km", 0) - distance) > 0.001:
+                db.log_change("transport_ruter", str(existing["id"]), "distance_km",
+                              old.get("distance_km"), distance, source="import")
+            if abs(old.get("run_time_minutes", 0) - run_time) > 0.001:
+                db.log_change("transport_ruter", str(existing["id"]), "run_time_minutes",
+                              old.get("run_time_minutes"), run_time, source="import")
+            if abs(old.get("setup_time_minutes", 0) - setup_time) > 0.001:
+                db.log_change("transport_ruter", str(existing["id"]), "setup_time_minutes",
+                              old.get("setup_time_minutes"), setup_time, source="import")
+            if abs(old.get("batch_size", 0) - batch) > 0.001:
+                db.log_change("transport_ruter", str(existing["id"]), "batch_size",
+                              old.get("batch_size"), batch, source="import")
+            db.conn.execute(
+                """UPDATE transport_ruter SET distance_km = ?, run_time_minutes = ?,
+                   setup_time_minutes = ?, batch_size = ? WHERE id = ?""",
+                (distance, run_time, setup_time, batch, existing["id"]),
+            )
+        else:
+            db.conn.execute(
+                """INSERT INTO transport_ruter (from_loc, to_loc, distance_km, run_time_minutes, setup_time_minutes, batch_size)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (from_loc, to_loc, distance, run_time, setup_time, batch),
+            )
+            db.log_change("transport_ruter", f"{from_loc}:{to_loc}", "_created",
+                          None, f"{from_loc}→{to_loc}", source="import")
+        db.conn.commit()
+
+    return len(rows) - deletions
+
+
 def _import_scenarios(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
     """Importer produksjonsscenarioer."""
     deletions = _deletions_from_action(rows, sheet_name, db)
@@ -1588,9 +1616,16 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
 
     # ── Ark 1: Product Master ────────────────────────────────
     ws1 = wb.active
-    _write_sheet(ws1, "Product Master", data.get("products", []),
-                 ["Item No", "Description", "Item Type", "Product Group", "Base Unit of Measure"],
-                 db_keys=["item_no", "description", "item_type", "product_group", "base_uom"])
+    # Slå opp transport_flagg for å vise Is Transport-kolonnen
+    _transport_flagg = {r["item_no"]: r["is_transport"] for r in data.get("transport_flagg", [])}
+    _products_with_transport = []
+    for p in data.get("products", []):
+        _row = dict(p)
+        _row["is_transport"] = _transport_flagg.get(_row.get("item_no", ""), 0)
+        _products_with_transport.append(_row)
+    _write_sheet(ws1, "Product Master", _products_with_transport,
+                 ["Item No", "Description", "Item Type", "Product Group", "Base Unit of Measure", "Is Transport"],
+                 db_keys=["item_no", "description", "item_type", "product_group", "base_uom", "is_transport"])
 
     # ── Ark 2: Locations ──────────────────────────────────────
     ws2 = wb.create_sheet()
@@ -1656,20 +1691,29 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
                  ["Scenario Name", "Product", "Planned Quantity"],
                  db_keys=["scenario_name", "product", "planned_quantity"])
 
-    # ── Ark 11: Endringslogg ─────────────────────────────────
-    # Endringsloggen har IKKE ACTION/ID kolonner
+    # ── Ark 11: Transport Ruter ─────────────────────────────
+    # (Før Endringslogg så antallet ruter er lett å finne)
     ws11 = wb.create_sheet()
+    _write_sheet(ws11, "Transport Ruter", data.get("transport_ruter", []),
+                 ["From Loc", "To Loc", "Distance Km", "Run Time Minutes",
+                  "Setup Time Minutes", "Batch Size"],
+                 db_keys=["from_loc", "to_loc", "distance_km", "run_time_minutes",
+                          "setup_time_minutes", "batch_size"])
+
+    # ── Ark 12: Endringslogg ────────────────────────────────
+    # Endringsloggen har IKKE ACTION/ID kolonner
+    ws12 = wb.create_sheet()
     change_log = db.get_changes(limit=1000)
     if change_log:
-        _write_sheet(ws11, "Endringslogg", change_log,
+        _write_sheet(ws12, "Endringslogg", change_log,
                      ["ID", "Tidspunkt", "Bruker", "Kilde", "Tabell", "Nokkel",
                       "Felt", "Gammel verdi", "Ny verdi"],
                      db_keys=["id", "timestamp", "user", "source", "table_name",
                               "record_key", "field_name", "old_value", "new_value"],
                      include_action=False)
     else:
-        ws11.title = "Endringslogg"
-        ws11.cell(row=1, column=1, value="(Ingen endringer logget)").font = data_font
+        ws12.title = "Endringslogg"
+        ws12.cell(row=1, column=1, value="(Ingen endringer logget)").font = data_font
 
     wb.save(output_path)
 

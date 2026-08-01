@@ -68,6 +68,14 @@ WORK_CENTERS = [
     {"code": "KVHOVEL", "description": "Kvaas hovel", "location_code": "KV",
      "labor_cost_hour": 500.0, "machine_cost_hour": 200.0, "overhead_cost_hour": 100.0,
      "capacity_hours_day": 16.0, "effective_capacity_pct": 92.0},
+    {"code": "TRANSPORT", "description": "Frakt mellom høvlerier", "location_code": "KOD",
+     "labor_cost_hour": 300.0, "machine_cost_hour": 300.0, "overhead_cost_hour": 200.0,
+     "capacity_hours_day": 24.0, "effective_capacity_pct": 100.0},
+]
+
+# Transportruter (KOD → KV: 45 min, batch 3200)
+TRANSPORT_RUTER = [
+    {"from_loc": "KOD", "to_loc": "KV", "run_time_minutes": 45.0, "setup_time_minutes": 30.0, "batch_size": 3200.0},
 ]
 
 # Lokasjoner
@@ -127,6 +135,17 @@ def _setup_test_db() -> DataRepo:
             "batch_size": rl["batch"],
         }], source="test")
 
+    # Transportruter
+    for tr in TRANSPORT_RUTER:
+        db.conn.execute(
+            """INSERT OR IGNORE INTO transport_ruter
+               (from_loc, to_loc, distance_km, run_time_minutes, setup_time_minutes, batch_size)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (tr["from_loc"], tr["to_loc"], tr.get("distance_km", 35.0),
+             tr["run_time_minutes"], tr["setup_time_minutes"], tr["batch_size"]),
+        )
+    db.conn.commit()
+
     return db
 
 
@@ -154,10 +173,22 @@ def test_1_sett_flagg_enkelt_produkt():
 
     # Verifiser semi-finished produkter
     assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 3, "Skulle ha 3 semi-finished"
-    # Verifiser BOM på hovedvaren → semi-finished
-    assert _count(db, "bom_lines", "parent_item_no='BL98520' AND component_item_no='BL98520-KOD'") == 1
-    # Verifiser TRANSPORT-routing
-    assert _count(db, "routing_lines", "item_no='BL98520' AND operation_code='TRANSPORT'") >= 1
+    # Hovedproduktets BOM er URØRT — original BOM-linje finnes fortsatt
+    assert _count(db, "bom_lines", "parent_item_no='BL98520' AND component_item_no='RM_50x75_US_V_Gran'") == 1
+    # Semi-finished refererer TIL hovedproduktet (Qty=1)
+    assert _count(db, "bom_lines", "parent_item_no='BL98520-KOD' AND component_item_no='BL98520'") == 1
+    # TRANSPORT-routing ligger på semi-finished (ikke hovedprodukt)
+    assert _count(db, "routing_lines", "item_no='BL98520-KOD' AND operation_code='TRANSPORT'") >= 1
+    # Hovedproduktet har ingen TRANSPORT-routing
+    assert _count(db, "routing_lines", "item_no='BL98520' AND operation_code='TRANSPORT'") == 0
+    # Verifiser at run_time hentes fra transport_ruter-tabellen (45 min, ikke fallback)
+    rt_row = db.conn.execute(
+        "SELECT run_time_minutes FROM routing_lines WHERE item_no='BL98520-KOD' AND operation_code='TRANSPORT'"
+    ).fetchone()
+    assert rt_row["run_time_minutes"] == 45.0, f"Skulle være 45.0 fra rutetabellen, var {rt_row['run_time_minutes']}"
+    # TRANSPORT bruker ett felles arbeidssenter
+    assert _count(db, "work_centers", "code='TRANSPORT'") == 1
+    assert _count(db, "work_centers", "code LIKE 'FRAKT_%'") == 0
     # Verifiser endringslogg har CREATE
     assert _count(db, "change_log", "table_name='products'") > 0
 
@@ -188,10 +219,11 @@ def test_2_fjern_flagg_restaurerer():
 
     # Verifiser alt er fjernet
     assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 0, "Semi-finished skal være slettet"
-    assert _count(db, "bom_lines", "parent_item_no='BL98520' AND component_item_no LIKE 'BL98520-%'") == 0
-    assert _count(db, "routing_lines", "item_no='BL98520' AND operation_code='TRANSPORT'") == 0
-    # Original BOM skal fortsatt finnes
+    assert _count(db, "bom_lines", "parent_item_no='BL98520-KOD'") == 0
+    assert _count(db, "routing_lines", "item_no LIKE 'BL98520-%'") == 0
+    # Hovedproduktet er URØRT — original BOM og routing beholdt
     assert _count(db, "bom_lines", "parent_item_no='BL98520' AND component_item_no='RM_50x75_US_V_Gran'") == 1
+    assert _count(db, "routing_lines", "item_no='BL98520' AND operation_code='HOVLING'") == 1
 
     print("OK ✅")
     db.close()
@@ -211,8 +243,10 @@ def test_3_co_produkt_overlever():
 
     # Semi-finished er laget
     assert _count(db, "products", "item_no LIKE 'JD16073-%'") == 3
-    # BOM for semi-finished har co-prod-item med suffiks
-    assert _count(db, "bom_lines", "parent_item_no='JD16073-KOD' AND co_product_item_no LIKE '%'") >= 1
+    # Semi-finished refererer til hovedproduktet
+    assert _count(db, "bom_lines", "parent_item_no='JD16073-KOD' AND component_item_no='JD16073'") == 1
+    # Hovedprodukts co-prod er URØRT (JD16073B ligger på hovedproduktet)
+    assert _count(db, "bom_lines", "parent_item_no='JD16073' AND co_product_item_no='JD16073B'") == 1
 
     print("OK ✅")
     db.close()
@@ -239,8 +273,10 @@ def test_4_produksjonskjede():
     # Presis sjekk: kun eksakt 'JD16098' + genererte 'JD16098TF-*'
     assert _count(db, "products", "item_no = 'JD16098'") == 1
     assert _count(db, "products", "item_no LIKE 'JD16098TF-%'") == 3
-    # BOM: JD16098TF-KOD → JD16098 (kopiert)
-    assert _count(db, "bom_lines", "parent_item_no='JD16098TF-KOD' AND component_item_no='JD16098'") == 1
+    # BOM: JD16098TF-KOD → JD16098TF (refererer til hovedprodukt)
+    assert _count(db, "bom_lines", "parent_item_no='JD16098TF-KOD' AND component_item_no='JD16098TF'") == 1
+    # JD16098TF sin egen BOM er URØRT (peker fortsatt på JD16098 + maling)
+    assert _count(db, "bom_lines", "parent_item_no='JD16098TF' AND component_item_no='JD16098'") == 1
 
     print("OK ✅")
     db.close()

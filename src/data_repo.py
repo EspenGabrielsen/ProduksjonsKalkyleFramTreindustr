@@ -186,6 +186,18 @@ CREATE TABLE IF NOT EXISTS transport_flagg (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Transportruter mellom høvlerier (from → to, med distanse og tider)
+CREATE TABLE IF NOT EXISTS transport_ruter (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_loc TEXT NOT NULL,
+    to_loc TEXT NOT NULL,
+    distance_km REAL NOT NULL DEFAULT 0,
+    run_time_minutes REAL NOT NULL DEFAULT 0,
+    setup_time_minutes REAL NOT NULL DEFAULT 30,
+    batch_size REAL NOT NULL DEFAULT 3000,
+    UNIQUE(from_loc, to_loc)
+);
+
 -- Infrastruktur-tabeller
 
 CREATE TABLE IF NOT EXISTS change_log (
@@ -1347,6 +1359,7 @@ class DataRepo:
             "products", "locations", "work_centers", "operations",
             "item_costs", "bom_lines", "routing_lines", "byproduct_rules",
             "capacity_days", "production_scenarios",
+            "transport_flagg", "transport_ruter",
         ]
         for t in tables:
             self.conn.execute(f"DELETE FROM {t}")
@@ -1437,6 +1450,8 @@ class DataRepo:
             "byproduct_rules": "SELECT * FROM byproduct_rules ORDER BY id",
             "capacity_days": "SELECT * FROM capacity_days ORDER BY id",
             "production_scenarios": "SELECT * FROM production_scenarios ORDER BY id",
+            "transport_flagg": "SELECT * FROM transport_flagg ORDER BY item_no",
+            "transport_ruter": "SELECT * FROM transport_ruter ORDER BY from_loc, to_loc",
         }
         result = {}
         for name, query in tables.items():
