@@ -37,6 +37,53 @@ from data_repo import DataRepo
 
 
 # ──────────────────────────────────────────────────────────────────────
+#  Oversettelse og farger for Excel-ark (konfigurert i sheet_i18n.json)
+# ──────────────────────────────────────────────────────────────────────
+
+_SHEET_I18N_PATH = os.path.join(os.path.dirname(__file__), "sheet_i18n.json")
+
+
+def _last_sheet_i18n() -> dict:
+    """Les sheet_i18n.json. Returnerer {} hvis filen mangler eller er ugyldig."""
+    try:
+        with open(_SHEET_I18N_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("sheets", {})
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+# Last inn én gang på modul-nivå
+_SHEET_I18N = _last_sheet_i18n()
+
+
+def _sheet_nb_navn(engelske_navn: str) -> str:
+    """Returner norsk fane-navn for et engelsk arknavn (fallback: engelsk)."""
+    info = _SHEET_I18N.get(engelske_navn)
+    if info and info.get("nb"):
+        return info["nb"]
+    return engelske_navn
+
+
+def _sheet_farge(engelske_navn: str) -> Optional[str]:
+    """Returner tabColor-heks for et ark (None = standard Excel-farge)."""
+    info = _SHEET_I18N.get(engelske_navn)
+    if not info:
+        return None
+    return info.get("color")
+
+
+def _finn_sheet_fra_fil(sheet_names, engelske_navn: str) -> Optional[str]:
+    """Finn faktisk arknavn i en Excel-fil som matcher engelsk ELLER norsk navn."""
+    if engelske_navn in sheet_names:
+        return engelske_navn
+    nb = _sheet_nb_navn(engelske_navn)
+    if nb in sheet_names:
+        return nb
+    return None
+
+
+# ──────────────────────────────────────────────────────────────────────
 #  Kolonnebeskrivelser (fra oppdater_mal.py)
 # ──────────────────────────────────────────────────────────────────────
 
@@ -327,11 +374,13 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
     component_bom_set: set[str] = set()
 
     for sheet_name, required_cols in expected_sheets.items():
-        if sheet_name not in sheet_names:
+        faktisk_ark = _finn_sheet_fra_fil(sheet_names, sheet_name)
+        if faktisk_ark is None:
             result["warnings"].append(f"Ark '{sheet_name}' mangler — vil bli hoppet over")
             continue
 
-        df = xls.parse(sheet_name)
+        # Les arket med faktisk navn (engelske ELLER norske navn støttes)
+        df = xls.parse(faktisk_ark)
         df = df.dropna(how="all").reset_index(drop=True)
 
         if df.empty:
@@ -455,7 +504,7 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
 
         # Item Costs: item_no må finnes i Product Master
         if "Item Costs" in result["stats"]:
-            df_ic = xls.parse("Item Costs")
+            df_ic = xls.parse(_finn_sheet_fra_fil(sheet_names, "Item Costs") or "Item Costs")
             for _, row in df_ic.iterrows():
                 item = _s(row.get("Item No", ""))
                 if item and item not in all_item_nos:
@@ -463,7 +512,7 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
 
     # Operation codes
     if all_op_codes and "Routing" in result["stats"]:
-        df_rt = xls.parse("Routing")
+        df_rt = xls.parse(_finn_sheet_fra_fil(sheet_names, "Routing") or "Routing")
         for _, row in df_rt.iterrows():
             op = _s(row.get("Operation Code", ""))
             if op and op not in all_op_codes:
@@ -471,7 +520,7 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
 
     # Work centers
     if all_wc_codes and "Routing" in result["stats"]:
-        df_rt = xls.parse("Routing")
+        df_rt = xls.parse(_finn_sheet_fra_fil(sheet_names, "Routing") or "Routing")
         for _, row in df_rt.iterrows():
             wc = _s(row.get("Work Center Code", ""))
             if wc and wc not in all_wc_codes:
@@ -479,7 +528,7 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
 
     # Location codes
     if all_loc_codes and "Work Centers" in result["stats"]:
-        df_wc = xls.parse("Work Centers")
+        df_wc = xls.parse(_finn_sheet_fra_fil(sheet_names, "Work Centers") or "Work Centers")
         for _, row in df_wc.iterrows():
             loc = _s(row.get("Location Code", ""))
             if loc and loc not in all_loc_codes:
@@ -576,15 +625,17 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
         "By Product Rules": (_import_byproduct_rules, ["Parent Item No", "By Product Item No"]),
         "Capacity Calendar": (_import_capacity, ["Work Center", "Date"]),
         "Production Scenario": (_import_scenarios, ["Scenario Name", "Product"]),
-    "Transport Ruter": (_import_transport_ruter, ["From Loc", "To Loc"]),
+        "Transport Ruter": (_import_transport_ruter, ["From Loc", "To Loc"]),
     }
 
     for sheet_name, (import_func, required_cols) in sheet_map.items():
-        if sheet_name not in sheet_names:
+        faktisk_ark = _finn_sheet_fra_fil(sheet_names, sheet_name)
+        if faktisk_ark is None:
             continue
 
         try:
-            df = xls.parse(sheet_name)
+            # Les arket med faktisk navn (engelske ELLER norske navn støttes)
+            df = xls.parse(faktisk_ark)
             df = df.dropna(how="all").reset_index(drop=True)
 
             if df.empty:
@@ -1532,7 +1583,12 @@ def export_sqlite_to_excel(output_path: str, db: Optional[DataRepo] = None) -> N
                      til snake_case (f.eks. "Item No" → "item_no").
             include_action: Om ACTION/ID skal inkluderes (True for data-ark, False for Endringslogg)
         """
-        ws.title = title
+        # Fane-navn hentes fra sheet_i18n.json (norsk oversettelse)
+        ws.title = _sheet_nb_navn(title)
+        # Farger fanen via sheet_i18n.json (None = standard Excel-farge)
+        _farge = _sheet_farge(title)
+        if _farge:
+            ws.sheet_properties.tabColor = _farge.lstrip("#")
 
         # Hvis db_keys ikke er oppgitt, konverter field_names til snake_case
         if db_keys is None:

@@ -1,7 +1,7 @@
 import marimo
 
 __generated_with = "0.23.14"
-app = marimo.App(width="medium", app_title="Produksjonskost Simulator", html_head_file="head.html")
+app = marimo.App(width="medium", app_title="Produksjonskost Simulator", html_head_file="head.html", css_file="app_style.css")
 
 
 @app.cell
@@ -70,81 +70,6 @@ def _():
     )
 
 
-@app.cell
-def _(mo):
-    mo.Html("""
-    <style>
-        body {
-            background-color: #F3F5F2;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #2C3E2B;
-        }
-        .marimo-app { max-width: 1200px; margin: 40px auto; padding: 0 24px; }
-
-        .fti-header {
-            background: linear-gradient(135deg, #14532D 0%, #1B6E3D 100%);
-            border-radius: 12px;
-            padding: 20px 28px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 16px rgba(20, 83, 45, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .fti-header-title { font-size: 1.8em; font-weight: 700; color: #FFFFFF; line-height: 1.2; }
-        .fti-header-subtitle { font-size: 0.95em; color: #C6E6D0; line-height: 1.2; }
-
-        .fti-card {
-            background: #F9FBF8; border-radius: 12px; padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(27, 89, 43, 0.08);
-            border-left: 6px solid #48BB78;
-            transition: box-shadow 0.2s ease;
-        }
-        .fti-card:hover { box-shadow: 0 6px 20px rgba(27, 89, 43, 0.12); }
-        .fti-card h2, .fti-card h3 { color: #14532D; margin-top: 0; margin-bottom: 12px; font-weight: 600; }
-        .fti-highlight-green { color: #2F855A; background-color: #E6FFFA; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
-        .fti-highlight-red { color: #C53030; background-color: #FFF5F5; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
-
-        .fti-footer {
-            background: #14532D;
-            color: #C6E6D0;
-            font-size: 0.85em;
-            text-align: center;
-            padding: 12px 24px;
-            border-radius: 8px;
-            margin-top: 32px;
-            margin-bottom: 16px;
-        }
-
-        .fti-sidebar-section { margin-bottom: 20px; }
-        .fti-sidebar-section h3 {
-            font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px;
-            color: #48BB78; margin: 0 0 8px 0; font-weight: 600;
-        }
-
-        .marimo-radio { background: #F9FBF8; border-radius: 8px; padding: 4px; border: 1px solid #D1E0D4; }
-        .marimo-radio label { padding: 8px 14px; border-radius: 6px; font-weight: 500; color: #2C3E2B; transition: all 0.15s ease; }
-        .marimo-radio input[type="radio"]:checked + label { background: #14532D; color: white; }
-        .marimo-radio label:hover { background: #E6FFFA; }
-
-        .marimo-dropdown { border-radius: 6px; border: 1px solid #D1E0D4; background: #F9FBF8; }
-
-        .fti-kpi-card {
-            background: #FFFFFF; border-radius: 10px; padding: 16px 20px;
-            border: 1px solid #E2E8F0; box-shadow: 0 2px 6px rgba(0,0,0,0.04); min-width: 180px;
-        }
-        .fti-kpi-title { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.5px; color: #6B8F7D; margin-bottom: 4px; }
-        .fti-kpi-value { font-size: 1.5em; font-weight: 700; color: #14532D; }
-        .fti-kpi-delta { font-size: 0.85em; font-weight: 600; margin-left: 8px; }
-
-        [data-marimo-theme="dark"] .fti-header { background: linear-gradient(135deg, #0B2819 0%, #14532D 100%); }
-        [data-marimo-theme="dark"] .fti-footer { background: #0B2819; }
-
-        .fti-run-button { margin: 16px 0; }
-    </style>
-    """)
-    return
 
 
 @app.cell

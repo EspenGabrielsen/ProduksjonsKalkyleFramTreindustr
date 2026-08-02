@@ -1,0 +1,17 @@
+{
+  "sheets": {
+    "Product Master": { "nb": "Produktregister", "color": "#C53030" },
+    "Locations": { "nb": "Lokasjoner", "color": "#C53030" },
+    "Work Centers": { "nb": "Arbeidssentre", "color": "#C53030" },
+    "Operation Master": { "nb": "Operasjonsregister", "color": "#C53030" },
+    "Item Costs": { "nb": "Varekostnader", "color": "#C53030" },
+    "BOM": { "nb": "Stykkliste", "color": "#3182CE" },
+    "Routing": { "nb": "Produksjonsrute", "color": "#3182CE" },
+    "By Product Rules": { "nb": "Biproduktregler", "color": "#3182CE" },
+    "Capacity Calendar": { "nb": "Kapasitetskalender", "color": null },
+    "Production Scenario": { "nb": "Produksjonsscenario", "color": null },
+    "Transport Ruter": { "nb": "Transportruter", "color": "#D69E2E" },
+    "Transport Flagg": { "nb": "Transportflagg", "color": null },
+    "Endringslogg": { "nb": "Endringslogg", "color": null }
+  }
+}

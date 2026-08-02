@@ -28,6 +28,8 @@ ProduksjonsKalkyle/
 │   ├── generer_excel_rapport.py
 │   ├── generer_dokumentasjon.py
 │   ├── varekost_app.py     # Marimo web-app
+│   ├── app_style.css       # Marimo app-styling (CSS-fil, fra STYLING.md)
+│   ├── sheet_i18n.json     # Oversettelser + fanefarger for Excel-eksport
 │   ├── __init__.py
 │   ├── produksjonskalkyle.db      # SQLite-database (DATA)
 │   ├── Produksjonsmodell_Testdata_v3.xlsx  # Testdata-Excel
@@ -62,8 +64,10 @@ ProduksjonsKalkyle/
 |-----|--------|
 | `src/kostberegning.py` | **Kjernelogikk:** ExcelData-parsing, SQLite-datalasting, CostCalculator (kostnadskalkyle), SimulationEngine (what-if), SimulationOverride, export_product_costs_to_json |
 | `src/data_repo.py` | SQLite-databasehåndtering: DataRepo-klasse med CRUD, endringslogg, versjonering av opplastede filer. Database: `src/produksjonskalkyle.db` |
-| `src/excel_bridge.py` | Import/eksport mellom Excel og SQLite. `validate_excel()` (validering), `import_excel_to_sqlite()` (import), `export_sqlite_to_excel()` (eksport til 11 ark inkl. endringslogg) |
-| `src/varekost_app.py` | **Marimo web-app** med 4 faner: simulering & analyse, dataimport & versjoner, datamodell-innsyn, endringslogg |
+| `src/excel_bridge.py` | Import/eksport mellom Excel og SQLite. `validate_excel()` (validering), `import_excel_to_sqlite()` (import), `export_sqlite_to_excel()` (eksport til 11 ark inkl. endringslogg). Støtter engelske og norske ark-navn via `sheet_i18n.json` |
+| `src/sheet_i18n.json` | Oversettelser og farger for Excel-faner ved eksport. Norsk navn (`nb`) + tabColor (`color`) per ark. Endres uten å røre Python-kode. `null` = standard Excel-farge |
+| `src/varekost_app.py` | **Marimo web-app** med 4 faner: simulering & analyse, dataimport & versjoner, datamodell-innsyn, endringslogg. Benytter `css_file="app_style.css"` for styling og `html_head_file="head.html"` for favicon/app-tittel |
+| `src/app_style.css` | Marimo app-styling (CSS) — fargepalett, tabell-hover (grønn `#E6FFFA` i stedet for Marimo sin gule), `.fti-card`, `.fti-header`, KPI-kort m.m. Følger `docs/STYLING.md` |
 | `src/generer_pdf_rapport.py` | PDF-rapportgenerering med ReportLab. Inneholder: `generer_rapport()` (simuleringsrapport med ledelsessammendrag, tabeller, kapasitetsdata), `generer_dokumentasjon_pdf()` (Markdown→PDF for dokumentasjonsfiler), `_parse_markdown_to_story()` (Markdown-parser), samt felles styling (farger, fonter, tittelside, header/footer, logo) |
 | `src/generer_excel_rapport.py` | Excel-rapportgenerering for simuleringsresultater |
 | `src/generer_dokumentasjon.py` | Wrapper-script for å generere stilede PDF-er fra Markdown-dokumentasjon. Støtter enkeltfiler, flere filer og `--all` |
@@ -73,6 +77,7 @@ ProduksjonsKalkyle/
 | `src/scripts/oppdater_mal.py` | Oppdater Excel-mal (`src/Produksjonsmodell_Mal.xlsx`) |
 | `src/scripts/sqldatabaseTest.py` | Test-verktøy for SQLite-databasen |
 | `src/scripts/test_transport.py` | Test av transportvare-modulen (5 tester, in-memory DB — berører aldri produksjonsdatabasen) |
+| `src/scripts/sjekk_i18n_eksport.py` | Verifiser norske fane-navn og tabColor-farger i Excel-eksporten (fra `sheet_i18n.json`) |
 | `output/baseline_kalkyle.json` | Lagret baseline-kalkyle |
 | `output/baseline_simulering.json` | Lagret simuleringsresultat |
 | `requirements.txt` | Avhengigheter: marimo>=0.23.0, openpyxl>=3.1.0, pandas>=2.0.0, reportlab>=4.0.0 |

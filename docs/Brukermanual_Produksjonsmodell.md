@@ -1,4 +1,5 @@
 # Brukermanual - Produksjonsmodellen
+
 ## For produksjonsledere, økonomi og innkjøp
 
 > **Formål:** Denne manualen forklarer hvilke tall du skal legge inn i Excel-arket,
@@ -10,18 +11,18 @@
 
 1. Hva er produksjonsmodellen?
 2. Oversikt over arkene
-3. Product Master - Vareregisteret
-4. Locations - Fabrikker og lagre
-5. Work Centers - Maskiner og arbeidsplasser
-6. Operation Master - Standardoperasjoner
-7. Item Costs - Kostpriser
-8. BOM - Stykklisten (hva består produktet av)
-9. Routing - Produksjonsflyten
-10. By Product Rules - Biprodukter
-11. Transport Flagg - Hvilke varer transporteres
-12. Transport Ruter - Fraktkost mellom lokasjoner
-13. Capacity Calendar - Kapasitetskalender
-14. Production Scenario - Produksjonsscenario
+3. Produktregister - Vareregisteret
+4. Lokasjoner - Fabrikker og lagre
+5. Arbeidssentre - Maskiner og arbeidsplasser
+6. Operasjonsregister - Standardoperasjoner
+7. Varekostnader - Kostpriser
+8. Stykkliste - hva består produktet av
+9. Produksjonsrute - Produksjonsflyten
+10. Biproduktregler - Biprodukter
+11. Transportflagg - Hvilke varer transporteres
+12. Transportruter - Fraktkost mellom lokasjoner
+13. Kapasitetskalender - Kapasitetskalender
+14. Produksjonsscenario - Produksjonsscenario
 15. Slik kommer du i gang
 16. Vanlige feil og tips
 
@@ -39,6 +40,7 @@ Den består av tre deler som jobber sammen:
 3. **Python-beregningsmotor** — som regner ut standardkost for hvert produkt
 
 Systemet gjør fire ting:
+
 - **Beregner standardkost** per produkt (hva koster det å lage én enhet?)
 - **Analyserer lønnsomhet** (hvilke produkter tjener vi penger på?)
 - **Simulerer endringer** (hva skjer hvis råvareprisen går opp 10%? eller hvis vi reduserer svinnet?)
@@ -48,11 +50,11 @@ Systemet gjør fire ting:
 
 | Rolle | Ansvarsområde | I Excel-arket | I Marimo web-appen |
 |-------|---------------|--------------|-------------------|
-| **Produksjonsleder** | Maskiner, operasjonstider, produksjonsflyt | Fyller inn i Work Centers, Routing, Capacity Calendar | Justerer parametere, kjører simulering, eksporterer PDF-rapport |
-| **Innkjøp** | Råvarepriser, leverandørdata | Oppdaterer Unit Cost i Item Costs | Laster opp Excel, ser konsekvens av prisendringer i simulering |
-| **Økonomi / Controller** | Timekostnader, biproduktverdi, produktregister | Fyller inn i Product Master, Item Costs, By Product Rules | Laster opp Excel, eksporterer rapporter til PDF og Excel |
-| **Produksjonsteknikk** | Stykkliste, operasjonsrekkefølge | Fyller inn i BOM, Routing, Operation Master | Verifiserer data i "Datamodell (Innsyn)"-fanen |
-| **Logistikk / Drift** | Transport mellom høvlerier, fraktkost | Fyller inn Is Transport i Product Master + Transport Ruter | Justerer fraktkost i simuleringen |
+| **Produksjonsleder** | Maskiner, operasjonstider, produksjonsflyt | Fyller inn i Arbeidssentre, Produksjonsrute, Kapasitetskalender | Justerer parametere, kjører simulering, eksporterer PDF-rapport |
+| **Innkjøp** | Råvarepriser, leverandørdata | Oppdaterer enhetskost i Varekostnader | Laster opp Excel, ser konsekvens av prisendringer i simulering |
+| **Økonomi / Controller** | Timekostnader, biproduktverdi, produktregister | Fyller inn i Produktregister, Varekostnader, Biproduktregler | Laster opp Excel, eksporterer rapporter til PDF og Excel |
+| **Produksjonsteknikk** | Stykkliste, operasjonsrekkefølge | Fyller inn i Stykkliste, Produksjonsrute, Operasjonsregister | Verifiserer data i "Datamodell (Innsyn)"-fanen |
+| **Logistikk / Drift** | Transport mellom høvlerier, fraktkost | Fyller inn Is Transport i Produktregister + Transportruter | Justerer fraktkost i simuleringen |
 | **IT / Superbruker** | Database, versjonshistorikk, feilsøking | - | Gjeninnlaster tidligere versjoner, overvåker endringslogg |
 
 ---
@@ -65,17 +67,17 @@ Excel-filen har **10 stamdata-ark + 1 transport-ark** som fylles ut. Her er en k
 
 | Ark | Hva det er | Hvem fyller ut |
 |-----|------------|----------------|
-| **Product Master** | Register over alle varer (råvarer, ferdigvarer, biprodukter). Inkluderer kolonnen **Is Transport** som markerer transportvarer | Økonomi |
-| **Locations** | Fabrikker og lagre | Produksjonsleder |
-| **Work Centers** | Maskiner og arbeidsplasser med timekostnad | Produksjonsleder + Økonomi |
-| **Operation Master** | Standardoperasjoner (oppdeling, hovling, pakking osv.) | Produksjonsteknikk |
-| **Item Costs** | Kostpriser for råvarer og markedsverdi for biprodukter | Innkjøp + Økonomi |
-| **BOM** | Stykkliste - hva består produktet av? | Produksjonsteknikk |
-| **Routing** | Produksjonsflyt - hvilke operasjoner, i hvilken rekkefølge, hvor lang tid? | Produksjonsleder |
-| **By Product Rules** | Biprodukter som oppstår (spon, flis, bark) og hva de er verdt | Økonomi |
-| **Capacity Calendar** | Kapasitetskalender per arbeidssenter *(legacy)* | Produksjonsleder |
-| **Production Scenario** | Forhåndsdefinerte produksjonsscenarioer *(legacy)* | Produksjonsleder + Økonomi |
-| **Transport Ruter** | Fraktkost per M3 mellom lokasjoner (f.eks. Kodal → Skien) | Logistikk / Økonomi |
+| **Produktregister** | Register over alle varer (råvarer, ferdigvarer, biprodukter). Inkluderer kolonnen **Is Transport** som markerer transportvarer | Økonomi |
+| **Lokasjoner** | Fabrikker og lagre | Produksjonsleder |
+| **Arbeidssentre** | Maskiner og arbeidsplasser med timekostnad | Produksjonsleder + Økonomi |
+| **Operasjonsregister** | Standardoperasjoner (oppdeling, hovling, pakking osv.) | Produksjonsteknikk |
+| **Varekostnader** | Kostpriser for råvarer og markedsverdi for biprodukter | Innkjøp + Økonomi |
+| **Stykkliste** | Stykkliste - hva består produktet av? | Produksjonsteknikk |
+| **Produksjonsrute** | Produksjonsflyt - hvilke operasjoner, i hvilken rekkefølge, hvor lang tid? | Produksjonsleder |
+| **Biproduktregler** | Biprodukter som oppstår (spon, flis, bark) og hva de er verdt | Økonomi |
+| **Kapasitetskalender** | Kapasitetskalender per arbeidssenter *(legacy)* | Produksjonsleder |
+| **Produksjonsscenario** | Forhåndsdefinerte produksjonsscenarioer *(legacy)* | Produksjonsleder + Økonomi |
+| **Transportruter** | Fraktkost per M3 mellom lokasjoner (f.eks. Kodal → Skien) | Logistikk / Økonomi |
 
 Når Excel-arket er fylt ut, **laster du det opp i Marimo-appen** — da blir alle data tilgjengelige for simulering og analyse.
 
@@ -83,9 +85,9 @@ Når Excel-arket er fylt ut, **laster du det opp i Marimo-appen** — da blir al
 
 ---
 
-<a id="3-product-master---vareregisteret"></a>
+<a id="3-produktregister---vareregisteret"></a>
 
-## 3. Product Master - Vareregisteret
+## 3. Produktregister - Vareregisteret
 
 **Dette arket er "telefonkatalogen" over alle varer.** Alt som finnes i
 virksomheten må være registrert her.
@@ -94,27 +96,25 @@ virksomheten må være registrert her.
 
 | Kolonne | Hva skal stå her? | Eksempel |
 |---------|-------------------|----------|
-| **Item No** | En unik kode for varen. Du bestemmer selv koden, men den må være unik. | `RM001` (råvare), `FG001` (ferdigvare), `BP001` (biprodukt) |
+| **Item No** | En unik kode for varen. Du bestemmer selv koden, men den må være unik. | Du kan f.eks. bruke prefiks for varetype (RM for råvare, FG for ferdigvare) |
 | **Description** | Navnet på varen slik alle kjenner den | `Skrulast 48x198`, `Utvendig Panel 21x95` |
 | **Item Type** | Hva slags vare er dette? | `Raw Material` (råvare), `Semi Finished` (halvfabrikat), `Finished Good` (ferdigvare), `By Product` (biprodukt), `Trading Item` (handelsvare) |
 | **Product Group** | Hvilken gruppe tilhører varen? | `Skrulast`, `Panel`, `Kledning`, `Spon` |
 | **Base Unit of Measure** | Hva måler vi varen i? | `M3` (kubikkmeter), `LM` (løpemeter), `KG` (kilo), `PCS` (stykker) |
-| **Active** | Er varen fortsatt i bruk? | `Ja` eller `Nei` |
 | **Is Transport** | Er varen en transportvare som transporteres mellom høvlerier? (se kapittel 11) | `1` (ja) eller `0` (nei) |
 
 ### Viktig å huske
 
-- **Alle** varer må være registrert: råvarer, ferdigvarer, biprodukter og
-  handelsvarer.
+- **Alle** varer må være registrert: råvarer, ferdigvarer, biprodukter og handelsvarer.
 - Hvis du legger til et nytt produkt, må du også huske å legge det inn i
-  **Item Costs**, **BOM** og **Routing** (se lengre ned).
+  **Varekostnader**, **Stykkliste** og **Produksjonsrute** (se lengre ned).
 - Item No er koden som brukes i alle andre ark for å referere til varen.
 
 ---
 
-<a id="4-locations---fabrikker-og-lagre"></a>
+<a id="4-lokasjoner---fabrikker-og-lagre"></a>
 
-## 4. Locations - Fabrikker og lagre
+## 4. Lokasjoner - Fabrikker og lagre
 
 **Dette arket er en liste over hvor dere holder til.** Hvert arbeidssenter
 (maskin) må være knyttet til en lokasjon.
@@ -126,7 +126,6 @@ virksomheten må være registrert her.
 | **Location Code** | En kort kode for stedet | `KOD` (Kodal), `SKI` (Skien) |
 | **Location Name** | Navnet på stedet | `Kodal Fabrikk` |
 | **Location Type** | Hva slags sted er dette? | `Factory` (fabrikk), `Warehouse` (lager) |
-| **Active** | Er stedet aktivt? | `Ja` eller `Nei` |
 
 ### Tips
 
@@ -135,9 +134,9 @@ virksomheten må være registrert her.
 
 ---
 
-<a id="5-work-centers---maskiner-og-arbeidsplasser"></a>
+<a id="5-arbeidssentre---maskiner-og-arbeidsplasser"></a>
 
-## 5. Work Centers - Maskiner og arbeidsplasser
+## 5. Arbeidssentre - Maskiner og arbeidsplasser
 
 **Dette er kanskje det viktigste arket for produksjonslederen.** Her
 registrerer du alle maskiner og arbeidsplasser, og hvor mye det koster å
@@ -155,7 +154,6 @@ bruke dem per time.
 | **Overhead Cost per Hour** | Indirekte kostnader per time (produksjonsledelse, kvalitetskontroll, intern logistikk) | Økonomi | `150` |
 | **Capacity Hours per Day** | Hvor mange timer per dag kan maskinen kjøre? | Produksjonsleder | `16` (to skift) |
 | **Effective Capacity %** | Hvor stor andel av tiden er maskinen faktisk i produksjon? (trekker fra stopp, vedlikehold, feil) | Produksjonsleder | `85` (betyr 85%) |
-| **Active** | Er maskinen i bruk? | Produksjonsleder | `Ja` |
 
 ### Hvordan finne timekostnaden?
 
@@ -167,23 +165,24 @@ Eksempel - Hovedhovel:
 ```
 
 **Tips til økonomi:**
+
 - **Labor Cost**: Ta årslønn inkl. feriepenger, pensjon og arbeidsgiveravgift,
   del på 1950 timer (normal årsverk).
 - **Machine Cost**: Årlige kostnader (avskrivning + service + strøm) delt på
   antall produksjonstimer per år.
-- **Overhead**: Totale indirekte produksjonskostnader delt på totale
-  maskintimer.
+- **Overhead**: Totale indirekte produksjonskostnader delt på totale maskintimer.
 
 **Tips til produksjonsleder:**
+
 - **Effective Capacity %**: Hvis maskinen er planlagt å kjøre 16 timer, men
   i snitt står 2,4 timer pga. vedlikehold, omstilling og feil, blir effektiv
   kapasitet (16-2,4)/16 = 85%.
 
 ---
 
-<a id="6-operation-master---standardoperasjoner"></a>
+<a id="6-operasjonsregister---standardoperasjoner"></a>
 
-## 6. Operation Master - Standardoperasjoner
+## 6. Operasjonsregister - Standardoperasjoner
 
 **Dette er "ordboken" over hva slags operasjoner dere utfører.** Her lister
 du opp alle typer operasjoner som finnes: oppdeling, hovling, profilering,
@@ -197,20 +196,18 @@ maling, pakking osv.
 | **Description** | Hva heter operasjonen? | `Oppdeling`, `Hovling` |
 | **Default Work Center** | Hvilken maskin brukes vanligvis? | `HOVEDHOVEL` |
 | **Standard Unit** | Måles operasjonstiden i minutter eller timer? | `Minutes` |
-| **Active** | Er operasjonen i bruk? | `Ja` |
 
 ### Tips
 
-- Dette arket trenger du bare å fylle ut én gang. Det er en standardliste
-  over hva dere gjør.
-- Når du skal sette opp produksjonsflyten for et produkt (i Routing-arket),
+- Dette arket trenger du bare å fylle ut én gang. Det er en standardliste over hva dere gjør.
+- Når du skal sette opp produksjonsflyten for et produkt (i Produksjonsrute-arket),
   velger du fra denne listen.
 
 ---
 
-<a id="7-item-costs---kostpriser"></a>
+<a id="7-varekostnader---kostpriser"></a>
 
-## 7. Item Costs - Kostpriser
+## 7. Varekostnader - Kostpriser
 
 **Dette arket er for innkjøp og økonomi.** Her setter dere priser på råvarer
 og markedsverdi på biprodukter.
@@ -219,38 +216,36 @@ og markedsverdi på biprodukter.
 
 | Kolonne | Hva skal stå her? | Hvem fyller ut? | Eksempel |
 |---------|-------------------|-----------------|----------|
-| **Item No** | Varekoden (samme som i Product Master) | - | `RM001` |
+| **Item No** | Varekoden (samme som i Produktregister) | - | Varekoden fra Produktregister |
 | **Cost Type** | Hva slags kostpris er dette? | Økonomi | `Standard Cost` (anbefalt) |
-| **Unit Cost** | Pris per enhet | Innkjøp | `3000.00` (for RM001, prisen per M3) |
+| **Unit Cost** | Pris per enhet | Innkjøp | `3000.00` (pris per M3) |
 | **Currency** | Hvilken valuta? | Økonomi | `NOK` |
-| **Effective Date** | Fra hvilken dato gjelder prisen? | Innkjøp | `2026-01-01` |
 
 ### Hvem fyller ut hva?
 
 | Varetype | Hvem setter prisen? | Forklaring |
 |----------|---------------------|------------|
-| **Råvarer (RM001, RM002...)** | **Innkjøp** | Sett inn faktisk innkjøpspris. Eksempel: Skrulast koster 3 000 kr per M3 |
-| **Maling (RM003)** | **Innkjøp** | Pris per liter. Eksempel: 120 kr per liter |
-| **Ferdigvarer (FG001, FG002...)** | **Skal være 0** | Kostnaden beregnes automatisk av modellen. La stå som 0. |
-| **Biprodukter (BP001, BP002...)** | **Økonomi** | Hva kan dere selge biproduktet for? Eksempel: Hovelspon 1,50 kr/kg |
+| **Råvarer** | **Innkjøp** | Sett inn faktisk innkjøpspris. Eksempel: Skrulast koster 3 000 kr per M3 |
+| **Maling** | **Innkjøp** | Pris per liter. Eksempel: 120 kr per liter |
+| **Ferdigvarer** | **Skal være 0** | Kostnaden beregnes automatisk av modellen. La stå som 0. |
+| **Biprodukter** | **Økonomi** | Hva kan dere selge biproduktet for? Eksempel: Hovelspon 1,50 kr/kg |
 
 ### Viktig
 
-- **Råvarer**: Sett inn den prisen dere faktisk betaler. Oppdater når prisen
-  endrer seg.
-- **Ferdigvarer**: Skal ALLTID ha 0 i Unit Cost. Modellen regner ut
-  kostnaden automatisk basert på hva produktet består av (BOM) og
-  produksjonsprosessen (Routing).
+- **Råvarer**: Sett inn den prisen dere faktisk betaler. Oppdater når prisen endrer seg.
+- **Ferdigvarer**: Skal ALLTID ha 0 i Unit Cost. Modellen regner ut kostnaden
+  automatisk basert på hva produktet består av (Stykkliste) og
+  produksjonsprosessen (Produksjonsrute).
 - **Biprodukter**: Sett inn markedsverdi - hva kan dere selge det for?
 - **Transportvarer**: For varer som transporteres mellom høvlerier, legges
-  fraktkostnaden til automatisk i simuleringen basert på Transport Ruter
+  fraktkostnaden til automatisk i simuleringen basert på Transportruter
   (se kapittel 12).
 
 ---
 
-<a id="8-bom---stykklisten"></a>
+<a id="8-stykkliste---hva-består-produktet-av"></a>
 
-## 8. BOM - Stykklisten
+## 8. Stykkliste - hva består produktet av
 
 **Dette arket forteller modellen hva hvert produkt består av.** For
 produksjonsteknikeren: dette er den samme stykklisten dere kjenner fra
@@ -260,15 +255,13 @@ ERP-systemet.
 
 | Kolonne | Hva skal stå her? | Eksempel |
 |---------|-------------------|----------|
-| **Parent Item No** | Produktet du skal lage | `FG001` (Utvendig Panel) |
-| **Component Item No** | Hva trenger du for å lage det? | `RM001` (Skrulast) |
+| **Parent Item No** | Produktet du skal lage | Varekoden til ferdigvaren |
+| **Component Item No** | Hva trenger du for å lage det? | Varekoden til råvaren |
 | **Quantity Per** | Hvor mange enheter får du ut av én enhet inn? | `400` (betyr: 400 LM panel per M3 skrulast) |
 | **Unit of Measure** | Måleenhet | `LM` |
 | **Scrap %** | Hvor mye går til spille? (svinn) | `5.0` (betyr 5% svinn) |
 | **Co-Prod %** | Andel av produksjonen som blir samprodukt (co-product). F.eks. 6% B-vare | `6.0` |
-| **Co-Prod Item No** | Varenummer for samproduktet (f.eks. B-vare) | `JD16073-B` |
-| **Valid From** | Fra hvilken dato gjelder dette? | `2026-01-01` |
-| **Valid To** | Til hvilken dato gjelder dette? | `2026-12-31` |
+| **Co-Prod Item No** | Varenummer for samproduktet (f.eks. B-vare) | `B`-suffiks på varekoden |
 
 ### Co-Produkt (samprodukt / A- og B-vare)
 
@@ -277,7 +270,7 @@ Co-Prod % brukes når en andel av produksjonen blir et sekundært produkt
 får kun en forholdsmessig andel av operasjonskostnaden allokert.
 
 ```
-Eksempel - Vare JD16073 (A-vare) med 0,5% B-vare (JD16073-B):
+Eksempel - Hovedprodukt (A-vare) med 0,5% B-vare:
   Teoretisk utbytte: 533,34 meter per M3
   Co-Prod: 0,5%
   A-vare kvantum: 533,34 x (1 - 0,005) = 530,67 LM
@@ -291,10 +284,10 @@ Eksempel - Vare JD16073 (A-vare) med 0,5% B-vare (JD16073-B):
 ```
 Quantity Per = hvor mye du får ut av én inn-enhet
 
-Eksempel - Panel (FG001) fra Skrulast (RM001):
+Eksempel - Utvendig Panel (ferdigvare) fra Skrulast (råvare):
   Quantity Per = 400 LM per M3
   Det betyr: 1 M3 skrulast gir 400 LM ferdig panel
-  
+
   Forbruk per LM panel = 1 / 400 = 0,0025 M3 per LM
 ```
 
@@ -302,24 +295,24 @@ Eksempel - Panel (FG001) fra Skrulast (RM001):
 
 | Produkt | Består av | Hvor mye? |
 |---------|-----------|-----------|
-| FG001 - Utvendig Panel | RM001 - Skrulast | 400 LM per M3 |
-| FG002 - Terrassebord | RM002 - Gran | 250 LM per M3 |
-| FG003 - Kledning | RM001 - Skrulast | 420 LM per M3 |
-| FG004 - Malt Panel | FG001 - Ubehandlet panel + RM003 - Maling | 1 LM + 0,05 LTR |
+| Utvendig Panel (ferdigvare) | Skrulast (råvare) | 400 LM per M3 |
+| Terrassebord (ferdigvare) | Gran (råvare) | 250 LM per M3 |
+| Kledning (ferdigvare) | Skrulast (råvare) | 420 LM per M3 |
+| Malt Panel (ferdigvare) | Ubehandlet panel + Maling | 1 LM + 0,05 LTR |
 
 ### Tips
 
-- **FG004 (malt panel)** er et eksempel på en **produksjonskjede**: Det
-  bruker FG001 (ferdig panel) som komponent. Modellen forstår dette og
+- **Malt panel** er et eksempel på en **produksjonskjede**: Det bruker
+  ubehandlet panel (ferdigvare) som komponent. Modellen forstår dette og
   beregner kostnaden riktig.
 - **Scrap %** er viktig for realistiske kostnader. Hvis 5% av materialet går
   til spille, må du kjøpe inn 5% mer.
 
 ---
 
-<a id="9-routing---produksjonsflyten"></a>
+<a id="9-produksjonsrute---produksjonsflyten"></a>
 
-## 9. Routing - Produksjonsflyten
+## 9. Produksjonsrute - Produksjonsflyten
 
 **Dette arket er for produksjonslederen.** Her beskriver du nøyaktig hvordan
 hvert produkt blir produsert: hvilke operasjoner, i hvilken rekkefølge, på
@@ -329,15 +322,13 @@ hvilken maskin, og hvor lang tid det tar.
 
 | Kolonne | Hva skal stå her? | Hvem finner tallet? | Eksempel |
 |---------|-------------------|---------------------|----------|
-| **Item No** | Produktet som skal produseres | - | `FG001` |
+| **Item No** | Produktet som skal produseres | - | Varekoden til produktet |
 | **Operation No** | Rekkefølgen (10, 20, 30...) | Produksjonsleder | `10` |
-| **Operation Code** | Hva skal gjøres? (fra Operation Master) | Produksjonsleder | `RIP` (oppdeling) |
-| **Work Center Code** | Hvilken maskin? (fra Work Centers) | Produksjonsleder | `HOVEDHOVEL` |
+| **Operation Code** | Hva skal gjøres? (fra Operasjonsregister) | Produksjonsleder | `RIP` (oppdeling) |
+| **Work Center Code** | Hvilken maskin? (fra Arbeidssentre) | Produksjonsleder | `HOVEDHOVEL` |
 | **Setup Time Minutes** | Hvor lang tid tar det å rigge til? (omstilling, knivbytte, innkjøring) | Produksjonsleder | `15.0` |
 | **Run Time Minutes** | Hvor lang tid tar det å produsere ÉN enhet? | Produksjonsleder | `0.15` (minutter per LM) |
 | **Batch Size** | Hvor mange enheter lager dere per ordre? | Produksjonsleder | `500` |
-| **Valid From** | Fra hvilken dato gjelder denne routingen? | Produksjonsleder | `2026-01-01` |
-| **Valid To** | Til hvilken dato gjelder denne routingen? | Produksjonsleder | `2026-12-31` |
 
 > **Merk:** `Changeover Time Minutes` er fjernet fra datamodellen.
 > Omstillingskost håndteres gjennom `Setup Time Minutes`.
@@ -348,7 +339,7 @@ hvilken maskin, og hvor lang tid det tar.
 maskinen bruker på å produsere **én enhet**.
 
 ```
-Eksempel - Oppdeling av panel (FG001):
+Eksempel - Oppdeling av utvendig panel:
   Maskinen kjører 400 LM per M3
   Hastighet: ca. 6,7 LM per minutt
   Run Time = 1 / 6,7 = 0,15 minutter per LM
@@ -356,6 +347,7 @@ Eksempel - Oppdeling av panel (FG001):
 
 **Setup Time Minutes** er tiden det tar å klargjøre maskinen FØR
 produksjonen starter. Dette inkluderer:
+
 - Bytte kniver/profiler
 - Justere maskinen
 - Kjøre inn og kontrollmåle
@@ -367,30 +359,29 @@ Denne brukes til å fordele setup-kostnaden.
 ### Eksempel på produksjonsflyt
 
 ```
-FG001 - Utvendig Panel 21x95:
+Utvendig Panel 21x95:
   Op 10: Oppdeling  @ Hovedhovel  (15 min oppsett + 0,15 min per LM)
   Op 20: Hovling    @ Hovedhovel  (10 min oppsett + 0,10 min per LM)
   Op 30: Profilering @ Spesialhovel (20 min oppsett + 0,12 min per LM)
   Op 40: Pakking    @ Pakkelinje   (5 min oppsett + 0,05 min per LM)
 ```
 
-### Viktig for FG004 (malt panel)
+### Viktig for malt panel
 
-FG004 er malt panel. Det betyr at **ubehandlet panel (FG001) allerede er
-ferdig produsert** med oppdeling, hovling, profilering og pakking. FG004
-trenger derfor bare:
+Malt panel betyr at **ubehandlet panel (ferdigvare) allerede er ferdig produsert**
+med oppdeling, hovling, profilering og pakking. Malt panel trenger derfor bare:
 
 ```
-FG004 - Utvendig Panel 21x95 - Malt:
+Malt Utvendig Panel 21x95:
   Op 10: Maling     @ Malingslinje (30 min oppsett + 0,20 min per LM)
   Op 20: Pakking    @ Pakkelinje   (5 min oppsett + 0,05 min per LM)
 ```
 
 ---
 
-<a id="10-by-product-rules---biprodukter"></a>
+<a id="10-biproduktregler---biprodukter"></a>
 
-## 10. By Product Rules - Biprodukter
+## 10. Biproduktregler - Biprodukter
 
 **Dette arket er for økonomi.** I trelastproduksjon oppstår det alltid
 biprodukter som spon, flis og bark. Disse har en verdi som skal trekkes fra
@@ -400,8 +391,8 @@ produksjonskostnaden.
 
 | Kolonne | Hva skal stå her? | Eksempel |
 |---------|-------------------|----------|
-| **Parent Item No** | Hvilket produkt skaper biproduktet? | `FG001` |
-| **By Product Item No** | Hvilket biprodukt? | `BP001` (Hovelspon) |
+| **Parent Item No** | Hvilket produkt skaper biproduktet? | Varekoden til produktet |
+| **By Product Item No** | Hvilket biprodukt? | Varekoden til biproduktet (f.eks. som ender på `BP`) |
 | **Expected Quantity** | Hvor mye biprodukt per enhet hovedprodukt? | `0.5` (0,5 kg spon per LM panel) |
 | **Unit of Measure** | Måleenhet | `KG` |
 | **Market Value** | Hva kan dere selge biproduktet for? | `1.50` (kr per kg) |
@@ -412,7 +403,7 @@ produksjonskostnaden.
 ```
 Biproduktverdi per enhet = Forventet mengde x Markedsverdi
 
-Eksempel - FG001 (Panel):
+Eksempel - Utvendig Panel:
   Hovelspon: 0,5 kg x 1,50 kr/kg = 0,75 kr per LM
   Flis:      0,3 kg x 0,80 kr/kg = 0,24 kr per LM
   Total:     0,99 kr per LM
@@ -430,17 +421,17 @@ Eksempel - FG001 (Panel):
 
 ---
 
-<a id="11-transport-flagg---hvilke-varer-transporteres"></a>
+<a id="11-transportflagg---hvilke-varer-transporteres"></a>
 
-## 11. Transport Flagg - Hvilke varer transporteres
+## 11. Transportflagg - Hvilke varer transporteres
 
 I fler-høvleri-produksjon kan en vare produseres på ett høvleri (f.eks.
 Kodal) og transporteres til et annet (f.eks. Skien) for videre produksjon
 eller distribusjon. Slike varer kalles **transportvarer**, og modellen legger
 automatisk til fraktkostnaden i kalkylen.
 
-> **Merk:** Transport-flagg er **ikke et eget ark** i Excel. Markeringen gjøres
-> via kolonnen **Is Transport** i **Product Master**-arket (se kapittel 3).
+> **Merk:** Transportflagg er **ikke et eget ark** i Excel. Markeringen gjøres
+> via kolonnen **Is Transport** i **Produktregister**-arket (se kapittel 3).
 
 ### Kolonne du må fylle ut
 
@@ -462,24 +453,24 @@ Når en vare er flagget som transportvare (`Is Transport = 1`):
 | Oppgave | Ansvarlig |
 |---------|-----------|
 | Bestemme hvilke varer som transporteres | Produksjonsleder / Logistikk |
-| Fylle inn `Is Transport` i Product Master | Logistikk / IT |
-| Fylle inn fraktkost per M3 i Transport Ruter | Økonomi / Logistikk |
+| Fylle inn `Is Transport` i Produktregister | Logistikk / IT |
+| Fylle inn fraktkost per M3 i Transportruter | Økonomi / Logistikk |
 
 ---
 
-<a id="12-transport-ruter---fraktkost-mellom-lokasjoner"></a>
+<a id="12-transportruter---fraktkost-mellom-lokasjoner"></a>
 
-## 12. Transport Ruter - Fraktkost mellom lokasjoner
+## 12. Transportruter - Fraktkost mellom lokasjoner
 
 **Dette arket er for logistikk og økonomi.** Her registrerer du fraktkostnaden
-per M3 mellom to lokasjoner. Rutene brukes sammen med transport-flaggene
+per M3 mellom to lokasjoner. Rutene brukes sammen med transportflaggene
 (kapittel 11) for å legge transportkostnaden til kalkylen.
 
 ### Kolonner du må fylle ut
 
 | Kolonne | Hva skal stå her? | Hvem fyller ut? | Eksempel |
 |---------|-------------------|-----------------|----------|
-| **From Loc** | Fra-lokasjon (samme Location Code som i Locations) | Logistikk | `KOD` |
+| **From Loc** | Fra-lokasjon (samme Location Code som i Lokasjoner) | Logistikk | `KOD` |
 | **To Loc** | Til-lokasjon | Logistikk | `KV` |
 | **Cost Per M3** | Fraktpris per M3 på denne ruten (eneste beregningsfelt) | Økonomi | `120` |
 | **Distance Km** | Distanse i kilometer (informasjon — påvirker ikke kostnaden) | Logistikk | `45` |
@@ -494,7 +485,7 @@ Eksempel - Rute KOD → KV:
   Fraktkost per M3: 120 kr
   Avstand: 45 km
   Kjøretid: 1,5 timer
-  
+
   Kun Cost Per M3 påvirker kalkylen.
   Distance Km og Hours er informasjon for logistikk-planlegging.
 ```
@@ -522,15 +513,15 @@ Eksempel - Simulering:
 
 ---
 
-<a id="13-capacity-calendar---kapasitetskalender"></a>
+<a id="13-kapasitetskalender---kapasitetskalender"></a>
 
-## 13. Capacity Calendar - Kapasitetskalender *(legacy)*
+## 13. Kapasitetskalender - Kapasitetskalender *(legacy)*
 
 **Dette arket er for produksjonslederen.** Her registrerer du tilgjengelig
 kapasitet per arbeidssenter per dag. Kalenderen brukes til å analysere
 flaskehalser og planlegge produksjon.
 
-> **Merk:** Capacity Calendar er foreløpig **ikke i aktiv beregning**.
+> **Merk:** Kapasitetskalender er foreløpig **ikke i aktiv beregning**.
 > Dataene vises i "Datamodell (Innsyn)"-fanen, men brukes ikke i
 > kostnadsberegningen eller simuleringen ennå. Dette påvirker ikke standard
 > bruk av modellen.
@@ -539,7 +530,7 @@ flaskehalser og planlegge produksjon.
 
 | Kolonne | Hva skal stå her? | Hvem fyller ut? | Eksempel |
 |---------|-------------------|-----------------|----------|
-| **Work Center** | Arbeidssenteret (samme som i Work Centers) | Produksjonsleder | `HOVEDHOVEL` |
+| **Work Center** | Arbeidssenteret (samme som i Arbeidssentre) | Produksjonsleder | `HOVEDHOVEL` |
 | **Date** | Dato | Produksjonsleder | `2026-01-05` |
 | **Available Hours** | Tilgjengelige timer denne dagen | Produksjonsleder | `16` |
 | **Planned Downtime** | Planlagte stopp (vedlikehold, ferie, ombygging) | Produksjonsleder | `0` |
@@ -552,16 +543,16 @@ Available Production Hours = Available Hours - Planned Downtime
 
 ---
 
-<a id="14-production-scenario---produksjonsscenario"></a>
+<a id="14-produksjonsscenario---produksjonsscenario"></a>
 
-## 14. Production Scenario - Produksjonsscenario *(legacy)*
+## 14. Produksjonsscenario - Produksjonsscenario *(legacy)*
 
 **Dette arket er for produksjonslederen og økonomi.** Her definerer du
 forhåndsdefinerte produksjonsscenarioer med planlagt kvantum per produkt.
 Scenarioene brukes i Marimo-appen til å simulere produksjon og beregne
 totalt ressursbehov.
 
-> **Merk:** Production Scenario er foreløpig **ikke i aktiv bruk**.
+> **Merk:** Produksjonsscenario er foreløpig **ikke i aktiv bruk**.
 > Planlagt kvantum styres nå direkte i Marimo-appen via **📦 Planlagt
 > kvantum** i "📊 Simulering & Analyse"-fanen. Arket er beholdt i
 > datamodellen for framtidig bruk.
@@ -571,10 +562,8 @@ totalt ressursbehov.
 | Kolonne | Hva skal stå her? | Hvem fyller ut? | Eksempel |
 |---------|-------------------|-----------------|----------|
 | **Scenario Name** | Navn på scenario | Produksjonsleder | `Normal Produksjon` |
-| **Product** | Produkt som skal produseres (Item No) | Produksjonsleder | `FG001` |
+| **Product** | Produkt som skal produseres (Item No) | Produksjonsleder | Varekoden til produktet |
 | **Planned Quantity** | Planlagt antall enheter | Produksjonsleder | `50000` |
-| **Start Date** | Startdato for produksjon | Produksjonsleder | `2026-01-01` |
-| **End Date** | Sluttdato for produksjon | Produksjonsleder | `2026-12-31` |
 
 ### Tips
 
@@ -590,8 +579,7 @@ totalt ressursbehov.
 ### Første gang — oppsett
 
 1. **Start med testdataene** som følger med. Åpne
-   `src/Produksjonsmodell_Testdata_v3.xlsx` for å se hvordan et ferdig oppsett
-   ser ut.
+   `src/Produksjonsmodell_Testdata_v3.xlsx` for å se hvordan et ferdig oppsett ser ut.
 2. **Erstatt testdataene** med dine egne produkter og priser.
 3. **Start Marimo web-appen:**
    ```bash
@@ -614,13 +602,13 @@ totalt ressursbehov.
 
 | Steg | Ark | Hva skal gjøres? | Hvem? |
 |------|-----|------------------|-------|
-| 1 | **Product Master** | Legg til varen med Item No, navn og type | Økonomi |
-| 2 | **Item Costs** | Sett pris (0 for ferdigvarer) | Innkjøp |
-| 3 | **BOM** | Hva består produktet av? (stykkliste) | Produksjonsteknikk |
-| 4 | **Routing** | Hvordan produseres det? (operasjoner, tider) | Produksjonsleder |
-| 5 | **By Product Rules** | Oppstår det biprodukter? | Økonomi |
-| 6 | **Product Master** | Er varen en transportvare? Sett `Is Transport = 1` | Logistikk |
-| 7 | **Transport Ruter** | Finnes fraktkost for aktuell rute? (ellers legg til) | Logistikk / Økonomi |
+| 1 | **Produktregister** | Legg til varen med Item No, navn og type | Økonomi |
+| 2 | **Varekostnader** | Sett pris (0 for ferdigvarer) | Innkjøp |
+| 3 | **Stykkliste** | Hva består produktet av? (stykkliste) | Produksjonsteknikk |
+| 4 | **Produksjonsrute** | Hvordan produseres det? (operasjoner, tider) | Produksjonsleder |
+| 5 | **Biproduktregler** | Oppstår det biprodukter? | Økonomi |
+| 6 | **Produktregister** | Er varen en transportvare? Sett `Is Transport = 1` | Logistikk |
+| 7 | **Transportruter** | Finnes fraktkost for aktuell rute? (ellers legg til) | Logistikk / Økonomi |
 | 8 | **Marimo-app** | Last opp Excel-filen på nytt | Hvem som helst |
 
 ### Oppdatere priser
@@ -629,10 +617,10 @@ Når priser endrer seg (f.eks. ny innkjøpspris på skrulast):
 
 | Hva skal oppdateres? | Ark | Hvem? |
 |----------------------|-----|-------|
-| Ny råvarepris | **Item Costs** | Innkjøp |
-| Ny timekostnad på maskin | **Work Centers** | Økonomi |
-| Ny markedsverdi på biprodukt | **Item Costs** | Økonomi |
-| Ny fraktkost / transportavtale | **Transport Ruter** | Innkjøp / Logistikk |
+| Ny råvarepris | **Varekostnader** | Innkjøp |
+| Ny timekostnad på maskin | **Arbeidssentre** | Økonomi |
+| Ny markedsverdi på biprodukt | **Varekostnader** | Økonomi |
+| Ny fraktkost / transportavtale | **Transportruter** | Innkjøp / Logistikk |
 
 Etter endringene: last opp Excel-filen på nytt i Marimo-appen for å få oppdaterte data.
 
@@ -652,55 +640,44 @@ gjeninnlaste den. Dette er nyttig hvis du har gjort feil og vil gå tilbake.
 
 | Feil | Problem | Løsning |
 |------|---------|---------|
-| **Manglende vare** | Produktet finnes ikke i Product Master | Legg til varen i alle ark |
+| **Manglende vare** | Produktet finnes ikke i Produktregister | Legg til varen i alle ark |
 | **Feil Item No** | Skrivefeil i varekode | Sjekk at koden er nøyaktig lik i alle ark |
-| **Unit Cost = 0 på råvare** | Modellen tror råvaren er gratis | Sett inn faktisk pris i Item Costs |
+| **Unit Cost = 0 på råvare** | Modellen tror råvaren er gratis | Sett inn faktisk pris i Varekostnader |
 | **Unit Cost > 0 på ferdigvare** | Modellen dobler kostnaden | Sett 0 på ferdigvarer - kostnad beregnes automatisk |
-| **Manglende BOM** | Produktet har ingen stykkliste | Legg til BOM-linjer for produktet |
-| **Manglende Routing** | Produktet har ingen produksjonsflyt | Legg til operasjoner i Routing |
+| **Manglende stykkliste** | Produktet har ingen stykkliste | Legg til stykklistelinjer for produktet |
+| **Manglende produksjonsrute** | Produktet har ingen produksjonsflyt | Legg til operasjoner i Produksjonsrute |
 | **Feil Quantity Per** | Forbruket blir feil | Sjekk: Quantity Per = output per input. Hvis 1 M3 gir 400 LM, skriv 400 |
 | **Scrap % for høy/lav** | Materialkost blir feil | Sjekk faktisk svinn i produksjonen |
-| **Transportvare uten rute** | Vare er flagget som transportvare, men ingen Transport Ruter finnes | Legg til ruten i Transport Ruter-arket |
+| **Transportvare uten rute** | Vare er flagget som transportvare, men ingen Transportruter finnes | Legg til ruten i Transportruter-arket |
 
 ### ❌ Vanlige feil ved import i Marimo
 
 | Feilmelding | Årsak | Løsning |
 |-------------|-------|---------|
 | "Validering fant feil — ingenting importert" | Excel-filen mangler ark eller kolonner | Sjekk at filen har alle nødvendige ark med korrekte kolonnenavn |
-| "Kryssreferanse-feil" | En varekode i BOM finnes ikke i Product Master | Sjekk at alle Item No er registrert |
+| "Kryssreferanse-feil" | En varekode i Stykkliste finnes ikke i Produktregister | Sjekk at alle Item No er registrert |
 | "Ingen data lastet" | Databasen er tom | Last opp en Excel-fil via "Dataimport & Versjoner" |
 
 ### ⚠️ Kjente begrensninger i dagens kalkyle
 
-Følgende felt registreres i Excel-arket, men filtreres foreløpig ikke i
+Følgende felt registreres i Excel-arket, men utnyttes foreløpig ikke fullt i
 Python-beregningen:
 
 | Felt | Status | Planlagt forbedring |
 |------|--------|---------------------|
-| **Active** (Product/Location/WC/Operation) | Visuell info kun — alle regnes som aktive | Filtrering kommer |
-| **Valid From** / **Valid To** (BOM og Routing) | Ignoreres — alle linjer inkluderes alltid | Datofiltrering kommer |
-| **Effective Date** (Item Costs) | Velger nyeste dato, ikke "gyldig per i dag" | Forbedres til å bruke en valgt analysedato |
-| **Start Date** / **End Date** (Scenario) | Ignoreres i simulering | Planlegges |
-| **Capacity Calendar** | Visuell info kun — ikke i aktiv beregning | Flaskehalsanalyse planlegges |
-| **Distance Km** / **Hours** (Transport Ruter) | Informasjon kun — påvirker ikke kostnaden | Planlegges |
+| **Kapasitetskalender** | Visuell info kun — ikke i aktiv beregning | Flaskehalsanalyse planlegges |
+| **Distance Km** / **Hours** (Transportruter) | Informasjon kun — påvirker ikke kostnaden | Planlegges |
 
-Dette påvirker ikke standard bruk av modellen, men vær oppmerksom på det
-hvis du har inaktive produkter eller tidsbegrensede priser i datasettet ditt.
+Dette påvirker ikke standard bruk av modellen.
 
 ### ✅ Gode råd
 
-1. **Start enkelt.** Legg inn 2-3 produkter først, sjekk at tallene gir
-   mening, så utvider du.
-2. **Sjekk at summen stemmer.** Beregn for hånd et enkelt produkt og
-   sammenlign med modellens resultat i Marimo.
-3. **Oppdater jevnlig.** Priser endrer seg — sett av tid til å oppdatere
-   modellen hvert kvartal.
-4. **Bruk kommentarfeltet.** Når du laster opp Excel i Marimo, skriv hva
-   som er endret — da kan du senere se i endringsloggen hva som skjedde.
-5. **Bruk versjonshistorikken.** Hvis noe går galt, kan du alltid gå
-   tilbake til en tidligere versjon.
-6. **Spør om hjelp.** Hvis tallene ser rare ut, sjekk om alle arkene er
-   fylt ut riktig.
+1. **Start enkelt.** Legg inn 2-3 produkter først, sjekk at tallene gir mening, så utvider du.
+2. **Sjekk at summen stemmer.** Beregn for hånd et enkelt produkt og sammenlign med modellens resultat i Marimo.
+3. **Oppdater jevnlig.** Priser endrer seg — sett av tid til å oppdatere modellen hvert kvartal.
+4. **Bruk kommentarfeltet.** Når du laster opp Excel i Marimo, skriv hva som er endret — da kan du senere se i endringsloggen hva som skjedde.
+5. **Bruk versjonshistorikken.** Hvis noe går galt, kan du alltid gå tilbake til en tidligere versjon.
+6. **Spør om hjelp.** Hvis tallene ser rare ut, sjekk om alle arkene er fylt ut riktig.
 
 ---
 
