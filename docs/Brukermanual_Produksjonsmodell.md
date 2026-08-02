@@ -175,7 +175,7 @@ Eksempel - Hovedhovel:
 **Tips til produksjonsleder:**
 
 - **Effective Capacity %**: Hvis maskinen er planlagt å kjøre 16 timer, men
-  i snitt står 2,4 timer pga. vedlikehold, omstilling og feil, blir effektiv
+  i snitt står 2,4 timer pga. vedlikehold og feil, blir effektiv
   kapasitet (16-2,4)/16 = 85%.
 
 ---

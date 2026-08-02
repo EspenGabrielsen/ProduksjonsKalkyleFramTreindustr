@@ -54,6 +54,59 @@ table tbody tr[data-state="selected"] {
     color: #14532D !important;
 }
 
+/* Fane-tabs (mo.ui.tabs): overstyrer Marimos standard blå (--primary #0880ea)
+   med stilguidens grønne profil (docs/STYLING.md).
+   NOTE: marimo renderer mo.ui-elementer i shadow DOM (se copyStyles()),
+   derfor må selektorene være globale ([role="tab"]) — et prefiks som
+   "marimo-tabs" finnes IKKE inne i shadow root og matchet ikke. */
+[role="tablist"] {
+    background-color: #F9FBF8;
+    border: 1px solid #D1E0D4;
+    border-radius: 10px;
+    padding: 4px;
+    gap: 2px;
+}
+[role="tab"] {
+    color: #2C3E2B;
+    background-color: transparent !important;
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 8px 14px;
+    border: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+[role="tab"]:hover {
+    background-color: #E6FFFA !important;
+    color: #2F855A !important;
+}
+[role="tab"][data-state="active"] {
+    background-color: #14532D !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 6px rgba(20, 83, 45, 0.25);
+}
+[role="tab"]:focus-visible {
+    outline: 2px solid #48BB78;
+    outline-offset: 2px;
+}
+[role="tab"][data-orientation="horizontal"] {
+    white-space: nowrap;
+}
+[data-marimo-theme="dark"] [role="tablist"] {
+    background-color: #1A2F1F;
+    border-color: #2C3E2B;
+}
+[data-marimo-theme="dark"] [role="tab"] {
+    color: #C6E6D0;
+}
+[data-marimo-theme="dark"] [role="tab"]:hover {
+    background-color: #24422C !important;
+    color: #E6FFFA !important;
+}
+[data-marimo-theme="dark"] [role="tab"][data-state="active"] {
+    background-color: #2F855A !important;
+    color: #FFFFFF !important;
+}
+
 .fti-footer {
     background: #14532D;
     color: #C6E6D0;

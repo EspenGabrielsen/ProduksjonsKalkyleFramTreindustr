@@ -1,17 +1,17 @@
 {
   "sheets": {
-    "Product Master": { "nb": "Produktregister", "color": "#C53030" },
-    "Locations": { "nb": "Lokasjoner", "color": "#C53030" },
-    "Work Centers": { "nb": "Arbeidssentre", "color": "#C53030" },
-    "Operation Master": { "nb": "Operasjonsregister", "color": "#C53030" },
-    "Item Costs": { "nb": "Varekostnader", "color": "#C53030" },
-    "BOM": { "nb": "Stykkliste", "color": "#3182CE" },
-    "Routing": { "nb": "Produksjonsrute", "color": "#3182CE" },
-    "By Product Rules": { "nb": "Biproduktregler", "color": "#3182CE" },
-    "Capacity Calendar": { "nb": "Kapasitetskalender", "color": null },
-    "Production Scenario": { "nb": "Produksjonsscenario", "color": null },
-    "Transport Ruter": { "nb": "Transportruter", "color": "#D69E2E" },
-    "Transport Flagg": { "nb": "Transportflagg", "color": null },
-    "Endringslogg": { "nb": "Endringslogg", "color": null }
+    "Product Master": { "nb": "Produktregister", "group":"masterdata","color": "#C53030" },
+    "Locations": { "nb": "Lokasjoner", "group":"masterdata","color": "#C53030" },
+    "Work Centers": { "nb": "Arbeidssentre", "group":"generalParameters","color": "#2F855A" },
+    "Operation Master": { "nb": "Operasjonsregister", "group":"masterdata","color": "#C53030" },
+    "Item Costs": { "nb": "Varekostnader", "group":"generalParameters","color": "#2F855A" },
+    "BOM": { "nb": "Stykkliste", "group":"itemBuilder","color": "#2C5F8A" },
+    "Routing": { "nb": "Produksjonsrute", "group":"itemBuilder","color": "#2C5F8A" },
+    "By Product Rules": { "nb": "Biproduktregler", "group":"itemBuilder","color": "#2C5F8A" },
+    "Capacity Calendar": { "nb": "Kapasitetskalender", "group":"","color": null },
+    "Production Scenario": { "nb": "Produksjonsscenario", "group":"","color": null },
+    "Transport Ruter": { "nb": "Transportruter", "group":"generalParameters","color": "#2F855A" },
+    "Transport Flagg": { "nb": "Transportflagg", "group":"","color": null },
+    "Endringslogg": { "nb": "Endringslogg", "group":"","color": null }
   }
 }
