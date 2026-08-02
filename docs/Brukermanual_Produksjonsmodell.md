@@ -8,22 +8,22 @@
 
 ## Innhold
 
-1. [Hva er produksjonsmodellen?](#1-hva-er-produksjonsmodellen)
-2. [Oversikt over arkene](#2-oversikt-over-arkene)
-3. [Product Master - Vareregisteret](#3-product-master---vareregisteret)
-4. [Locations - Fabrikker og lagre](#4-locations---fabrikker-og-lagre)
-5. [Work Centers - Maskiner og arbeidsplasser](#5-work-centers---maskiner-og-arbeidsplasser)
-6. [Operation Master - Standardoperasjoner](#6-operation-master---standardoperasjoner)
-7. [Item Costs - Kostpriser](#7-item-costs---kostpriser)
-8. [BOM - Stykklisten (hva består produktet av)](#8-bom---stykklisten)
-9. [Routing - Produksjonsflyten](#9-routing---produksjonsflyten)
-10. [By Product Rules - Biprodukter](#10-by-product-rules---biprodukter)
-11. [Transport Flagg - Hvilke varer transporteres](#11-transport-flagg---hvilke-varer-transporteres)
-12. [Transport Ruter - Fraktkost mellom lokasjoner](#12-transport-ruter---fraktkost-mellom-lokasjoner)
-13. [Capacity Calendar - Kapasitetskalender](#13-capacity-calendar---kapasitetskalender)
-14. [Production Scenario - Produksjonsscenario](#14-production-scenario---produksjonsscenario)
-15. [Slik kommer du i gang](#15-slik-kommer-du-i-gang)
-16. [Vanlige feil og tips](#16-vanlige-feil-og-tips)
+1. Hva er produksjonsmodellen?
+2. Oversikt over arkene
+3. Product Master - Vareregisteret
+4. Locations - Fabrikker og lagre
+5. Work Centers - Maskiner og arbeidsplasser
+6. Operation Master - Standardoperasjoner
+7. Item Costs - Kostpriser
+8. BOM - Stykklisten (hva består produktet av)
+9. Routing - Produksjonsflyten
+10. By Product Rules - Biprodukter
+11. Transport Flagg - Hvilke varer transporteres
+12. Transport Ruter - Fraktkost mellom lokasjoner
+13. Capacity Calendar - Kapasitetskalender
+14. Production Scenario - Produksjonsscenario
+15. Slik kommer du i gang
+16. Vanlige feil og tips
 
 ---
 
