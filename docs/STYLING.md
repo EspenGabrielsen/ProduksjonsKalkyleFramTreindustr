@@ -1,4 +1,4 @@
-# Fram Treindustri — Styling-referanse
+# FramTre industri — Styling-referanse
 
 ## Fargepalett
 

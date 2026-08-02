@@ -10,7 +10,7 @@
 
 ## Om dette dokumentet
 
-Dette er den tekniske dokumentasjonen for **ProduksjonsKalkyle** — et system for standardkost-beregning og produksjonssimulering bygget for Fram Treindustri / Kodal Hovleri.
+Dette er den tekniske dokumentasjonen for **ProduksjonsKalkyle** — et system for standardkost-beregning og produksjonssimulering bygget for FramTre industri / Kodal Hovleri.
 
 Dokumentasjonen dekker:
 - **Datamodellen** — Excel-arkene og SQLite-tabellene som utgjør grunnlaget for alle beregninger
@@ -967,7 +967,7 @@ python src/data_repo.py --clear      # Tøm data (bevar endringslogg)
 
 | Seksjon | Innhold |
 |---------|---------|
-| **Forside** | Tittel "Produksjonskost Simulator - Simuleringsrapport", dato, Fram Treindustri-logo |
+| **Forside** | Tittel "Produksjonskost Simulator - Simuleringsrapport", dato, FramTre industri-logo |
 | **Ledelsessammendrag** | Brukerens egen kommentar (hvis fylt ut) |
 | **Kapasitetssammendrag** | Timebehov per arbeidssenter (run-time + setup-time) |
 | **Overstyrte parametere** | Liste over hvilke parametere som ble endret i simuleringen (råvarepriser, svinn, timekostnader, routing, co-produkt) |
@@ -977,7 +977,7 @@ python src/data_repo.py --clear      # Tøm data (bevar endringslogg)
 ### 19.3 Tekniske detaljer
 
 - **Format:** A4, Portrait
-- **Farger:** Fram Treindustri-profil (skogsgrønn #14532D, lysegrønn #2F855A)
+- **Farger:** FramTre industri-profil (skogsgrønn #14532D, lysegrønn #2F855A)
 - **Fonter:** DejaVu (Unicode-støtte) eller Helvetica som fallback
 - **Genereres med:** ReportLab via `generer_pdf_rapport.py`
 

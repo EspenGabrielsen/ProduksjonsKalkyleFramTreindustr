@@ -78,10 +78,10 @@ def _(mo):
     <div class="fti-header" id="fti-header">
         <div style="display: flex; align-items: center; gap: 16px;">
             <img src="https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png"
-                 alt="Fram Treindustri" style="height: 48px;" />
+                 alt="FramTre industri" style="height: 48px;" />
             <div>
                 <div class="fti-header-title">Produksjonskost Simulator</div>
-                <div class="fti-header-subtitle">Fram Treindustri — Standardkostkalkyle, simulering og analyse</div>
+                <div class="fti-header-subtitle">FramTre industri — Standardkostkalkyle, simulering og analyse</div>
             </div>
         </div>
         <div style="text-align: right; color: #C6E6D0; font-size: 0.85em;">
@@ -670,7 +670,7 @@ def _(mo):
         datamodell og endringslogg.
         """),
         mo.Html('<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75em; color: #6B8F7D;">'),
-        mo.Html('Fram Treindustri - marimo v0.23.14'),
+        mo.Html('FramTre industri - marimo v0.23.14'),
     ]), width="260px")
     return (vareFilter,)
 
@@ -918,7 +918,7 @@ def _(
 
 @app.cell
 def _(mo):
-    mo.Html('<div class="fti-footer">🌲 Fram Treindustri — Produksjonskost Simulator · Standardkostkalkyle & simulering</div>')
+    mo.Html('<div class="fti-footer">🌲 FramTre industri — Produksjonskost Simulator · Standardkostkalkyle & simulering</div>')
     return
 
 

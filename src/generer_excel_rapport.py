@@ -86,7 +86,7 @@ def generer_excel_rapport(sim_results, output_path):
             ws.column_dimensions[letter].width = max_len + 2
 
     def _sett_logo(ws):
-        """Sett inn Fram Treindustri-logo øverst til venstre i arket."""
+        """Sett inn FramTre industri-logo øverst til venstre i arket."""
         if _logo and os.path.exists(_logo):
             try:
                 _img = XLImage(_logo)

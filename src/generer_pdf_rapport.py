@@ -30,7 +30,7 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# --- Farger (Fram Treindustri-profil) ---
+# --- Farger (FramTre industri-profil) ---
 PRIMARY = HexColor("#14532D")          # Dyp skogsgrønn - overskrifter
 SECONDARY = HexColor("#2F855A")        # Lysegrønn - highlight-tekst
 ACCENT = HexColor("#48BB78")           # Frisk lysegrønn - aksenter/kant
@@ -102,7 +102,7 @@ def bygg_stiler():
     }
 
 
-# Last ned Fram Treindustri-logo og cache i temp-mappe
+# Last ned FramTre industri-logo og cache i temp-mappe
 _LOGO_URL = "https://framtreindustri.no/wp-content/uploads/2025/08/logo-liggende-2048x512.png"
 _LOGO_PATH = None
 

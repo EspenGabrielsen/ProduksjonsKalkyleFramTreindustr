@@ -2,7 +2,7 @@
 """
 generer_dokumentasjon.py - Generer stilede PDF-er fra Markdown-dokumentasjon.
 
-Bruker Fram Treindustri styling-profil (farger, fonter, logo, tittelside)
+Bruker FramTre industri styling-profil (farger, fonter, logo, tittelside)
 fra generer_pdf_rapport.py.
 
 Bruk:
