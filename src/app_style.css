@@ -17,7 +17,7 @@ body {
     justify-content: space-between;
 }
 .fti-header-title { font-size: 1.8em; font-weight: 700; color: #FFFFFF; line-height: 1.2; }
-.fti-header-subtitle { font-size: 0.95em; color: #C6E6D0; line-height: 1.2; }
+.fti-header-subtitle { font-size: 0.95em; color: #A8DDB5; line-height: 1.2; }
 
 .fti-card {
     background: #F9FBF8; border-radius: 12px; padding: 24px;
@@ -39,7 +39,7 @@ tr[aria-selected]:hover,
 .marimo-data-grid tbody tr:hover,
 [role="gridcell"]:hover,
 [data-marimo-theme="dark"] table tbody tr:hover {
-    background-color: #E6FFFA !important;
+    background-color: #e6fff0 !important;
     color: #2F855A !important;
     transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -71,6 +71,23 @@ table tbody tr[data-state="selected"] {
     color: #48BB78; margin: 0 0 8px 0; font-weight: 600;
 }
 
+/* Sidebar-collapse: skjul filterfeltet når sidebaren er kollapset (smal),
+   så det ikke klemmes sammen. Toggle-knappen fungerer fortsatt som normalt. */
+[data-testid="marimo-sidebar"]:has([aria-expanded="true"]) { /* utvidet */ }
+@media (max-width: 100px) {
+    [data-testid="marimo-sidebar"] input,
+    [data-testid="marimo-sidebar"] textarea,
+    [data-testid="marimo-sidebar"] .fti-sidebar-section,
+    [data-testid="marimo-sidebar"] .marimo-text {
+        display: none !important;
+    }
+}
+[data-testid="helper"][data-panel-size="0.0"] input,
+[data-testid="helper"][data-panel-size="0.0"] textarea,
+[data-testid="helper"][data-panel-size="0.0"] .fti-sidebar-section {
+    display: none !important;
+}
+
 .marimo-radio { background: #F9FBF8; border-radius: 8px; padding: 4px; border: 1px solid #D1E0D4; }
 .marimo-radio label { padding: 8px 14px; border-radius: 6px; font-weight: 500; color: #2C3E2B; transition: all 0.15s ease; }
 .marimo-radio input[type="radio"]:checked + label { background: #14532D; color: white; }
@@ -82,11 +99,23 @@ table tbody tr[data-state="selected"] {
     background: #FFFFFF; border-radius: 10px; padding: 16px 20px;
     border: 1px solid #E2E8F0; box-shadow: 0 2px 6px rgba(0,0,0,0.04); min-width: 180px;
 }
-.fti-kpi-title { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.5px; color: #6B8F7D; margin-bottom: 4px; }
+.fti-kpi-title { font-size: 0.78em; text-transform: uppercase; letter-spacing: 0.5px; color: #4A7A63; margin-bottom: 4px; }
 .fti-kpi-value { font-size: 1.5em; font-weight: 700; color: #14532D; }
 .fti-kpi-delta { font-size: 0.85em; font-weight: 600; margin-left: 8px; }
 
 [data-marimo-theme="dark"] .fti-header { background: linear-gradient(135deg, #0B2819 0%, #14532D 100%); }
 [data-marimo-theme="dark"] .fti-footer { background: #0B2819; }
+
+/* Dark mode: mørke bakgrunner for kort og KPI-elementer (unngår lyse plakater) */
+[data-marimo-theme="dark"] .fti-card {
+    background: #1A2F1F;
+    border-left-color: #2F855A;
+}
+[data-marimo-theme="dark"] .fti-kpi-card {
+    background: #1A2F1F;
+    border-color: #2C3E2B;
+}
+[data-marimo-theme="dark"] .fti-kpi-title { color: #7BA891; }
+[data-marimo-theme="dark"] .fti-kpi-value { color: #48BB78; }
 
 .fti-run-button { margin: 16px 0; }
