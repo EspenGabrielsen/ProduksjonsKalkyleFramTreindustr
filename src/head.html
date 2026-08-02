@@ -1,0 +1,64 @@
+<link rel="icon" type="image/png" sizes="32x32" href="https://framtreindustri.no/wp-content/uploads/2025/11/cropped-favicon-SOME-32x32.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="https://framtreindustri.no/wp-content/uploads/2025/11/cropped-favicon-SOME-192x192.png" />
+<link rel="apple-touch-icon" href="https://framtreindustri.no/wp-content/uploads/2025/11/cropped-favicon-SOME-180x180.png" />
+<script>
+// Tving favicon til Fram Treindustri-logoen uavhengig av Marimo sin frontend.
+// Marimo bytter favicon dynamisk (f.eks. "running"-ikon) når den jobber i
+// bakgrunnen; denne observatøren sørger for at logoen alltid gjenopprettes.
+(function () {
+  var ICON_32 = "https://framtreindustri.no/wp-content/uploads/2025/11/cropped-favicon-SOME-32x32.png";
+  var ICON_192 = "https://framtreindustri.no/wp-content/uploads/2025/11/cropped-favicon-SOME-192x192.png";
+
+  function applyFavicon() {
+    var links = document.querySelectorAll('link[rel~="icon"]');
+    var hasOurs = false;
+    for (var i = 0; i < links.length; i++) {
+      var link = links[i];
+      var sizes = (link.getAttribute("sizes") || "").toLowerCase();
+      var type = (link.getAttribute("type") || "").toLowerCase();
+      var href = link.getAttribute("href") || "";
+      if (href.indexOf("framtreindustri") >= 0) {
+        hasOurs = true;
+        continue;
+      }
+      if (sizes.indexOf("192") >= 0) {
+        link.setAttribute("href", ICON_192);
+        hasOurs = true;
+      } else if (sizes.indexOf("32") >= 0 || type.indexOf("png") >= 0) {
+        link.setAttribute("href", ICON_32);
+        hasOurs = true;
+      } else if (href.indexOf("favicon") >= 0) {
+        link.setAttribute("href", ICON_32);
+        hasOurs = true;
+      }
+    }
+    // Garanterer at minst én lenke til logoen finnes
+    if (!hasOurs) {
+      var fav = document.createElement("link");
+      fav.rel = "icon";
+      fav.type = "image/png";
+      fav.setAttribute("href", ICON_32);
+      document.head.appendChild(fav);
+    }
+  }
+
+  function start() {
+    applyFavicon();
+    var observer = new MutationObserver(applyFavicon);
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["href", "rel"]
+    });
+    // Ekstra sikkerhet: håndhev logoen jevnlig
+    window.setInterval(applyFavicon, 2000);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+})();
+</script>

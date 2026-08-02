@@ -18,12 +18,16 @@
 8. [BOM - Stykklisten (hva består produktet av)](#8-bom---stykklisten)
 9. [Routing - Produksjonsflyten](#9-routing---produksjonsflyten)
 10. [By Product Rules - Biprodukter](#10-by-product-rules---biprodukter)
-11. [Capacity Calendar - Kapasitetskalender](#11-capacity-calendar---kapasitetskalender)
-12. [Production Scenario - Produksjonsscenario](#12-production-scenario---produksjonsscenario)
-13. [Slik kommer du i gang](#13-slik-kommer-du-i-gang)
-14. [Vanlige feil og tips](#14-vanlige-feil-og-tips)
+11. [Transport Flagg - Hvilke varer transporteres](#11-transport-flagg---hvilke-varer-transporteres)
+12. [Transport Ruter - Fraktkost mellom lokasjoner](#12-transport-ruter---fraktkost-mellom-lokasjoner)
+13. [Capacity Calendar - Kapasitetskalender](#13-capacity-calendar---kapasitetskalender)
+14. [Production Scenario - Produksjonsscenario](#14-production-scenario---produksjonsscenario)
+15. [Slik kommer du i gang](#15-slik-kommer-du-i-gang)
+16. [Vanlige feil og tips](#16-vanlige-feil-og-tips)
 
 ---
+
+<a id="1-hva-er-produksjonsmodellen"></a>
 
 ## 1. Hva er produksjonsmodellen?
 
@@ -48,17 +52,20 @@ Systemet gjør fire ting:
 | **Innkjøp** | Råvarepriser, leverandørdata | Oppdaterer Unit Cost i Item Costs | Laster opp Excel, ser konsekvens av prisendringer i simulering |
 | **Økonomi / Controller** | Timekostnader, biproduktverdi, produktregister | Fyller inn i Product Master, Item Costs, By Product Rules | Laster opp Excel, eksporterer rapporter til PDF og Excel |
 | **Produksjonsteknikk** | Stykkliste, operasjonsrekkefølge | Fyller inn i BOM, Routing, Operation Master | Verifiserer data i "Datamodell (Innsyn)"-fanen |
+| **Logistikk / Drift** | Transport mellom høvlerier, fraktkost | Fyller inn Is Transport i Product Master + Transport Ruter | Justerer fraktkost i simuleringen |
 | **IT / Superbruker** | Database, versjonshistorikk, feilsøking | - | Gjeninnlaster tidligere versjoner, overvåker endringslogg |
 
 ---
 
+<a id="2-oversikt-over-arkene"></a>
+
 ## 2. Oversikt over arkene
 
-Excel-filen har **10 ark** som må fylles ut. Her er en kort forklaring:
+Excel-filen har **10 stamdata-ark + 1 transport-ark** som fylles ut. Her er en kort forklaring:
 
 | Ark | Hva det er | Hvem fyller ut |
 |-----|------------|----------------|
-| **Product Master** | Register over alle varer (råvarer, ferdigvarer, biprodukter) | Økonomi |
+| **Product Master** | Register over alle varer (råvarer, ferdigvarer, biprodukter). Inkluderer kolonnen **Is Transport** som markerer transportvarer | Økonomi |
 | **Locations** | Fabrikker og lagre | Produksjonsleder |
 | **Work Centers** | Maskiner og arbeidsplasser med timekostnad | Produksjonsleder + Økonomi |
 | **Operation Master** | Standardoperasjoner (oppdeling, hovling, pakking osv.) | Produksjonsteknikk |
@@ -66,12 +73,17 @@ Excel-filen har **10 ark** som må fylles ut. Her er en kort forklaring:
 | **BOM** | Stykkliste - hva består produktet av? | Produksjonsteknikk |
 | **Routing** | Produksjonsflyt - hvilke operasjoner, i hvilken rekkefølge, hvor lang tid? | Produksjonsleder |
 | **By Product Rules** | Biprodukter som oppstår (spon, flis, bark) og hva de er verdt | Økonomi |
-| **Capacity Calendar** | Kapasitetskalender per arbeidssenter | Produksjonsleder |
-| **Production Scenario** | Forhåndsdefinerte produksjonsscenarioer | Produksjonsleder + Økonomi |
+| **Capacity Calendar** | Kapasitetskalender per arbeidssenter *(legacy)* | Produksjonsleder |
+| **Production Scenario** | Forhåndsdefinerte produksjonsscenarioer *(legacy)* | Produksjonsleder + Økonomi |
+| **Transport Ruter** | Fraktkost per M3 mellom lokasjoner (f.eks. Kodal → Skien) | Logistikk / Økonomi |
 
 Når Excel-arket er fylt ut, **laster du det opp i Marimo-appen** — da blir alle data tilgjengelige for simulering og analyse.
 
+**Endringslogg:** I tillegg genererer appen automatisk et eget ark med **Endringslogg** når du laster ned den komplette datafilen. Dette arket fyller du ikke ut selv — det viser historikken over alle endringer i databasen.
+
 ---
+
+<a id="3-product-master---vareregisteret"></a>
 
 ## 3. Product Master - Vareregisteret
 
@@ -88,6 +100,7 @@ virksomheten må være registrert her.
 | **Product Group** | Hvilken gruppe tilhører varen? | `Skrulast`, `Panel`, `Kledning`, `Spon` |
 | **Base Unit of Measure** | Hva måler vi varen i? | `M3` (kubikkmeter), `LM` (løpemeter), `KG` (kilo), `PCS` (stykker) |
 | **Active** | Er varen fortsatt i bruk? | `Ja` eller `Nei` |
+| **Is Transport** | Er varen en transportvare som transporteres mellom høvlerier? (se kapittel 11) | `1` (ja) eller `0` (nei) |
 
 ### Viktig å huske
 
@@ -98,6 +111,8 @@ virksomheten må være registrert her.
 - Item No er koden som brukes i alle andre ark for å referere til varen.
 
 ---
+
+<a id="4-locations---fabrikker-og-lagre"></a>
 
 ## 4. Locations - Fabrikker og lagre
 
@@ -119,6 +134,8 @@ virksomheten må være registrert her.
 - Hvis dere bare har én fabrikk, holder det med én rad.
 
 ---
+
+<a id="5-work-centers---maskiner-og-arbeidsplasser"></a>
 
 ## 5. Work Centers - Maskiner og arbeidsplasser
 
@@ -164,6 +181,8 @@ Eksempel - Hovedhovel:
 
 ---
 
+<a id="6-operation-master---standardoperasjoner"></a>
+
 ## 6. Operation Master - Standardoperasjoner
 
 **Dette er "ordboken" over hva slags operasjoner dere utfører.** Her lister
@@ -188,6 +207,8 @@ maling, pakking osv.
   velger du fra denne listen.
 
 ---
+
+<a id="7-item-costs---kostpriser"></a>
 
 ## 7. Item Costs - Kostpriser
 
@@ -221,8 +242,13 @@ og markedsverdi på biprodukter.
   kostnaden automatisk basert på hva produktet består av (BOM) og
   produksjonsprosessen (Routing).
 - **Biprodukter**: Sett inn markedsverdi - hva kan dere selge det for?
+- **Transportvarer**: For varer som transporteres mellom høvlerier, legges
+  fraktkostnaden til automatisk i simuleringen basert på Transport Ruter
+  (se kapittel 12).
 
 ---
+
+<a id="8-bom---stykklisten"></a>
 
 ## 8. BOM - Stykklisten
 
@@ -290,6 +316,8 @@ Eksempel - Panel (FG001) fra Skrulast (RM001):
   til spille, må du kjøpe inn 5% mer.
 
 ---
+
+<a id="9-routing---produksjonsflyten"></a>
 
 ## 9. Routing - Produksjonsflyten
 
@@ -360,6 +388,8 @@ FG004 - Utvendig Panel 21x95 - Malt:
 
 ---
 
+<a id="10-by-product-rules---biprodukter"></a>
+
 ## 10. By Product Rules - Biprodukter
 
 **Dette arket er for økonomi.** I trelastproduksjon oppstår det alltid
@@ -400,11 +430,110 @@ Eksempel - FG001 (Panel):
 
 ---
 
-## 11. Capacity Calendar - Kapasitetskalender
+<a id="11-transport-flagg---hvilke-varer-transporteres"></a>
+
+## 11. Transport Flagg - Hvilke varer transporteres
+
+I fler-høvleri-produksjon kan en vare produseres på ett høvleri (f.eks.
+Kodal) og transporteres til et annet (f.eks. Skien) for videre produksjon
+eller distribusjon. Slike varer kalles **transportvarer**, og modellen legger
+automatisk til fraktkostnaden i kalkylen.
+
+> **Merk:** Transport-flagg er **ikke et eget ark** i Excel. Markeringen gjøres
+> via kolonnen **Is Transport** i **Product Master**-arket (se kapittel 3).
+
+### Kolonne du må fylle ut
+
+| Kolonne | Hva skal stå her? | Eksempel |
+|---------|-------------------|----------|
+| **Is Transport** | `1` = varen transporteres mellom høvlerier, `0` = vanlig vare | `1` |
+
+### Slik fungerer det
+
+Når en vare er flagget som transportvare (`Is Transport = 1`):
+
+1. Modellen ser opp hvilke transportruter som finnes (kapittel 12).
+2. For hver relevant rute legges **fraktkost per M3** til produktets kostnad.
+3. I datamodellen vises varen med en fiktiv lokasjon (f.eks. `KOD→KV`) som
+   inkluderer fraktkostnaden i stedet for en fysisk operasjon.
+
+### Hvem gjør hva?
+
+| Oppgave | Ansvarlig |
+|---------|-----------|
+| Bestemme hvilke varer som transporteres | Produksjonsleder / Logistikk |
+| Fylle inn `Is Transport` i Product Master | Logistikk / IT |
+| Fylle inn fraktkost per M3 i Transport Ruter | Økonomi / Logistikk |
+
+---
+
+<a id="12-transport-ruter---fraktkost-mellom-lokasjoner"></a>
+
+## 12. Transport Ruter - Fraktkost mellom lokasjoner
+
+**Dette arket er for logistikk og økonomi.** Her registrerer du fraktkostnaden
+per M3 mellom to lokasjoner. Rutene brukes sammen med transport-flaggene
+(kapittel 11) for å legge transportkostnaden til kalkylen.
+
+### Kolonner du må fylle ut
+
+| Kolonne | Hva skal stå her? | Hvem fyller ut? | Eksempel |
+|---------|-------------------|-----------------|----------|
+| **From Loc** | Fra-lokasjon (samme Location Code som i Locations) | Logistikk | `KOD` |
+| **To Loc** | Til-lokasjon | Logistikk | `KV` |
+| **Cost Per M3** | Fraktpris per M3 på denne ruten (eneste beregningsfelt) | Økonomi | `120` |
+| **Distance Km** | Distanse i kilometer (informasjon — påvirker ikke kostnaden) | Logistikk | `45` |
+| **Hours** | Kjøretid i timer (informasjon — påvirker ikke kostnaden) | Logistikk | `1.5` |
+
+### Slik fungerer det
+
+```
+Transportkost = Fraktkost per M3 x Volum som transporteres
+
+Eksempel - Rute KOD → KV:
+  Fraktkost per M3: 120 kr
+  Avstand: 45 km
+  Kjøretid: 1,5 timer
+  
+  Kun Cost Per M3 påvirker kalkylen.
+  Distance Km og Hours er informasjon for logistikk-planlegging.
+```
+
+### I Marimo-appen
+
+I fanen **📊 Simulering & Analyse** finner du transportrutene under
+**🚛 Transport (kr/m³)** i simuleringsparametrene. Der kan du justere
+fraktkostnaden per M3 for å simulere f.eks. høyere drivstoffpriser eller
+ny transportavtale:
+
+```
+Eksempel - Simulering:
+  KOD → KV: Org. kost 120 kr/m³ → Ny kost 150 kr/m³
+  KOD → EIK: Org. kost 95 kr/m³  → Ny kost 110 kr/m³
+```
+
+### Hvem gjør hva?
+
+| Oppgave | Ansvarlig |
+|---------|-----------|
+| Sette fraktkost per M3 | Økonomi |
+| Fylle inn distanse og kjøretid | Logistikk |
+| Oppdatere ved ny transportavtale / prisendring | Innkjøp / Logistikk |
+
+---
+
+<a id="13-capacity-calendar---kapasitetskalender"></a>
+
+## 13. Capacity Calendar - Kapasitetskalender *(legacy)*
 
 **Dette arket er for produksjonslederen.** Her registrerer du tilgjengelig
 kapasitet per arbeidssenter per dag. Kalenderen brukes til å analysere
 flaskehalser og planlegge produksjon.
+
+> **Merk:** Capacity Calendar er foreløpig **ikke i aktiv beregning**.
+> Dataene vises i "Datamodell (Innsyn)"-fanen, men brukes ikke i
+> kostnadsberegningen eller simuleringen ennå. Dette påvirker ikke standard
+> bruk av modellen.
 
 ### Kolonner du må fylle ut
 
@@ -423,12 +552,19 @@ Available Production Hours = Available Hours - Planned Downtime
 
 ---
 
-## 12. Production Scenario - Produksjonsscenario
+<a id="14-production-scenario---produksjonsscenario"></a>
+
+## 14. Production Scenario - Produksjonsscenario *(legacy)*
 
 **Dette arket er for produksjonslederen og økonomi.** Her definerer du
 forhåndsdefinerte produksjonsscenarioer med planlagt kvantum per produkt.
 Scenarioene brukes i Marimo-appen til å simulere produksjon og beregne
 totalt ressursbehov.
+
+> **Merk:** Production Scenario er foreløpig **ikke i aktiv bruk**.
+> Planlagt kvantum styres nå direkte i Marimo-appen via **📦 Planlagt
+> kvantum** i "📊 Simulering & Analyse"-fanen. Arket er beholdt i
+> datamodellen for framtidig bruk.
 
 ### Kolonner du må fylle ut
 
@@ -442,13 +578,14 @@ totalt ressursbehov.
 
 ### Tips
 
-- Scenarioer brukes i Marimo-appen til å simulere "what-if" analyser.
 - Du kan ha flere produkter per scenario (én rad per produkt).
 - Kvantumet påvirker hvor mye setupkost som fordeles per enhet.
 
 ---
 
-## 13. Slik kommer du i gang
+<a id="15-slik-kommer-du-i-gang"></a>
+
+## 15. Slik kommer du i gang
 
 ### Første gang — oppsett
 
@@ -467,7 +604,7 @@ totalt ressursbehov.
    - Systemet validerer automatisk og importerer
 5. **Simulér og analyser:**
    - Gå til fanen **📊 Simulering & Analyse**
-   - Juster parametere (råvarepriser, svinn, timekostnader, produksjonstider)
+   - Juster parametere (råvarepriser, svinn, timekostnader, produksjonstider, transportkost)
    - Angi planlagt kvantum
    - Trykk **⚡ Start simulering**
 6. **Eksporter rapport:**
@@ -482,7 +619,9 @@ totalt ressursbehov.
 | 3 | **BOM** | Hva består produktet av? (stykkliste) | Produksjonsteknikk |
 | 4 | **Routing** | Hvordan produseres det? (operasjoner, tider) | Produksjonsleder |
 | 5 | **By Product Rules** | Oppstår det biprodukter? | Økonomi |
-| 6 | **Marimo-app** | Last opp Excel-filen på nytt | Hvem som helst |
+| 6 | **Product Master** | Er varen en transportvare? Sett `Is Transport = 1` | Logistikk |
+| 7 | **Transport Ruter** | Finnes fraktkost for aktuell rute? (ellers legg til) | Logistikk / Økonomi |
+| 8 | **Marimo-app** | Last opp Excel-filen på nytt | Hvem som helst |
 
 ### Oppdatere priser
 
@@ -493,6 +632,7 @@ Når priser endrer seg (f.eks. ny innkjøpspris på skrulast):
 | Ny råvarepris | **Item Costs** | Innkjøp |
 | Ny timekostnad på maskin | **Work Centers** | Økonomi |
 | Ny markedsverdi på biprodukt | **Item Costs** | Økonomi |
+| Ny fraktkost / transportavtale | **Transport Ruter** | Innkjøp / Logistikk |
 
 Etter endringene: last opp Excel-filen på nytt i Marimo-appen for å få oppdaterte data.
 
@@ -504,7 +644,9 @@ gjeninnlaste den. Dette er nyttig hvis du har gjort feil og vil gå tilbake.
 
 ---
 
-## 14. Vanlige feil og tips
+<a id="16-vanlige-feil-og-tips"></a>
+
+## 16. Vanlige feil og tips
 
 ### ❌ Vanlige feil i Excel-arket
 
@@ -518,12 +660,13 @@ gjeninnlaste den. Dette er nyttig hvis du har gjort feil og vil gå tilbake.
 | **Manglende Routing** | Produktet har ingen produksjonsflyt | Legg til operasjoner i Routing |
 | **Feil Quantity Per** | Forbruket blir feil | Sjekk: Quantity Per = output per input. Hvis 1 M3 gir 400 LM, skriv 400 |
 | **Scrap % for høy/lav** | Materialkost blir feil | Sjekk faktisk svinn i produksjonen |
+| **Transportvare uten rute** | Vare er flagget som transportvare, men ingen Transport Ruter finnes | Legg til ruten i Transport Ruter-arket |
 
 ### ❌ Vanlige feil ved import i Marimo
 
 | Feilmelding | Årsak | Løsning |
 |-------------|-------|---------|
-| "Validering fant feil — ingenting importert" | Excel-filen mangler ark eller kolonner | Sjekk at filen har alle 10 ark med korrekte kolonnenavn |
+| "Validering fant feil — ingenting importert" | Excel-filen mangler ark eller kolonner | Sjekk at filen har alle nødvendige ark med korrekte kolonnenavn |
 | "Kryssreferanse-feil" | En varekode i BOM finnes ikke i Product Master | Sjekk at alle Item No er registrert |
 | "Ingen data lastet" | Databasen er tom | Last opp en Excel-fil via "Dataimport & Versjoner" |
 
@@ -538,6 +681,8 @@ Python-beregningen:
 | **Valid From** / **Valid To** (BOM og Routing) | Ignoreres — alle linjer inkluderes alltid | Datofiltrering kommer |
 | **Effective Date** (Item Costs) | Velger nyeste dato, ikke "gyldig per i dag" | Forbedres til å bruke en valgt analysedato |
 | **Start Date** / **End Date** (Scenario) | Ignoreres i simulering | Planlegges |
+| **Capacity Calendar** | Visuell info kun — ikke i aktiv beregning | Flaskehalsanalyse planlegges |
+| **Distance Km** / **Hours** (Transport Ruter) | Informasjon kun — påvirker ikke kostnaden | Planlegges |
 
 Dette påvirker ikke standard bruk av modellen, men vær oppmerksom på det
 hvis du har inaktive produkter eller tidsbegrensede priser i datasettet ditt.
@@ -559,7 +704,6 @@ hvis du har inaktive produkter eller tidsbegrensede priser i datasettet ditt.
 
 ---
 
-> **Trenger du hjelp?** Se `Produksjonsmodell_Dokumentasjon.pdf` for
-> teknisk dokumentasjon, eller kontakt systemansvarlig.
+> **Trenger du hjelp?** Kontakt systemansvarlig.
 >
-> *Sist oppdatert: juli 2026*
+> *Sist oppdatert: august 2026*

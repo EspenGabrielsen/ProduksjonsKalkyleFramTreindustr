@@ -25,6 +25,7 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Preformatted, HRFlowable, Spacer, Table, TableStyle, Image,
     KeepTogether, PageBreak
 )
+from reportlab.platypus.flowables import CondPageBreak
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -343,6 +344,31 @@ def lag_ledelsessammendrag(sammenligninger, styles):
     return story
 
 
+def _grupper_per_lokasjon(sammenligninger):
+    """Grupper sammenligninger per lokasjon.
+
+    Returnerer en liste med tupler:
+        (lokasjonskode, reelle_rader, transport_rader)
+
+    - Reelle lokasjoner (uten '->') sorteres alfabetisk.
+    - Simulerte transport-lokasjoner (f.eks. 'KOD->EIK') legges under sin
+      destinasjon (f.eks. 'EIK') i den rekkefølgen de dukker opp i dataene.
+    """
+    grupper: dict[str, dict] = {}
+
+    for c in sammenligninger:
+        loc_code = c.get('location_code', '') or ''
+        if '->' in loc_code:
+            dest = loc_code.split('->')[1].strip()
+            grupper.setdefault(dest, {"reelle": [], "transport": []})
+            grupper[dest]["transport"].append(c)
+        else:
+            grupper.setdefault(loc_code, {"reelle": [], "transport": []})
+            grupper[loc_code]["reelle"].append(c)
+
+    return [(loc, g["reelle"], g["transport"]) for loc, g in sorted(grupper.items())]
+
+
 def generer_rapport(sammenligninger, overrides, output_path, tittel="Simuleringsrapport", kommentar=None, inkluder_detaljer=False, kapasitet_data=None):
     """
     Generer en PDF-rapport fra simuleringsresultater.
@@ -428,27 +454,65 @@ def generer_rapport(sammenligninger, overrides, output_path, tittel="Simulerings
     story.append(Paragraph("Sammenligning: Baseline vs Simulert", styles['h2']))
 
     if sammenligninger:
-        # Sorter etter absolutt differanse (størst først)
-        sorterte = sorted(sammenligninger, key=lambda c: abs(c.get('diff_netto', 0)), reverse=True)
-
-        tabell_data = []
-        for c in sorterte:
-            diff_netto = c.get('diff_netto', 0)
-            org_netto = c.get('org_netto', 0)
-            endring_pct = (diff_netto / org_netto * 100) if org_netto != 0 else 0.0
-            tabell_data.append({
-                "Produkt": c.get('produkt', ''),
-                "Beskrivelse": c.get('beskrivelse', ''),
-                "Org. netto": org_netto,
-                "Sim. netto": c.get('sim_netto', 0),
-                "Diff (kr)": diff_netto,
-                "Endring %": endring_pct,
-            })
-
+        # Grupper per lokasjon: KOD, EIK, KV osv. hver i sin egen tabell.
+        # Simulerte transport-lokasjoner (f.eks. KOD->EIK) legges under
+        # destinasjonen de går til (f.eks. EIK), i den rekkefølgen de
+        # dukker opp i dataene.
+        lokasjonsgrupper = _grupper_per_lokasjon(sammenligninger)
         kol_bredder = [28*mm, 45*mm, 30*mm, 30*mm, 27*mm, 25*mm]
-        tbl = lag_tabell(tabell_data, styles, kol_bredder)
-        story.append(tbl)
-        story.append(Spacer(1, 4*mm))
+
+        for lok, reelle_rader, transport_rader in lokasjonsgrupper:
+            lok_tittel = lok
+            _navn = ""
+            if reelle_rader:
+                _navn = reelle_rader[0].get('location_name', '') or ""
+            elif transport_rader:
+                _navn = transport_rader[0].get('location_name', '') or ""
+            if _navn and _navn != lok:
+                lok_tittel = f"{lok} — {_navn}"
+            # Start ny side hvis det er mindre enn 33% igjen, slik at
+            # tabellen ikke blir delt over et sideskift
+            story.append(CondPageBreak(A4[1] * 2 / 6))
+            story.append(Paragraph(f"Lokasjon: {lok_tittel}", styles['h3']))
+
+            # Reelle produkter ved lokasjonen
+            if reelle_rader:
+                tabell_data = []
+                for c in reelle_rader:
+                    diff_netto = c.get('diff_netto', 0)
+                    org_netto = c.get('org_netto', 0)
+                    endring_pct = (diff_netto / org_netto * 100) if org_netto != 0 else 0.0
+                    tabell_data.append({
+                        "Produkt": c.get('produkt', ''),
+                        "Beskrivelse": c.get('beskrivelse', ''),
+                        "Org. netto": org_netto,
+                        "Sim. netto": c.get('sim_netto', 0),
+                        "Diff (kr)": diff_netto,
+                        "Endring %": endring_pct,
+                    })
+                story.append(lag_tabell(tabell_data, styles, kol_bredder))
+                story.append(Spacer(1, 2*mm))
+
+            # Simulerte transport-rader til denne lokasjonen
+            if transport_rader:
+                story.append(Paragraph(f"Transport til {lok}:", styles['body_bold']))
+                tabell_data = []
+                for c in transport_rader:
+                    diff_netto = c.get('diff_netto', 0)
+                    org_netto = c.get('org_netto', 0)
+                    endring_pct = (diff_netto / org_netto * 100) if org_netto != 0 else 0.0
+                    tabell_data.append({
+                        "Produkt": f"{c.get('location_code', '')} · {c.get('produkt', '')}",
+                        "Beskrivelse": c.get('beskrivelse', ''),
+                        "Org. netto": org_netto,
+                        "Sim. netto": c.get('sim_netto', 0),
+                        "Diff (kr)": diff_netto,
+                        "Endring %": endring_pct,
+                    })
+                story.append(lag_tabell(tabell_data, styles, kol_bredder))
+                story.append(Spacer(1, 3*mm))
+            elif not reelle_rader:
+                story.append(Spacer(1, 3*mm))
 
         # ── Total effekt ──────────────────────────────────────────
         total_org = sum(c.get('org_netto', 0) for c in sammenligninger)
@@ -635,7 +699,7 @@ def _parse_md_table(linjer, styles):
 
     # Lag tabell
     kolonner = header
-    headers_par = [Paragraph(k, styles['table_header']) for k in kolonner]
+    headers_par = [Paragraph(_md_to_html(k), styles['table_header']) for k in kolonner]
     rows_pdf = [headers_par]
     for rad in data_rows:
         celle_pars = []
@@ -646,7 +710,7 @@ def _parse_md_table(linjer, styles):
                 float(v)
                 celle_pars.append(Paragraph(verdi, styles['table_cell']))
             except (ValueError, AttributeError):
-                celle_pars.append(Paragraph(verdi, styles['table_cell_left']))
+                celle_pars.append(Paragraph(_md_to_html(verdi), styles['table_cell_left']))
         while len(celle_pars) < len(kolonner):
             celle_pars.append(Paragraph("", styles['table_cell']))
         rows_pdf.append(celle_pars[:len(kolonner)])
@@ -701,7 +765,7 @@ def _parse_markdown_to_story(md_content, styles):
                 # Avslutt kodeblokk
                 in_code_block = False
                 code_text = "\n".join(code_buffer)
-                story.append(Paragraph(code_text, styles['code']))
+                story.append(Preformatted(code_text, styles['code']))
                 story.append(Spacer(1, 2*mm))
                 code_buffer = []
             else:
@@ -760,12 +824,17 @@ def _parse_markdown_to_story(md_content, styles):
             table_buffer = []
             in_table = False
 
-        # Blockquote (linje som starter med >)
+        # Blockquote (linje som starter med >) – samle påfølgende linjer til én boks
         if linje_stripped.startswith(">"):
-            quote_text = linje_stripped.lstrip("> ").strip()
-            if quote_text:
-                story.append(Paragraph(quote_text, styles['comment_box']))
-            i += 1
+            quote_linjer = []
+            while i < len(linjer) and linjer[i].strip().startswith(">"):
+                q = linjer[i].strip().lstrip("> ").strip()
+                if q:
+                    quote_linjer.append(_md_to_html(q))
+                i += 1
+            if quote_linjer:
+                quote_html = "<br/>".join(quote_linjer)
+                story.append(Paragraph(quote_html, styles['comment_box']))
             continue
 
         # Overskrifter H1-H3
@@ -775,6 +844,10 @@ def _parse_markdown_to_story(md_content, styles):
             i += 1
             continue
         if linje_stripped.startswith("## "):
+            # Start kapitlet på ny side hvis vi har passert threshold av siden.
+            # CondPageBreak(threshold) bryter kun hvis gjenværende plass < threshold.
+            # eksempel 2/6 brytter når det er mindre enn 33% igjen av siden
+            story.append(CondPageBreak(A4[1] * 2 / 6))
             tekst = _md_to_html(linje_stripped[3:])
             story.append(Paragraph(tekst, styles['h2']))
             i += 1
@@ -793,16 +866,13 @@ def _parse_markdown_to_story(md_content, styles):
             i += 1
             continue
 
-        if linje_stripped.startswith("1. ") or linje_stripped.startswith("2. ") or linje_stripped.startswith("3. "):
-            # Nummerert liste
-            match = re.match(r"^(\d+)\.\s*(.*)", linje_stripped)
-            if match:
-                    nummer = match.group(1)
-                    tekst = _md_to_html(match.group(2))
-                    story.append(Paragraph(f"<b>{nummer}.</b> {tekst}", styles['bullet']))
-                    in_list = True
-            else:
-                story.append(Paragraph(_md_to_html(linje_stripped), styles['body']))
+        # Nummerert liste (alle tall, ikke bare 1-3)
+        match_num = re.match(r"^(\d+)\.\s*(.*)", linje_stripped)
+        if match_num:
+            nummer = match_num.group(1)
+            tekst = _md_to_html(match_num.group(2))
+            story.append(Paragraph(f"<b>{nummer}.</b> {tekst}", styles['bullet']))
+            in_list = True
             i += 1
             continue
 
@@ -823,6 +893,14 @@ def _parse_markdown_to_story(md_content, styles):
 
 def _md_to_html(tekst):
     """Konverter Markdown inline-formatering til HTML for ReportLab."""
+    # Fjern emoji-tegn som PDF-fontene (DejaVu) ikke har glyfer for.
+    # Uten dette vises de som små sorte firkanter (tofu) i PDF-en.
+    tekst = re.sub(
+        r"[\U0001F000-\U0001FFFF\u2600-\u27BF\uFE00-\uFE0F\u200D\uFE0F]",
+        "", tekst
+    )
+    # [tekst](url) → tekst (PDF-parseren lager ikke klikkbare linker)
+    tekst = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", tekst)
     # Fjern <img>-taggar (ReportLab Paragraph støtter ikke alt-attributt her)
     tekst = re.sub(r"<img[^>]*?>", "", tekst, flags=re.IGNORECASE)
     # **fet**
@@ -876,15 +954,39 @@ def generer_dokumentasjon_pdf(markdown_content, output_path, tittel="Dokumentasj
         story.append(Paragraph(kommentar, styles['comment_box']))
         story.append(Spacer(1, 4*mm))
 
-    # Inline-til innholdsfortegnelse — pars H1 og H2 for TOC
+    # Inline-innholdsfortegnelse — pars H1 og H2 for TOC.
+    # Første H1 (dokumenttittel) og første H2 (undertittel) hoppes over,
+    # da de allerede vises øverst i dokumentet og på tittelsiden.
+    # Et eventuelt "Innhold"-kapittel hoppes også over — det erstattes
+    # fullstendig av den automatiske innholdsfortegnelsen.
     _linjer = markdown_content.split("\n")
     toc_items = []
+    _innhold_linjer = []
+    _sett_tittel = False
+    _sett_undertittel = False
+    _skip_innhold = False
     for _l in _linjer:
         _s = _l.strip()
+        if not _sett_tittel and _s.startswith("# "):
+            _sett_tittel = True
+            continue
+        if not _sett_undertittel and _s.startswith("## "):
+            _sett_undertittel = True
+            continue
+        if _skip_innhold:
+            if _s.startswith("## "):
+                _skip_innhold = False
+            else:
+                continue
+        if _s.startswith("## ") and _s[3:].strip().lower() in ("innhold", "innholdsfortegnelse"):
+            _skip_innhold = True
+            continue
+        _innhold_linjer.append(_l)
         if _s.startswith("## "):
             toc_items.append((2, _s[3:].replace("**", "").replace("`", "")))
-        elif _s.startswith("# ") and not _s.startswith("# "):
+        elif _s.startswith("# "):
             toc_items.append((1, _s[2:].replace("**", "").replace("`", "")))
+    _markdown_innhold = "\n".join(_innhold_linjer)
 
     if toc_items:
         story.append(Paragraph("Innholdsfortegnelse", styles['h2']))
@@ -897,7 +999,7 @@ def generer_dokumentasjon_pdf(markdown_content, output_path, tittel="Dokumentasj
         story.append(HRFlowable(width="100%", thickness=0.5, color=ACCENT, spaceAfter=4*mm))
 
     # Parse Markdown
-    story.extend(_parse_markdown_to_story(markdown_content, styles))
+    story.extend(_parse_markdown_to_story(_markdown_innhold, styles))
 
     # Footer
     story.append(Spacer(1, 10*mm))
@@ -910,7 +1012,7 @@ def generer_dokumentasjon_pdf(markdown_content, output_path, tittel="Dokumentasj
     # Bygg PDF
     _full_tittel = tittel + (" — " + undertittel if undertittel else "")
     doc.build(story,
-              onFirstPage=lambda c, d: lag_tittelside(c, d, _full_tittel, dato_str, None),
+              onFirstPage=lambda c, d: lag_tittelside(c, d, tittel=tittel,undertittel=undertittel, dato=dato_str),
               onLaterPages=lambda c, d: lag_header_footer(c, d, _full_tittel))
 
     return output_path
