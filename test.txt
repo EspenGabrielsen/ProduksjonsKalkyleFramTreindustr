@@ -1,0 +1,1973 @@
+[OPTIMERING] Database: C:\Users\EspenGabrielsen\code\ProduksjonsKalkyle\src\produksjonskalkyle.db
+[OPTIMERING] Dager per periode: 5.0
+[VALIDERING] 15 demand-linjer filtrert bort:
+   ❌ CO_PRODUKT_HÅNDTERES_IKKE: 1
+   ❌ MANGLER_LM_M3_KONVERTERING: 14
+[DATA] Demand-linjer: 73
+[DATA] Transportruter: 6
+[PROGNOSE] 12 ukers prognose fra historisk salg (20772 prognose-linjer).
+
+==========================================================================
+  OPTIMERINGSRESULTAT  |  Optimal
+==========================================================================
+  Total kost:             28,824,667.03 kr
+  Løsningstid:                    23.66 s
+  ├─ Produksjon:          28,564,004.70 kr
+  ├─ Setup (rigg):           129,654.80 kr
+  └─ Transport:              131,007.53 kr
+==========================================================================
+
+--------------------------------------------------------------------------
+  UKE 53
+--------------------------------------------------------------------------
+
+  [HOVEDHOVEL]  Kapasitet:   65.6t /   73.6t ( 89.2%)
+   ► JD19098                      Ferdigvare      8,170.3 LM
+   ► JD19123                      Ferdigvare      3,589.8 LM
+   ► JD22198                      Ferdigvare        100.0 LM
+   ► JK19148A                     Ferdigvare          0.1 LM
+   ► JK19148AGH                   Ferdigvare        950.0 LM
+   ► JK19148AVE                   Ferdigvare        304.8 LM
+   ► JK19220                      Ferdigvare     69,786.7 LM
+   ► JL19148                      Ferdigvare      1,454.0 LM
+   ► JY19020                      Ferdigvare         50.0 LM
+   ► JY22148                      Ferdigvare      8,064.0 LM
+   ► JY22173                      Ferdigvare         65.0 LM
+   ► JY22198                      Ferdigvare      1,026.0 LM
+     JD19148                      Halvfabrikat   60,848.4 LM
+     JD22148                      Halvfabrikat      220.0 LM
+     JK19148                      Halvfabrikat    1,682.0 LM
+     JK19148AVF                   Halvfabrikat      304.8 LM
+     JK19223                      Halvfabrikat      730.0 LM
+     JK19224                      Halvfabrikat        0.1 LM
+     JK19230                      Halvfabrikat   93,681.5 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     KD_Extreem                   Råvare/kjøp       109.9 LM
+     KD_Extreem                   Råvare/kjøp        20.7 LM
+     KD_Extreem                   Råvare/kjøp        24.0 LM
+     KD_Opaque                    Råvare/kjøp       120.1 LM
+     KD_Opaque                    Råvare/kjøp        61.1 LM
+     KD_Opaque                    Råvare/kjøp        27.2 LM
+     KD_Trebitt                   Råvare/kjøp        14.5 LM
+     KD_Trebitt                   Råvare/kjøp        27.8 LM
+     KD_Visir                     Råvare/kjøp        30.1 LM
+     KD_Visir                     Råvare/kjøp         4.0 LM
+     KD_Visir                     Råvare/kjøp        41.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         1.2 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         0.9 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         4.3 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         1.3 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp        23.0 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         5.3 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         9.2 LM
+     RM_50x100_K90_Furu           Råvare/kjøp         0.3 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         0.2 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp         3.8 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         0.5 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp         5.5 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp         0.8 LM
+     RM_50x175_K90_Furu           Råvare/kjøp         0.3 LM
+     RM_50x200_K90_Furu           Råvare/kjøp         5.1 LM
+     RM_50x200_US_V_Gran          Råvare/kjøp         0.5 LM
+     RM_50x75_US_V_Gran           Råvare/kjøp         1.2 LM
+     RM_63x175_US_V_Gran          Råvare/kjøp         0.2 LM
+
+  [MALINGSLINJE]  Kapasitet:   57.4t /   66.4t ( 86.4%)
+   ► JD19098TF                    Ferdigvare        405.0 LM
+   ► JD19123EF                    Ferdigvare        435.0 LM
+   ► JD19123TF                    Ferdigvare         20.0 LM
+   ► JD19148EF                    Ferdigvare        435.0 LM
+   ► JD22148TF                    Ferdigvare        220.0 LM
+   ► JK19148TF                    Ferdigvare        500.0 LM
+   ► JK19220TF                    Ferdigvare      1,750.0 LM
+   ► JK19220VE                    Ferdigvare        616.0 LM
+   ► JK19223EF                    Ferdigvare        730.0 LM
+   ► JK19223GH                    Ferdigvare          0.1 LM
+   ► JK19223VE                    Ferdigvare        216.0 LM
+   ► JK19224GH                    Ferdigvare          0.1 LM
+   ► JK19230EF                    Ferdigvare      5,544.0 LM
+   ► JK19230TF                    Ferdigvare      6,908.2 LM
+   ► JK21120GH                    Ferdigvare      1,200.0 LM
+   ► JL19148EF                    Ferdigvare        154.0 LM
+   ► JL22123GH                    Ferdigvare         41.0 LM
+   ► JQ21070EF                    Ferdigvare        651.0 LM
+   ► NB10430                      Ferdigvare        950.0 LM
+   ► NB10500                      Ferdigvare      1,900.0 LM
+     JD19098VF                    Halvfabrikat      405.0 LM
+     JD19123GF                    Halvfabrikat      435.0 LM
+     JD19123VF                    Halvfabrikat       20.0 LM
+     JD19148GF                    Halvfabrikat      595.0 LM
+     JD22148VF                    Halvfabrikat      220.0 LM
+     JK19148VF                    Halvfabrikat      500.0 LM
+     JK19220VF                    Halvfabrikat    1,750.0 LM
+     JK19223GF                    Halvfabrikat      730.0 LM
+     JK19223VF                    Halvfabrikat   50,199.9 LM
+     JK19230GF                    Halvfabrikat    5,544.0 LM
+     JK19230VF                    Halvfabrikat   28,975.5 LM
+     JL19148GF                    Halvfabrikat      154.0 LM
+     JQ21070GF                    Halvfabrikat      651.0 LM
+
+  [SPESIALHOVEL]  Kapasitet:    5.2t /   75.2t (  6.9%)
+   ► JK19208                      Ferdigvare          0.1 LM
+   ► JK21140                      Ferdigvare      1,000.0 LM
+   ► JS45070                      Ferdigvare          0.2 LM
+   ► JV45095                      Ferdigvare         45.0 LM
+     JK21120                      Halvfabrikat    1,200.0 LM
+     JL22123                      Halvfabrikat       41.0 LM
+     JQ21070                      Halvfabrikat      651.0 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 54
+--------------------------------------------------------------------------
+
+  [HOVEDHOVEL]  Kapasitet:   73.2t /   73.6t ( 99.4%)
+     JD19148                      Halvfabrikat      225.2 LM
+     JK19223                      Halvfabrikat  381,162.9 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     KD_Extreem                   Råvare/kjøp        76.0 LM
+     KD_Extreem                   Råvare/kjøp        53.7 LM
+     KD_Extreem                   Råvare/kjøp        25.8 LM
+     KD_Opaque                    Råvare/kjøp        89.6 LM
+     KD_Opaque                    Råvare/kjøp        65.7 LM
+     KD_Opaque                    Råvare/kjøp        31.3 LM
+     KD_Trebitt                   Råvare/kjøp        35.5 LM
+     KD_Visir                     Råvare/kjøp        45.7 LM
+     KD_Visir                     Råvare/kjøp       192.1 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         2.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         0.6 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp        18.8 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp        43.0 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         4.0 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         0.6 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        21.2 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         1.1 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp         1.6 LM
+
+  [MALINGSLINJE]  Kapasitet:   65.0t /   66.4t ( 97.9%)
+   ► JD19148EF                    Ferdigvare    134,161.0 LM
+     JK19223VF                    Halvfabrikat   42,567.9 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 55
+--------------------------------------------------------------------------
+
+  [HOVEDHOVEL]  Kapasitet:   63.6t /   73.6t ( 86.4%)
+     JK19148                      Halvfabrikat  356,482.0 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:   51.2t /   66.4t ( 77.1%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+     JD19148GF                    Halvfabrikat  137,066.6 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 56
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:    0.8t /   80.0t (  0.9%)
+     ES91300                      Halvfabrikat        6.4 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 57
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   17.3t /   80.0t ( 21.7%)
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22123T                     Halvfabrikat        9.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 58
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   22.6t /   80.0t ( 28.3%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        3.8 LM
+     IU22148T                     Halvfabrikat        1.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        30.2 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 59
+--------------------------------------------------------------------------
+
+  [HOVEDHOVEL]  Kapasitet:   23.4t /   73.6t ( 31.8%)
+     JD19148                      Halvfabrikat  120,957.2 LM
+
+  [IMPREGNERING]  Kapasitet:   23.4t /   80.0t ( 29.2%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat       19.3 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU22148T                     Halvfabrikat        1.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 60
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   23.4t /   80.0t ( 29.2%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        1.9 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU22148T                     Halvfabrikat        1.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        61.0 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 61
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   24.1t /   80.0t ( 30.1%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        1.9 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU22148T                     Halvfabrikat        1.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 62
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   24.1t /   80.0t ( 30.1%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        1.9 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU22148T                     Halvfabrikat        1.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 63
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   24.1t /   80.0t ( 30.1%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        1.9 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU22148T                     Halvfabrikat        1.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 64
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   24.1t /   80.0t ( 30.1%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        1.9 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU22148T                     Halvfabrikat        1.6 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        16.8 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       361.7 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 65
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   24.1t /   80.0t ( 30.1%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        1.9 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU22148T                     Halvfabrikat        3.1 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       723.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+--------------------------------------------------------------------------
+  UKE 66
+--------------------------------------------------------------------------
+
+  [IMPREGNERING]  Kapasitet:   24.1t /   80.0t ( 30.2%)
+     ES91250                      Halvfabrikat       19.2 LM
+     ES91300                      Halvfabrikat        6.4 LM
+     HA91110                      Halvfabrikat        9.1 LM
+     IG34145BR                    Halvfabrikat       27.7 LM
+     IK19120EF                    Halvfabrikat       20.1 LM
+     IK19120GF                    Halvfabrikat       11.0 LM
+     IK19148GF                    Halvfabrikat        9.6 LM
+     IK19149EH                    Halvfabrikat        2.7 LM
+     IK19150EGH                   Halvfabrikat       54.1 LM
+     IK19150GF                    Halvfabrikat       11.0 LM
+     IK19200EH                    Halvfabrikat       48.1 LM
+     IK19210EH                    Halvfabrikat       16.3 LM
+     IK19221                      Halvfabrikat        4.2 LM
+     IK19222                      Halvfabrikat        4.2 LM
+     IK19224                      Halvfabrikat        6.8 LM
+     IK19224GH                    Halvfabrikat       28.9 LM
+     IK19225EF                    Halvfabrikat       19.1 LM
+     IK19225GF                    Halvfabrikat       11.0 LM
+     IK19250EF                    Halvfabrikat       20.6 LM
+     IP13120                      Halvfabrikat       26.0 LM
+     IU19073                      Halvfabrikat        5.8 LM
+     IU19098T                     Halvfabrikat        4.8 LM
+     IU19123                      Halvfabrikat        8.1 LM
+     IU19148T                     Halvfabrikat       51.0 LM
+     IU22073                      Halvfabrikat        4.1 LM
+     IU22098                      Halvfabrikat        4.1 LM
+     IU22123                      Halvfabrikat        1.9 LM
+     IU22123T                     Halvfabrikat        4.8 LM
+     IU29098T                     Halvfabrikat        9.4 LM
+     IV28145                      Halvfabrikat        1.8 LM
+     IV45080                      Halvfabrikat       37.1 LM
+     IV45120                      Halvfabrikat        4.6 LM
+
+  [KJØP/UKJENT]  Kapasitet:    0.0t /    0.0t (  0.0%)
+     ES91086                      Råvare/kjøp         0.1 LM
+     ES91094                      Råvare/kjøp         0.0 LM
+     ES91146                      Råvare/kjøp         1.5 LM
+     ES91146                      Råvare/kjøp         0.2 LM
+     JD19098B                     Råvare/kjøp       287.3 LM
+     JD19123B                     Råvare/kjøp       266.2 LM
+     JD19148B                     Råvare/kjøp       247.2 LM
+     JD19173B                     Råvare/kjøp         0.0 LM
+     JD22098B                     Råvare/kjøp        50.1 LM
+     JD22123B                     Råvare/kjøp        30.0 LM
+     JD22148B                     Råvare/kjøp         0.0 LM
+     JD22173B                     Råvare/kjøp        94.5 LM
+     JD22198B                     Råvare/kjøp        99.2 LM
+     JD29148B                     Råvare/kjøp         1.9 LM
+     JE15120B                     Råvare/kjøp       223.2 LM
+     JE18120B                     Råvare/kjøp       256.4 LM
+     JE21120B                     Råvare/kjøp        87.7 LM
+     JJ21195B                     Råvare/kjøp         4.4 LM
+     JJ21220B                     Råvare/kjøp        93.1 LM
+     JK19123B                     Råvare/kjøp        40.1 LM
+     JK19148B                     Råvare/kjøp       173.0 LM
+     JK19148B                     Råvare/kjøp         0.0 LM
+     JK19173B                     Råvare/kjøp         0.0 LM
+     JK19200B                     Råvare/kjøp       272.4 LM
+     JK19216B                     Råvare/kjøp        93.1 LM
+     JK19216B                     Råvare/kjøp         0.0 LM
+     JK19220B                     Råvare/kjøp       175.8 LM
+     JK19220B                     Råvare/kjøp         0.0 LM
+     JK19223B                     Råvare/kjøp       272.4 LM
+     JK19223B                     Råvare/kjøp        41.9 LM
+     JK19224B                     Råvare/kjøp       434.4 LM
+     JK19224B                     Råvare/kjøp         0.0 LM
+     JK19227B                     Råvare/kjøp        68.1 LM
+     JK19227B                     Råvare/kjøp         0.0 LM
+     JK19230B                     Råvare/kjøp        69.7 LM
+     JK19230B                     Råvare/kjøp       118.3 LM
+     JK19250B                     Råvare/kjøp       260.1 LM
+     JK19250B                     Råvare/kjøp         0.0 LM
+     JK21120B                     Råvare/kjøp         4.7 LM
+     JK21120B                     Råvare/kjøp         0.0 LM
+     JK21121B                     Råvare/kjøp        39.5 LM
+     JK22120B                     Råvare/kjøp         0.0 LM
+     JK22148B                     Råvare/kjøp        13.5 LM
+     JL19148B                     Råvare/kjøp         0.0 LM
+     JY19098B                     Råvare/kjøp         0.0 LM
+     JY19123B                     Råvare/kjøp         9.9 LM
+     JY19148B                     Råvare/kjøp        15.7 LM
+     JY19173B                     Råvare/kjøp         0.0 LM
+     JY22073B                     Råvare/kjøp         0.0 LM
+     JY22098B                     Råvare/kjøp        41.2 LM
+     JY22123B                     Råvare/kjøp         0.0 LM
+     JY22148B                     Råvare/kjøp         0.0 LM
+     JY22173B                     Råvare/kjøp        28.9 LM
+     JY22198B                     Råvare/kjøp        18.7 LM
+     JY29098B                     Råvare/kjøp         0.0 LM
+     JY29123B                     Råvare/kjøp         0.0 LM
+     JY29148B                     Råvare/kjøp         5.0 LM
+     JY29173B                     Råvare/kjøp         0.0 LM
+     JY29198B                     Råvare/kjøp         0.0 LM
+     JY29300B                     Råvare/kjøp         0.0 LM
+     JY29310B                     Råvare/kjøp        32.3 LM
+     JY29320B                     Råvare/kjøp         0.0 LM
+     JY29330B                     Råvare/kjøp       264.2 LM
+     JY29340B                     Råvare/kjøp         0.0 LM
+     JY29350B                     Råvare/kjøp         0.0 LM
+     JY29360B                     Råvare/kjøp         0.0 LM
+     JY29370B                     Råvare/kjøp         0.0 LM
+     JY29380B                     Råvare/kjøp         0.0 LM
+     JY29390B                     Råvare/kjøp         0.0 LM
+     JY29400B                     Råvare/kjøp         0.0 LM
+     JY29405B                     Råvare/kjøp         0.0 LM
+     JY29410B                     Råvare/kjøp        64.9 LM
+     JY29420B                     Råvare/kjøp        56.1 LM
+     JY29425B                     Råvare/kjøp         0.0 LM
+     JY29426B                     Råvare/kjøp       481.2 LM
+     JY29430B                     Råvare/kjøp        34.5 LM
+     JY29440B                     Råvare/kjøp        47.4 LM
+     JY29450B                     Råvare/kjøp       168.2 LM
+     JY29455B                     Råvare/kjøp       292.2 LM
+     JY29490B                     Råvare/kjøp        59.0 LM
+     KD_Extreem                   Råvare/kjøp       440.6 LM
+     KD_Extreem                   Råvare/kjøp     1,334.9 LM
+     KD_Extreem                   Råvare/kjøp         1.6 LM
+     KD_Opaque                    Råvare/kjøp       474.0 LM
+     KD_Opaque                    Råvare/kjøp     1,583.2 LM
+     KD_Opaque                    Råvare/kjøp         6.6 LM
+     KD_Trebitt                   Råvare/kjøp        43.3 LM
+     KD_Visir                     Råvare/kjøp       179.1 LM
+     KD_Visir                     Råvare/kjøp       541.6 LM
+     PG14120CEF                   Råvare/kjøp         1.5 LM
+     PG14120CEH                   Råvare/kjøp        34.6 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp         9.9 LM
+     RM_44x100__US_V_Gran         Råvare/kjøp        19.5 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp         8.4 LM
+     RM_44x125_US_V_Gran          Råvare/kjøp        30.5 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp       102.2 LM
+     RM_44x150_US_V_Gran          Råvare/kjøp         1.2 LM
+     RM_50x100_US_V_Gran          Råvare/kjøp         1.4 LM
+     RM_50x125_US_V_Gran          Råvare/kjøp        15.1 LM
+     RM_50x150_K90_Furu           Råvare/kjøp         6.2 LM
+     RM_50x150_US_V_Gran          Råvare/kjøp        28.2 LM
+
+  [MALINGSLINJE]  Kapasitet:    1.0t /   66.4t (  1.6%)
+   ► JD19098TF                    Ferdigvare         27.6 LM
+     JD19098VF                    Halvfabrikat       55.7 LM
+--------------------------------------------------------------------------
+
+==========================================================================
+  TRANSPORTPLAN
+==========================================================================
+
+  UKE 53:
+   JD19098                      KOD → EIK      8,170.3 LM  (4,313.93 kr)
+   JD19098TF                    KOD → EIK        405.0 LM  (213.84 kr)
+   JD19098VF                    KOD → EIK        405.0 LM  (213.84 kr)
+   JD19123                      KOD → EIK      3,589.8 LM  (2,369.28 kr)
+   JD19123TF                    KOD → EIK         20.0 LM  (13.20 kr)
+   JD19123VF                    KOD → EIK         20.0 LM  (13.20 kr)
+   JK19148                      KOD → EIK        500.0 LM  (396.00 kr)
+   JK19148TF                    KOD → EIK        500.0 LM  (396.00 kr)
+   JK19148VF                    KOD → EIK        500.0 LM  (396.00 kr)
+   JK19220                      KOD → EIK      2,921.0 LM  (2,313.43 kr)
+   JK19220VE                    KOD → EIK        616.0 LM  (487.87 kr)
+   JK19220VF                    KOD → EIK        946.0 LM  (749.23 kr)
+   JK19230                      KOD → EIK     93,681.5 LM  (74,195.76 kr)
+   JK19230EF                    KOD → EIK      5,544.0 LM  (4,390.85 kr)
+   JK19230GF                    KOD → EIK      5,544.0 LM  (4,390.85 kr)
+   JK19230TF                    KOD → EIK      6,908.2 LM  (5,471.29 kr)
+   JK19230VF                    KOD → EIK     28,975.5 LM  (22,948.60 kr)
+   JK21140                      KOD → EIK      1,000.0 LM  (660.00 kr)
+   JD22148                      KOD → KV         220.0 LM  (148.50 kr)
+   JD22148TF                    KOD → KV         220.0 LM  (148.50 kr)
+   JD22148VF                    KOD → KV         220.0 LM  (148.50 kr)
+   JK19148                      KOD → KV         304.8 LM  (181.05 kr)
+   JK19148AVE                   KOD → KV         304.8 LM  (181.05 kr)
+   JK19148AVF                   KOD → KV         304.8 LM  (181.05 kr)
+   JK19220                      KOD → KV       1,750.0 LM  (1,039.50 kr)
+   JK19220TF                    KOD → KV       1,750.0 LM  (1,039.50 kr)
+   JK19220VF                    KOD → KV       1,750.0 LM  (1,039.50 kr)
+   JK19223                      KOD → KV         730.0 LM  (433.62 kr)
+   JK19223EF                    KOD → KV         730.0 LM  (433.62 kr)
+   JK19223GF                    KOD → KV         730.0 LM  (433.62 kr)
+   JQ21070                      KOD → KV         651.0 LM  (219.83 kr)
+   JQ21070EF                    KOD → KV         651.0 LM  (219.83 kr)
+   JQ21070GF                    KOD → KV         651.0 LM  (219.83 kr)
+
+  UKE 55:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 56:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 57:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 58:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 59:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 60:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 61:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 62:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 63:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 64:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 65:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+  UKE 66:
+   JD19098TF                    KOD → EIK         27.6 LM  (14.57 kr)
+   JD19098VF                    KOD → EIK         55.7 LM  (29.39 kr)
+   JK19220                      KOD → EIK         50.4 LM  (39.90 kr)
+   JK19220VF                    KOD → EIK          0.1 LM  (0.05 kr)
+
+==========================================================================
+  BATCH-START / RIGG
+==========================================================================
+
+  UKE 53:
+   JD19098                      KOD    setup=5,002.50 kr
+   JD19098TF                    KOD    setup=1,194.60 kr
+   JD19098VF                    KOD    setup=1,194.60 kr
+   JD19123                      KOD    setup=2,502.50 kr
+   JD19123EF                    KOD    setup=1,194.60 kr
+   JD19123GF                    KOD    setup=1,194.60 kr
+   JD19148                      KOD    setup=5,002.50 kr
+   JD19148EF                    KOD    setup=1,194.60 kr
+   JD19148GF                    KOD    setup=1,194.60 kr
+   JD22148                      KOD    setup=5,005.00 kr
+   JD22148TF                    KOD    setup=1,194.60 kr
+   JD22148VF                    KOD    setup=1,194.60 kr
+   JD22198                      KOD    setup=5,003.00 kr
+   JK19148                      KOD    setup=5,002.50 kr
+   JK19148AGH                   KOD    setup=2,501.70 kr
+   JK19148AVE                   KOD    setup=2,501.70 kr
+   JK19148AVF                   KOD    setup=2,501.70 kr
+   JK19148TF                    KOD    setup=1,194.60 kr
+   JK19148VF                    KOD    setup=1,194.60 kr
+   JK19220                      KOD    setup=7,505.00 kr
+   JK19220TF                    KOD    setup=1,194.60 kr
+   JK19220VE                    KOD    setup=1,194.60 kr
+   JK19220VF                    KOD    setup=1,194.60 kr
+   JK19223                      KOD    setup=7,507.50 kr
+   JK19223EF                    KOD    setup=1,194.60 kr
+   JK19223GF                    KOD    setup=1,194.60 kr
+   JK19223VE                    KOD    setup=1,194.60 kr
+   JK19223VF                    KOD    setup=1,194.60 kr
+   JK19230                      KOD    setup=7,505.00 kr
+   JK19230EF                    KOD    setup=1,194.60 kr
+   JK19230GF                    KOD    setup=1,194.60 kr
+   JK19230TF                    KOD    setup=1,194.60 kr
+   JK19230VF                    KOD    setup=1,194.60 kr
+   JK21120                      KOD    setup=853.80 kr
+   JK21120GH                    KOD    setup=1,194.60 kr
+   JK21140                      KOD    setup=853.80 kr
+   JL19148                      KOD    setup=5,002.50 kr
+   JL19148EF                    KOD    setup=1,194.60 kr
+   JL19148GF                    KOD    setup=1,194.60 kr
+   JQ21070                      KOD    setup=853.50 kr
+   JQ21070EF                    KOD    setup=1,194.60 kr
+   JQ21070GF                    KOD    setup=1,194.60 kr
+   JY22148                      KOD    setup=5,002.50 kr
+   JY22198                      KOD    setup=5,003.00 kr
+   NB10430                      KOD    setup=1,194.60 kr
+   NB10500                      KOD    setup=1,194.60 kr
+
+  UKE 54:
+   JD19148EF                    KOD    setup=1,194.60 kr
+   JK19223                      KOD    setup=7,507.50 kr
+   JK19223VF                    KOD    setup=1,194.60 kr
+
+  UKE 55:
+   JD19148GF                    KOD    setup=1,194.60 kr
+   JK19148                      KOD    setup=5,002.50 kr
+
+  UKE 59:
+   JD19148                      KOD    setup=5,002.50 kr
+
+==========================================================================
+  FERDIG — Bytt til --days 10 eller høyere for å se en løsbar plan
+==========================================================================

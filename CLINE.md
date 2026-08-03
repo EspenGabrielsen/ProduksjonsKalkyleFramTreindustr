@@ -118,6 +118,91 @@ ProduksjonsKalkyle/
 
 ---
 
+## FTI-nummerstruktur (produktfamilier & changeover)
+
+**FramtreIndustriNr (FTI)** er produktnummereringssystemet: `[PREFIKS][SIFFER][SUFFIKS]`
+
+```
+JD19073GH
+││     ││
+││     │└── Suffiks (0-3 tegn) — overflatebehandling/variant
+││     └──── Siffer (4-5 siffer) — dimensjon/profilkode
+│└────────── Prefiks (2-3 bokstaver) — produkttype/profilserie
+└─────────── Hele FTI-strengen
+```
+
+### Prefiks — produkttype/profilserie
+
+| Prefiks | Betydning | Treslag |
+|---------|-----------|---------|
+| **JD** | Justert kledning (vanligste) | Gran |
+| **JK** | Dobbelfalsskledning | Gran |
+| **JV** | Vannbrett, hafjell | Gran |
+| **JJ** | Buer kledning, Aune kledning | Gran |
+| **JL** | Vestlandskledning | Gran |
+| **JS** | Barokk kledning, Hasås | Gran |
+| **JQ** | Barokk raftekledning | Gran |
+| **JR/JP/JT** | Raft forskjellige | Gran |
+| **JM/JO** | Gulvbord gran/furu | Gran/Furu |
+| **JY/YA** | Malmfuru/K90 (spesialsag) | **Furu** |
+| **JU** | Spesialkledning (Thermo) | **Furu** |
+| **JB/JC/JG** | Justert konstruksjonsvirke / forskaling / utforing | Gran |
+| **IV/IK/IG** | Impregnert (ALDRI maling!) | **Furu** |
+| **IL** | Impregnert + overflatebehandlet | **Furu** |
+| **BL** | Byggelist | — |
+| **CD/CC** | Jotun maling/kjemi (ekskluderes fra tre-koblinger) | — |
+| **ES** | Råvarer (sagbruk) | — |
+
+### Siffer — dimensjon
+
+- **Første 2 siffer = tykkelse (mm)**: `JD19048` → 19mm
+- **Siste 2-3 siffer = bredde (mm)**: `JD19048` → 48mm
+- **Unntak:** Spesialprofiler kan ha avvikende bredde (f.eks. `JK19200` = 19x148mm, der 200 er profilvariant)
+- **Profil-match:** Beskrivelser med `NR.XXX` (NR.440, NR.156) verifiserer likhet på tvers av prefikser
+
+### Suffiks — overflatebehandling
+
+| Suffiks | Betydning |
+|---------|-----------|
+| *(tom)* | Ubehandlet/høvlet |
+| GH | Grunnet Hvit (Power/c.ex CD10773) |
+| GF | Grunnet Farge (Opaque CD10410) |
+| VF | Grunnet VISIR (Visir CD10100) |
+| VE | VISIR + 2× EXTREME |
+| TF | VISIR + TREBITT (forelder: VF) |
+| EH | GR.HVIT + N.EXTREME (forelder: GH) |
+| EF | GR.FARGE + N.EXTREME (forelder: GF) |
+| ME | Grunnet + EXTREME |
+| MS | Malt strøk |
+| B/AB | B-vare / 2. sortering |
+| LG | Lange lengder |
+| E/EGH | Impregnert |
+
+**Suffiks-hierarki for videreforedling:** VF→TF, GH→EH, GF→EF (aldri direkte fra basis).
+
+### Koblingsregler (produktfamilier)
+
+1. **Samme prefiks + siffer = samme base/produktfamilie** (`JV45070` → `JV45070GH`)
+2. **Forskjellig prefiks + samme siffer** krever **samme profilnummer (NR.XXX)** i beskrivelsen
+3. **Impregnert (IV/IK/IG) kobles ALDRI til malte varianter**
+4. Overflate-status (`surface`): basis/grunnet/grunnet+malt/malt/impregnert/beiset
+5. **Ribbing:** Råvaren ribbes (deles på langs) — 1 råvarebord → 2 kledningsbord. Eksempel 50×75 → 2 stk 19×73 (~26% svinn)
+
+### Changeover-modellering (for optimeringsmotoren)
+
+Sortert fra **minst til mest kostbar omstilling** på høvel:
+
+| Nivå | Endring | Eksempel | Est. omstillingstid |
+|------|---------|----------|---------------------|
+| 1 | **Suffiks-bytte** (samme siffer) | GH→GF→VF→TF | ~0 min (kun malingsskift) |
+| 2 | **Bredde-bytte** (samme tykkelse) | JD19**073**→JD19**148** | 15-30 min (sidekniver) |
+| 3 | **Tykkelse-bytte** | JD**19**148→JD**22**148 | 45-60 min (ribbing, kniver) |
+| 4 | **Prefiks-bytte** | JD→JV, JD→JS | ~90 min (full omstilling) |
+
+**Familiegruppering for MILP:** Produkter med samme (prefiks, siffer—tykkelse, siffer—bredde) = en familie. Changeover-straff per periode trekkes fra kapasiteten når antall ulike familier > 1.
+
+---
+
 ## Kjerneberegninger (i `CostCalculator`)
 
 ### Materialkost

@@ -8,6 +8,7 @@ Excel brukes kun som import/eksport-format.
 Tabeller:
   - Stamdata: products, locations, work_centers, operations, item_costs,
     bom_lines, routing_lines, byproduct_rules, capacity_days, production_scenarios
+  - Optimering: demand (sluttetterspørsel), changeover_matrix (omstillingstid mellom produktfamilier)
   - Infrastruktur: change_log, uploaded_files
 
 Alle tabeller har id INTEGER PRIMARY KEY AUTOINCREMENT, med unike constraints
@@ -197,6 +198,49 @@ CREATE TABLE IF NOT EXISTS transport_ruter (
     UNIQUE(from_loc, to_loc)
 );
 
+-- Optimerings-tabeller (brukes av optimization_engine.py — MILP-optimeringsmotor)
+-- Eksisterende kode/app rører ALDRI disse tabellene.
+
+-- Sluttetterspørsel: hva kunden/markedet har bestilt per periode
+CREATE TABLE IF NOT EXISTS demand (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id TEXT NOT NULL,
+    period INTEGER NOT NULL,
+    quantity REAL NOT NULL DEFAULT 0,
+    location_code TEXT NOT NULL,
+    customer_region TEXT NOT NULL DEFAULT '',
+    UNIQUE(product_id, period, location_code)
+);
+
+-- Historisk salg: brukes som prognose for batch-størrelsesvalg.
+-- Modellen slår sammen faktisk demand (åpne ordrer) med historisk
+-- salgsmønster for å forutse fremtidig etterspørsel per produkt×uke.
+CREATE TABLE IF NOT EXISTS historical_sales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id TEXT NOT NULL,
+    period INTEGER NOT NULL,
+    quantity REAL NOT NULL DEFAULT 0,
+    location_code TEXT NOT NULL,
+    UNIQUE(product_id, period, location_code)
+);
+
+-- Omstillingstid mellom produktfamilier per arbeidssenter.
+-- Familie = FTI prefiks+siffer (f.eks. 'JD19073'), dvs. samme dimensjon/profil.
+-- Kun TID lagres her — kostnad beregnes ALLTID i koden:
+--   changeover_cost = (changeover_minutes / 60) × work_centers.total_cost_hour
+-- Dette unngår dobbelt vedlikehold av kostnadsdata.
+-- Fallback-generator i kode bruker FTI-nummerstrukturen (se CLINE.md) når
+-- denne tabellen er tom: suffiks-bytte ~0min, bredde-bytte 15-30min,
+-- tykkelse-bytte 45-60min, prefiks-bytte ~90min.
+CREATE TABLE IF NOT EXISTS changeover_matrix (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    work_center_code TEXT NOT NULL,
+    from_family TEXT NOT NULL,
+    to_family TEXT NOT NULL,
+    changeover_minutes REAL NOT NULL DEFAULT 0,
+    UNIQUE(work_center_code, from_family, to_family)
+);
+
 -- Infrastruktur-tabeller
 
 CREATE TABLE IF NOT EXISTS change_log (
@@ -366,7 +410,10 @@ class DataRepo:
         tables = [
             "products", "locations", "work_centers", "operations",
             "item_costs", "bom_lines", "routing_lines", "byproduct_rules",
-            "capacity_days", "production_scenarios", "change_log", "uploaded_files",
+            "capacity_days", "production_scenarios",
+            "demand", "historical_sales", "changeover_matrix",
+            "transport_flagg", "transport_ruter",
+            "change_log", "uploaded_files",
         ]
         stats = {}
         for t in tables:
@@ -1376,6 +1423,141 @@ class DataRepo:
             self.conn.execute("DELETE FROM production_scenarios WHERE id = ?", (scenario_id,))
             self.conn.commit()
 
+    # ── Demand-import fra DataFrame ─────────────────────────────
+
+    def upsert_demand_from_df(
+        self,
+        df,
+        item_col: str = "item_no",
+        period_col: str = "Uke",
+        qty_col: str = "qty",
+        location_col: str = "location_code",
+        location_mapping: Optional[dict[str, str]] = None,
+    ) -> tuple[int, int]:
+        """Importer demand-data fra en pandas DataFrame.
+
+        Filtrerer automatisk bort varer som ikke finnes i products-tabellen.
+        Overskriver eksisterende demand-data (tømmer tabellen først).
+
+        Args:
+            df: DataFrame med kolonner for varenr, uke, kvantum og lokasjon
+            item_col: Kolonnenavn for varenummer (må matches mot products.item_no)
+            period_col: Kolonnenavn for ukenummer/periode
+            qty_col: Kolonnenavn for kvantum (løpemeter)
+            location_col: Kolonnenavn for lokasjonsnavn (f.eks. "HOVEDLAGER")
+            location_mapping: Valgfri mapping fra rå navn til våre location_code
+                              (f.eks. {"HOVEDLAGER": "KOD"})
+
+        Returns:
+            (antall_importerte_rader, antall_filtrert_bort)
+        """
+        import pandas as pd
+
+        # Hent alle gyldige product_id fra products-tabellen
+        valid_items = {r[0] for r in self.conn.execute(
+            "SELECT item_no FROM products"
+        ).fetchall()}
+
+        # Filtrer DataFrame mot gyldige varer
+        df_filtered = df[df[item_col].isin(valid_items)]
+        filtered_out = len(df) - len(df_filtered)
+
+        # Default mapping hvis ikke angitt
+        if location_mapping is None:
+            location_mapping = {"HOVEDLAGER": "KOD"}
+
+        # Tøm eksisterende demand-data
+        self.conn.execute("DELETE FROM demand")
+
+        # Sett inn nye rader
+        rows = []
+        for _, row in df_filtered.iterrows():
+            raw_loc = str(row[location_col]).strip() if location_col in df_filtered.columns else ""
+            mapped_loc = location_mapping.get(raw_loc, raw_loc)
+            rows.append((
+                str(row[item_col]),
+                int(row[period_col]),
+                float(row[qty_col]),
+                mapped_loc,
+                "",
+            ))
+
+        if rows:
+            self.conn.executemany(
+                """INSERT OR REPLACE INTO demand 
+                   (product_id, period, quantity, location_code, customer_region)
+                   VALUES (?, ?, ?, ?, ?)""",
+                rows,
+            )
+        self.conn.commit()
+        return len(rows), filtered_out
+
+    # ── Historisk salg-import fra DataFrame ─────────────────────
+
+    def upsert_historical_sales_from_df(
+        self,
+        df,
+        item_col: str = "item_no",
+        period_col: str = "Uke",
+        qty_col: str = "qty",
+        location_col: str = "location_code",
+        location_mapping: Optional[dict[str, str]] = None,
+    ) -> tuple[int, int]:
+        """Importer historisk salg fra en pandas DataFrame.
+
+        Filtrerer automatisk bort varer som ikke finnes i products-tabellen.
+        Overskriver eksisterende historical_sales-data (tømmer tabellen først).
+
+        Args:
+            df: DataFrame med kolonner for varenr, uke, kvantum og lokasjon
+            item_col: Kolonnenavn for varenummer (må matches mot products.item_no)
+            period_col: Kolonnenavn for ukenummer/periode
+            qty_col: Kolonnenavn for kvantum (løpemeter)
+            location_col: Kolonnenavn for lokasjonsnavn (f.eks. "HOVEDLAGER")
+            location_mapping: Valgfri mapping fra rå navn til våre location_code
+                              (f.eks. {"HOVEDLAGER": "KOD"})
+
+        Returns:
+            (antall_importerte_rader, antall_filtrert_bort)
+        """
+        # Hent alle gyldige product_id fra products-tabellen
+        valid_items = {r[0] for r in self.conn.execute(
+            "SELECT item_no FROM products"
+        ).fetchall()}
+
+        # Filtrer DataFrame mot gyldige varer
+        df_filtered = df[df[item_col].isin(valid_items)]
+        filtered_out = len(df) - len(df_filtered)
+
+        # Default mapping hvis ikke angitt
+        if location_mapping is None:
+            location_mapping = {"HOVEDLAGER": "KOD"}
+
+        # Tøm eksisterende historical_sales-data
+        self.conn.execute("DELETE FROM historical_sales")
+
+        # Sett inn nye rader
+        rows = []
+        for _, row in df_filtered.iterrows():
+            raw_loc = str(row[location_col]).strip() if location_col in df_filtered.columns else ""
+            mapped_loc = location_mapping.get(raw_loc, raw_loc)
+            rows.append((
+                str(row[item_col]),
+                int(row[period_col]),
+                float(row[qty_col]),
+                mapped_loc,
+            ))
+
+        if rows:
+            self.conn.executemany(
+                """INSERT OR REPLACE INTO historical_sales 
+                   (product_id, period, quantity, location_code)
+                   VALUES (?, ?, ?, ?)""",
+                rows,
+            )
+        self.conn.commit()
+        return len(rows), filtered_out
+
     # ── Tømming og tilbakestilling ──────────────────────────────
 
     def clear_all_data(self):
@@ -1384,6 +1566,7 @@ class DataRepo:
             "products", "locations", "work_centers", "operations",
             "item_costs", "bom_lines", "routing_lines", "byproduct_rules",
             "capacity_days", "production_scenarios",
+            "demand", "historical_sales", "changeover_matrix",
             "transport_flagg", "transport_ruter",
         ]
         for t in tables:
@@ -1477,6 +1660,9 @@ class DataRepo:
             "production_scenarios": "SELECT * FROM production_scenarios ORDER BY id",
             "transport_flagg": "SELECT * FROM transport_flagg ORDER BY item_no",
             "transport_ruter": "SELECT * FROM transport_ruter ORDER BY from_loc, to_loc",
+            "demand": "SELECT * FROM demand ORDER BY period, product_id",
+            "historical_sales": "SELECT * FROM historical_sales ORDER BY period, product_id",
+            "changeover_matrix": "SELECT work_center_code, from_family, to_family, changeover_minutes FROM changeover_matrix ORDER BY work_center_code, from_family, to_family",
         }
         result = {}
         for name, query in tables.items():
