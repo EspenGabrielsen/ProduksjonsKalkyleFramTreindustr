@@ -82,6 +82,7 @@ class OptimizationResult:
     batch_decisions: list[dict] = field(default_factory=list)
     cost_breakdown: dict = field(default_factory=dict)
     solve_time_seconds: float = 0.0
+    sequence: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -95,6 +96,7 @@ class OptimizationResult:
             "transport_plan": self.transport_plan,
             "batch_decisions": self.batch_decisions,
             "inventory_levels": self.inventory_levels,
+            "sequence": self.sequence,
         }
 
 
@@ -115,10 +117,11 @@ class OptimizationEngine:
         self,
         db_path: Optional[str] = None,
         days_per_period: float = 5.0,
-        holding_cost_pct: float = 0.0,
+        holding_cost_pct: float = 2.0,
         include_transport: bool = True,
         forecast_weeks: int = 12,
         forecast_max_setup_pct: float = 30.0,
+        use_min_batch: bool = True,
     ):
         self.db_path = db_path
         self.days_per_period = days_per_period
@@ -126,6 +129,7 @@ class OptimizationEngine:
         self.include_transport = include_transport
         self.forecast_weeks = forecast_weeks
         self.forecast_max_setup_pct = forecast_max_setup_pct
+        self.use_min_batch = use_min_batch
 
         # Database + datasource (gjenbruk av eksisterende kode)
         self.db = DataRepo(db_path)
@@ -141,6 +145,7 @@ class OptimizationEngine:
         self.unit_costs: dict[tuple[str, str], float] = {}   # (p,l) → operasjonskost - byproduct per enhet
         self.full_costs: dict[tuple[str, str], dict] = {}    # (p,l) → {operations, material, setup, byproduct, gross, net}
         self.fixed_setup: dict[tuple[str, str], float] = {}  # (p,l) → fast setup-kost per batch
+        self.min_batch: dict[tuple[str, str], float] = {}    # (p,l) → minste tillatte serie (fra routing batch_size)
         self.purchase_costs: dict[str, float] = {}           # p → statisk innkjøpskost (råvarer)
         self.lm_per_m3: dict[str, float] = {}                # p → LM/M3-konvertering
         self.route_costs: dict[tuple[str, str, str], float] = {}  # (p,from,to) → transportkost per enhet
@@ -163,6 +168,7 @@ class OptimizationEngine:
         self._calculate_costs()
         self._calculate_lm_per_m3()
         self._calculate_route_costs()
+        self._compute_dynamic_min_batch()
 
     def validate_demand(self) -> tuple[list[dict], list[DemandRecord]]:
         """Valider alle demand-linjer i databasen FØR MILP-en bygges.
@@ -299,21 +305,22 @@ class OptimizationEngine:
     def _forecast_records(self) -> list[DemandRecord]:
         """Bygg prognose-records fra historisk salg.
 
-        For hvert (produkt, lokasjon) med historisk salg beregnes
-        gjennomsnittlig ukentlig salg. Dette projiseres fremover i de neste
-        `forecast_weeks` periodene, men KUN i perioder som ikke allerede
-        har faktisk demand (åpne ordre). Dette gir modellen et bilde av
-        fremtidig etterspørsel — slik at den kan velge riktig batch-størrelse:
+        Historisk salg aggregeres per PRODUKT (totalt på tvers av
+        lokasjoner) FØR setup-kost-terskelen anvendes. Dette gjør at
+        en vare som selges 300 LM på KOD + 400 LM på EIK ikke filtreres
+        bort som to separate små volumer — sammen utgjør de en god batch.
+        Volumet fordeles deretter proporsjonalt tilbake til lokasjonene
+        basert på historisk andel.
+
+        Gjennomsnittlig ukentlig salg projiseres fremover i de neste
+        `forecast_weeks` periodene. Dette gir modellen et bilde av fremtidig
+        etterspørsel — slik at den kan velge riktig batch-størrelse:
         en stor batch nå sparer setup-kost, men påløper lagerholdskost.
 
         Setup-kost-terskel:
           Hvis setup-kostnaden er uforholdsmessig høy i forhold til
-          operasjonskosten for én ukes salg, skal prognosen IKKE genereres
-          hver uke. I stedet slås N uker sammen til én prognoseperiode,
-          der N = ceil(min_mengde / snitt_uke_salg). Dette unngår at
-          modellen foreslår meningsløse mikrobatcher (f.eks. 0.1 LM).
-          Merknaden "x uker forsinket" kan leses som at produktet får
-          prognose hver N-te periode istedenfor hver uke.
+          operasjonskosten for én ukes salg, slås N uker sammen til én
+          prognoseperiode, der N = ceil(min_mengde / snitt_uke_salg).
 
         Returns:
             Liste med DemandRecord for prognose-periodene.
@@ -326,57 +333,111 @@ class OptimizationEngine:
         max_demand_period = max(
             (d.period for d in self.demand), default=0
         )
-
-        # Gjennomsnittlig ukentlig salg per (produkt, lokasjon)
         HIST_UKER = 52
-        avg = {key: v / HIST_UKER for key, v in totals.items()}
 
-        # Setup-kost-terskel (Alternativ A: kun operasjonskost/routing, eksklusiv råvare)
+        # Aggreger historisk salg per PRODUKT (tvers av lokasjoner)
+        totals_by_prod: dict[str, float] = {}
+        for (pid, loc), v in totals.items():
+            totals_by_prod[pid] = totals_by_prod.get(pid, 0.0) + v
+
+        # ── Omvendt BOM-aggregering ─────────────────────────────
+        # For halvfabrikata og råvarer må omløpshastigheten måles ut fra
+        # ALLE sluttprodukter som (direkte eller indirekte) bruker dem.
+        # Eksempel: JD19098 brukes av JD19098TF, JD19098VF, JD19098EF m.fl.
+        # Hvis JD19098-totalt (18 000 LM) er lite, men de maltede variantene
+        # står for 100 000+ LM historisk, er det lønnsomt å produsere JD19098
+        # i store batcher — fordi de vil bli brukt kort tid etterpå.
+        parents_map: dict[str, set[str]] = {}
+        for bl in self.data.bom_lines:
+            parents_map.setdefault(bl.component_item_no, set()).add(bl.parent_item_no)
+
+        cache_agg: dict[str, float] = {}
+
+        def aggregate_historic(pid: str, visited: Optional[set[str]] = None) -> float:
+            """Sum historisk salg for pid + alle foreldre som bruker den (rekursivt).
+
+            Bruker visited-sett for å unngå uendelig rekursjon hvis BOM-kjeden
+            inneholder sirkler (A → B → A).
+            """
+            if visited is None:
+                visited = set()
+            if pid in cache_agg:
+                return cache_agg[pid]
+            if pid in visited:
+                return totals_by_prod.get(pid, 0.0)  # sirkelbeskyttelse
+            visited = visited | {pid}
+            total = totals_by_prod.get(pid, 0.0)
+            for parent in parents_map.get(pid, set()):
+                total += aggregate_historic(parent, visited)
+            cache_agg[pid] = total
+            return total
+
+        # Aggreger historisk salg per produkt (inkl. nedstrøms etterspørsel)
+        totals_by_prod_agg = {
+            pid: aggregate_historic(pid) for pid in totals_by_prod
+        }
+
+        # Gjennomsnittlig ukentlig salg per produkt (totalt)
+        avg_by_prod = {pid: v / HIST_UKER for pid, v in totals_by_prod_agg.items()}
+
+        # Andel per lokasjon (for å fordele prognosen tilbake)
+        loc_share: dict[str, dict[str, float]] = {}
+        for (pid, loc), v in totals.items():
+            denom = totals_by_prod_agg.get(pid, 0.0)
+            if denom > 0:
+                loc_share.setdefault(pid, {})[loc] = v / denom
+
+        # Setup-kost-terskel: bruk billigste/kjente lokasjon for produktet,
+        # slik at vi ikke filtrerer bort et produkt pga. en dyr lokasjon.
         # 0% = ubegrenset (alle prognoselinjer genereres)
         setup_pct = self.forecast_max_setup_pct / 100.0
 
-        # Prognose-perioder: fortsettelse etter siste faktiske demand.
         records: list[DemandRecord] = []
-        for (pid, loc), uke_qty in avg.items():
-            if uke_qty <= 0:
+        for pid, prod_qty in avg_by_prod.items():
+            if prod_qty <= 0:
                 continue
 
-            # Beregn minimum økonomisk mengde per batch:
-            #   min_mengde = setup_kost / (enhetskost × max_setup_pct)
-            # Hvis snitt ukentlig salg < min_mengde, slås N uker sammen.
-            unit_cost = self.unit_costs.get((pid, loc), 0.0)
-            setup_cost = self.fixed_setup.get((pid, loc), 0.0)
+            # Finn enhetskost og setup for dette produktet (billigste lokasjon)
+            locs = sorted(loc_share.get(pid, {}).keys())
+            unit_cost = 0.0
+            setup_cost = 0.0
+            for loc in locs:
+                uc = self.unit_costs.get((pid, loc), 0.0)
+                sc = self.fixed_setup.get((pid, loc), 0.0)
+                # Bruk den lokasjonen som gir lavest setup-andel i praksis
+                if sc > 0:
+                    unit_cost = uc
+                    setup_cost = sc
+                    break
+            if unit_cost == 0.0:
+                unit_cost = next((self.unit_costs.get((pid, l), 0.0) for l in locs), 0.0)
+            if setup_cost == 0.0:
+                setup_cost = next((self.fixed_setup.get((pid, l), 0.0) for l in locs), 0.0)
 
+            n = 1
             if setup_pct > 0 and unit_cost > 0 and setup_cost > 0:
                 min_mengde = setup_cost / (unit_cost * setup_pct)
-                if uke_qty < min_mengde:
-                    # Slå sammen N = ceil(min_mengde / uke_qty) uker.
-                    # Produktet får da prognose kun hver N-te periode.
+                if prod_qty < min_mengde:
                     import math
-                    n = max(1, math.ceil(min_mengde / uke_qty))
-                    for t in range(max_demand_period + 1,
-                                   max_demand_period + 1 + self.forecast_weeks):
-                        # Kun hver n-te periode fra start
-                        if (t - (max_demand_period + 1)) % n != 0:
-                            continue
-                        records.append(DemandRecord(
-                            product_id=pid,
-                            period=t,
-                            quantity=uke_qty * n,  # N ukers behov samlet
-                            location_code=loc,
-                            customer_region="prognose",
-                        ))
-                    continue
+                    n = max(1, math.ceil(min_mengde / prod_qty))
 
-            # Normaltilfellet: ukentlig prognose
-            for t in range(max_demand_period + 1, max_demand_period + 1 + self.forecast_weeks):
-                records.append(DemandRecord(
-                    product_id=pid,
-                    period=t,
-                    quantity=uke_qty,
-                    location_code=loc,
-                    customer_region="prognose",
-                ))
+            # Generer prognose per periode (hver n-te uke)
+            for t in range(max_demand_period + 1,
+                           max_demand_period + 1 + self.forecast_weeks):
+                if (t - (max_demand_period + 1)) % n != 0:
+                    continue
+                for loc in locs:
+                    share = loc_share.get(pid, {}).get(loc, 0.0)
+                    loc_qty = prod_qty * n * share
+                    if loc_qty <= 0:
+                        continue
+                    records.append(DemandRecord(
+                        product_id=pid,
+                        period=t,
+                        quantity=loc_qty,
+                        location_code=loc,
+                        customer_region="prognose",
+                    ))
         return records
 
     def _expand_records(
@@ -472,16 +533,31 @@ class OptimizationEngine:
     def _expand_demand(self) -> dict[tuple[str, str, int], float]:
         """Pre-prosesser demand via BOM-traversering.
 
-        Slår sammen faktisk demand (åpne ordre) med prognose fra historisk
-        salg, og følger BOM-kjeden rekursivt for å finne totalbehov per
-        produkt, periode og lokasjon.
+        Bruker KUN faktisk demand (åpne ordre) — historisk salg skal IKKE
+        generere tilleggsett etterspørsel. Historisk salg brukes kun som
+        beslutningsgrunnlag for batch-størrelse via `_forecast_records()`
+        (omløpshastighet → overproduksjon/økonomisk batch).
+
+        Følger BOM-kjeden rekursivt for å finne totalbehov per produkt,
+        periode og lokasjon.
 
         Returns:
             dict {(product_id, location_code, period): total_behov}
         """
-        forecast = self._forecast_records()
-        records = list(self.demand) + forecast
-        return self._expand_records(records)
+        records = list(self.demand)
+
+        # Spor kilde for sporbarhet i output
+        self._source_map: dict[str, str] = {}
+        for d in self.demand:
+            self._source_map[d.product_id] = "demand"
+
+        total = self._expand_records(records)
+
+        # Utvid: avledet behov (BOM-komponenter) markeres som "bom-avledet"
+        for (p, _l, _t) in total:
+            if p not in self._source_map:
+                self._source_map[p] = "bom-avledet"
+        return total
 
     def _load_bom_structure(self):
         """Ingen egen BOM-tabell — demand pre-prosesseres via _expand_demand()."""
@@ -605,6 +681,11 @@ class OptimizationEngine:
                     setup_per_batch += od.setup_cost_per_unit * od.batch_size
                 self.fixed_setup[key] = setup_per_batch
 
+                # Min_batch settes IKKE her — beregnes dynamisk i
+                # _compute_dynamic_min_batch() basert på historisk salg.
+                # Routing-tabellens statiske batch_size brukes KUN i
+                # CostCalculator for kostpris-referanse, ikke for planlegging.
+
                 # Lagre fullkost-oppslag for referanse i output
                 self.full_costs[key] = {
                     "operations": r.operation_cost,
@@ -620,6 +701,99 @@ class OptimizationEngine:
             cost = self.data.item_cost(p.item_no)
             if cost is not None:
                 self.purchase_costs[p.item_no] = cost.unit_cost
+
+    def _compute_dynamic_min_batch(self):
+        """Beregn dynamisk min_batch fra aggregert historisk salg (top-down BOM).
+
+        Metode:
+          1. Les historisk salg for alle produkter med routing.
+          2. Kjør top-down BOM-ekspansjon på dette salget (sluttprodukt → råvare),
+             med quantity_per- og scrap-konvertering, for å finne avledet behov.
+          3. Aggreger til årlig volum per produkt.
+          4. Beregn ukentlig snitt: uke_snitt = årlig / 52.
+          5. Beregn min_batch slik at setup-kostnad per enhet ikke overstiger
+             forecast_max_setup_pct av enhetskost:
+                 min_mengde = fixed_setup / (unit_cost * setup_pct)
+             Deretter rundes OPP til hele ukers behov:
+                 min_batch = ceil(min_mengde / uke_snitt) * uke_snitt
+             (men minst én ukes behov per batch).
+
+        Kun produkter med routing (produserbare varer) får min_batch —
+        råvarer og kjøpsvarer styres av materialbalansen, ikke av batch-skranker.
+        """
+        routing_items = {rl.item_no for rl in self.data.routing_lines}
+        if not routing_items:
+            self.min_batch = {}
+            return
+
+        # Historisk salg per produkt (totalt, tvers av lokasjoner)
+        totals = self._load_historical_sales()
+        if not totals:
+            self.min_batch = {}
+            return
+
+        sales_by_prod: dict[str, float] = {}
+        for (pid, loc), v in totals.items():
+            sales_by_prod[pid] = sales_by_prod.get(pid, 0.0) + v
+
+        # BOM-indeks for top-down ekspansjon
+        bom_index: dict[str, list] = {}
+        for bl in self.data.bom_lines:
+            bom_index.setdefault(bl.parent_item_no, []).append(bl)
+
+        # Top-down ekspansjon av historisk salg → avledet årlig behov
+        derived: dict[str, float] = {}
+        for pid, qty in sales_by_prod.items():
+            # Traverser nedover fra sluttprodukt til komponenter
+            stack = [(pid, qty, set())]
+            while stack:
+                cur_p, cur_qty, visited = stack.pop()
+                if cur_p in visited:
+                    continue
+                visited = visited | {cur_p}
+                derived[cur_p] = derived.get(cur_p, 0.0) + cur_qty
+                for bl in bom_index.get(cur_p, []):
+                    if bl.co_product_item_no and bl.co_product_item_no == bl.component_item_no:
+                        continue
+                    qty_per = bl.quantity_per if bl.quantity_per and bl.quantity_per > 0 else 1.0
+                    scrap = bl.scrap_pct if bl.scrap_pct else 0.0
+                    child_qty = cur_qty * (1.0 / qty_per) * (1.0 + scrap / 100.0)
+                    stack.append((bl.component_item_no, child_qty, visited))
+
+        # Setup-terskel som desimal (30% → 0.30)
+        setup_pct = self.forecast_max_setup_pct / 100.0
+        HIST_UKER = 52
+
+        # Beregn min_batch per (produkt, lokasjon) — kun produserbare varer
+        self.min_batch = {}
+        for (p, l), setup in self.fixed_setup.items():
+            if p not in routing_items:
+                continue
+            årlig = derived.get(p, 0.0)
+            uke_snitt = årlig / HIST_UKER if årlig > 0 else 0.0
+            if uke_snitt <= 0:
+                continue
+
+            unit_cost = self.unit_costs.get((p, l), 0.0)
+            if unit_cost <= 0 or setup <= 0:
+                # Ingen økonomisk terskel — bruk kun én ukes behov
+                self.min_batch[(p, l)] = round(uke_snitt, 0)
+                continue
+
+            # Minimum økonomisk batch: setup/(enhetskost × terskel)
+            min_mengde = setup / (unit_cost * setup_pct) if setup_pct > 0 else uke_snitt
+            if min_mengde <= 0:
+                min_mengde = uke_snitt
+
+            # Rund opp til hele ukers behov
+            import math
+            n_uker = max(1, math.ceil(min_mengde / uke_snitt))
+            mb = uke_snitt * n_uker
+
+            # Aldri la min_batch overstige estimert årlig behov × 0.5 (6 mnd)
+            mb = min(mb, årlig * 0.5) if årlig > 0 else mb
+            if mb > 0:
+                self.min_batch[(p, l)] = round(mb, 0)
 
     def _calculate_lm_per_m3(self):
         """Finn LM/M3-konvertering for alle produkter i modellen.
@@ -839,14 +1013,32 @@ class OptimizationEngine:
 
         model += pulp.lpSum(objective_terms), "Total_Kost"
 
-        # ── Big-M batch-kobling ───────────────────────────────────
-        total_demand = sum(expanded_demand.values())
-        M = max(total_demand * 10, 100000.0)  # stor nok verdi
-
+        # ── Big-M batch-kobling + minste seriestørrelse ─────────
+        # M per (produkt, periode): summen av etterspørsel fra og med
+        # denne perioden — numerisk mye tryggere enn en global M=100 000.
+        # I tillegg krever vi at en batch som rigges har MINST routing-batch-
+        # størrelsen (produksjonslederens anbefalte serie). Dette hindrer
+        # meningsløse mikrobatcher (f.eks. 500 LM når anbefalingen er 2000 LM).
         for (p, l, t) in Y_keys:
+            relevant_demand = sum(
+                qty for (item, loc, period), qty in expanded_demand.items()
+                if item == p and period >= t
+            )
+            # Big-M må være stor nok til å tillate full min_batch — ellers
+            # kolliderer riggconstrainten X <= M*Y med min_batch X >= mb*Y.
+            mb = self.min_batch.get((p, l), 0.0)
+            M = max(relevant_demand * 1.2, mb * 1.1, 1000.0)  # romslig, men stabil
             model += X[(p, l, t)] <= M * Y[(p, l, t)], (
                 f"Rigg_{_safe(p)}_{l}_{t}"
             )
+            if mb > 0 and self.use_min_batch:
+                # Overskudd utover etterspørsel går til lager (I[p,l,t])
+                # via materialbalansen — produktet selges historisk raskt nok
+                # til at det er riktig å bygge lager fremfor å produsere 405 LM.
+                if mb > 1e-9:
+                    model += X[(p, l, t)] >= mb * Y[(p, l, t)], (
+                        f"MinBatch_{_safe(p)}_{l}_{t}"
+                    )
 
         # ── Kapasitet per arbeidssenter ───────────────────────────
         # Beregn run- og setup-tid per (produkt, work_center) fra CostCalculator-detaljer
@@ -910,16 +1102,24 @@ class OptimizationEngine:
                     if setup_h > 0 and (p, loc, t) in Y:
                         load_expr.append(setup_h * Y[(p, loc, t)])
 
-                # Changeover-straff: hver aktiv familie trekker 0.5 × snittstraff
-                # (i timer) fra kapasiteten. YF[familie, wc, t] er binær.
-                for f in model_families:
-                    key = (f, wc_code, t)
-                    if key in YF:
-                        penalty_min = self.family_penalty.get((wc_code, f), 0.0)
-                        if penalty_min > 0:
-                            load_expr.append(
-                                YF[key] * (0.5 * penalty_min / 60.0)
-                            )
+                # Changeover-straff: kun dersom FLERE familier kjøres på
+                # samme WC i samme periode. Første familie er gratis —
+                # hver EKSTRA familie trekker 0.5 × snittstraff (i timer).
+                # Dette unngår unødvendig kapasitetstap for enkeltfamilier.
+                active_fams_in_wc = [
+                    YF[(f, wc_code, t)]
+                    for f in model_families
+                    if (f, wc_code, t) in YF
+                ]
+                if len(active_fams_in_wc) > 1:
+                    for f in model_families:
+                        key = (f, wc_code, t)
+                        if key in YF:
+                            penalty_min = self.family_penalty.get((wc_code, f), 0.0)
+                            if penalty_min > 0:
+                                load_expr.append(
+                                    YF[key] * (0.5 * penalty_min / 60.0)
+                                )
 
                 if load_expr:
                     model += pulp.lpSum(load_expr) <= cap, f"Kapasitet_{wc_code}_{t}"
@@ -976,9 +1176,9 @@ class OptimizationEngine:
         start = time.time()
 
         if time_limit_seconds:
-            model.solve(pulp.PULP_CBC_CMD(msg=0, timeLimit=time_limit_seconds))
+            model.solve(pulp.PULP_CBC_CMD(msg=True, timeLimit=time_limit_seconds, gapRel=0.001))
         else:
-            model.solve(pulp.PULP_CBC_CMD(msg=0))
+            model.solve(pulp.PULP_CBC_CMD(msg=True, gapRel=0.001))
 
         solve_time = time.time() - start
 
@@ -1003,20 +1203,51 @@ class OptimizationEngine:
             # Returner delvis/feil-status uten plan
             return result
 
-        # Produksjonsplan
+        # Produksjonsplan — kun produkter som faktisk produseres (har routing).
+        # Råvarer og andre kjøpsvarer (uten routing) utelates fra listen,
+        # selv om de inngår i materialbalansen som kjøpt behov.
+        routing_items = {rl.item_no for rl in self.data.routing_lines}
+
         for (p, l, t), var in sorted(X.items(), key=lambda kv: (kv[0][0], kv[0][1], kv[0][2])):
             val = var.value() or 0.0
-            if val > 0.001:
-                cost_per_unit = self.unit_costs.get((p, l), self.purchase_costs.get(p, 0.0))
+            if val > 0.001 and p in routing_items:
+                base_unit_cost = self.unit_costs.get((p, l), self.purchase_costs.get(p, 0.0))
+                setup_fixed = self.fixed_setup.get((p, l), 0.0)
+
+                # Sjekk om det ble startet en batch i denne perioden
+                batch_var = Y.get((p, l, t))
+                is_batch_start = (batch_var.value() > 0.5) if batch_var is not None else False
+
+                # Beregn dynamisk setup per enhet basert på faktisk volum i batchen
+                if is_batch_start and val > 0:
+                    dynamic_setup_per_unit = setup_fixed / val
+                    actual_batch_size = val  # Volum produsert i denne riggen
+                else:
+                    dynamic_setup_per_unit = 0.0
+                    actual_batch_size = 0.0
+
+                # Reell enhetskost for denne kjøringen (operasjon - biprodukt + amortisert rigg)
+                dynamic_unit_cost = base_unit_cost + dynamic_setup_per_unit
+
+                # Samlet kostnad for linjen
+                total_line_cost = (val * base_unit_cost) + (setup_fixed if is_batch_start else 0.0)
+
                 fc = self.full_costs.get((p, l), {})
                 row = {
                     "product": p,
                     "product_desc": self._desc(p),
                     "location": l,
                     "period": t,
+                    "source": self._source_map.get(p, "ukjent"),
                     "quantity": round(val, 4),
-                    "cost_per_unit": round(cost_per_unit, 4),
-                    "total_cost": round(val * cost_per_unit, 4),
+                    "actual_batch_size": round(actual_batch_size, 4),
+                    "base_unit_cost": round(base_unit_cost, 4),
+                    "setup_per_unit": round(dynamic_setup_per_unit, 4),
+                    "cost_per_unit": round(dynamic_unit_cost, 4),  # DYNAMISK KOST!
+                    "holding_cost_per_unit": round(
+                        base_unit_cost * (self.holding_cost_pct / 100.0), 4
+                    ),
+                    "total_cost": round(total_line_cost, 4),
                 }
                 # Referanse: statisk fullkost fra CostCalculator (kostberegning.py)
                 if fc:
@@ -1429,6 +1660,7 @@ def _run_test(args) -> int:
         include_transport=not args.no_transport,
         forecast_weeks=args.forecast_weeks,
         forecast_max_setup_pct=args.forecast_max_setup_pct,
+        use_min_batch=not args.no_min_batch,
     )
     engine.load_all()
 
@@ -1493,6 +1725,7 @@ def _run_real(args) -> int:
         include_transport=not args.no_transport,
         forecast_weeks=args.forecast_weeks,
         forecast_max_setup_pct=args.forecast_max_setup_pct,
+        use_min_batch=not args.no_min_batch,
     )
     engine.load_all()
 
@@ -1522,10 +1755,12 @@ def _run_real(args) -> int:
         print(f"  └─ Transport:          {result.cost_breakdown.get('transport', 0):>14,.2f} kr")
     print("=" * 74)
 
-    if result.status != "Optimal":
+    if result.status not in ("Optimal", "Feasible"):
         print("\n  ⚠️  Modellen fant ingen gyldig løsning innenfor kapasiteten.")
         print("      Dette betyr at demandet overstiger tilgjengelig maskintid.")
         print("      Prøv --days 10 for å se hva det koster å produsere alt.")
+        if args.output:
+            engine.export_json(result, args.output)
         return 0
 
     # ── Bygg oppslag: (produkt, lokasjon) → arbeidssenter ──────
@@ -1598,35 +1833,90 @@ def _run_real(args) -> int:
             pct = (used_hours / cap * 100) if cap > 0 else 0
             print(f"\n  [{wc}]  Kapasitet: {used_hours:>6.1f}t / {cap:>6.1f}t ({pct:>5.1f}%)")
 
-            # FTI-sekvensering: tykkelse → bredde → prefiks → suffiks
-            def _fti_sort_key(product_id):
-                fam = _fti_family(product_id)
-                d = "".join(ch for ch in fam if ch.isdigit())
-                if len(d) >= 4:
-                    tykkelse, bredde = int(d[:2]), int(d[-3:])
-                else:
-                    tykkelse, bredde = 99, 9999
-                pref = "".join(ch for ch in fam if not ch.isdigit())
-                suff = product_id[len(fam):] if product_id.startswith(fam) else product_id
-                return (tykkelse, bredde, pref, suff)
-
-            # Ferdigvarer først, deretter halvfabrikata, så råvarer —
-            # innenfor hver type sortert etter FTI-struktur
+            # Ferdigvarer først, deretter halvfabrikata, så råvarer
             order = {"Ferdigvare": 0, "Halvfabrikat": 1, "Råvare/kjøp": 2}
-            rows_sorted = sorted(
-                rows,
-                key=lambda r: (order.get(r["type"], 3), _fti_sort_key(r["product"])),
-            )
+
+            if args.sequence:
+                # TSP-sekvensering (greedy nearest-neighbor per produkttype):
+                # Finn rekkefølgen som minimerer total omstillingstid mellom familier.
+                def _greedy_order(items, changeover_cost_fn):
+                    n = len(items)
+                    if n <= 1:
+                        return list(items), 0.0
+                    best_order, best_cost = None, None
+                    for start in range(n):
+                        unv = set(range(n))
+                        order = [start]
+                        unv.remove(start)
+                        cur = start
+                        while unv:
+                            nxt = min(unv, key=lambda j: changeover_cost_fn(items[cur], items[j]))
+                            order.append(nxt)
+                            unv.remove(nxt)
+                            cur = nxt
+                        c = sum(changeover_cost_fn(items[order[i]], items[order[(i+1) % n]])
+                                for i in range(n))
+                        if best_cost is None or c < best_cost:
+                            best_cost, best_order = c, list(order)
+                    return [items[i] for i in (best_order or [])], (best_cost or 0.0)
+
+                def _co(product_a, product_b):
+                    return _changeover_minutes(_fti_family(product_a), _fti_family(product_b),
+                                               engine.family_dims)
+
+                rows_sorted = []
+                for typ in sorted({r["type"] for r in rows}, key=lambda t: order.get(t, 3)):
+                    typ_rows = [r for r in rows if r["type"] == typ]
+                    by_fam: dict[str, list[dict]] = {}
+                    for r in typ_rows:
+                        by_fam.setdefault(_fti_family(r["product"]), []).append(r)
+                    fams = list(by_fam.keys())
+                    fam_order, _ = _greedy_order(fams, lambda a, b: _co(a, b))
+                    for fam in fam_order:
+                        rows_sorted.extend(sorted(by_fam[fam], key=lambda r: r["product"]))
+            else:
+                # Enkel FTI-sortering (tykkelse → bredde → prefiks → suffiks) — lynrask
+                def _fti_sort_key(product_id):
+                    fam = _fti_family(product_id)
+                    d = "".join(ch for ch in fam if ch.isdigit())
+                    if len(d) >= 4:
+                        tykkelse, bredde = int(d[:2]), int(d[-3:])
+                    else:
+                        tykkelse, bredde = 99, 9999
+                    pref = "".join(ch for ch in fam if not ch.isdigit())
+                    suff = product_id[len(fam):] if product_id.startswith(fam) else product_id
+                    return (tykkelse, bredde, pref, suff)
+
+                rows_sorted = sorted(
+                    rows,
+                    key=lambda r: (order.get(r["type"], 3), _fti_sort_key(r["product"])),
+                )
+
             prev_fam = None
             for i, rr in enumerate(rows_sorted, 1):
                 fam = _fti_family(rr["product"])
-                # Kun vis familiebryter innenfor samme produkttype
-                if prev_fam and fam != prev_fam and rr["type"] == rows_sorted[i - 2]["type"]:
+                if prev_fam and fam != prev_fam:
                     co = _changeover_minutes(prev_fam, fam, engine.family_dims)
                     print(f"      ── changeover {prev_fam} → {fam}: {co:.1f} min")
                 marker = "►" if rr["is_demand"] else " "
                 print(f"   {i:<3} {marker} {rr['product']:<26} {rr['type']:<12} "
                       f"{rr['quantity']:>10,.1f} LM")
+                # Lagre sekvensen for JSON-output (kun når --sequence er satt)
+                if args.sequence:
+                    result.sequence.append({
+                        "pos": i,
+                        "uke": t,
+                        "arbeidssenter": wc,
+                        "produkt": rr["product"],
+                        "familie": fam,
+                        "type": rr["type"],
+                        "lokasjon": rr["location"],
+                        "kvantum": round(rr["quantity"], 2),
+                        "beskrivelse": rr.get("product_desc", ""),
+                        "changeover_minutter": round(
+                            _changeover_minutes(prev_fam, fam, engine.family_dims)
+                            if prev_fam and fam != prev_fam else 0.0, 1),
+                    })
                 prev_fam = fam
         print("-" * 74)
 
@@ -1680,8 +1970,8 @@ def main():
                         help="Skriv resultat til JSON-fil")
     parser.add_argument("--days", type=float, default=5.0,
                         help="Antall arbeidsdager per periode (default: 5)")
-    parser.add_argument("--holding-cost-pct", type=float, default=0.0,
-                        help="Lagerholdskost i % av enhetskost per periode (default: 0)")
+    parser.add_argument("--holding-cost-pct", type=float, default=2.0,
+                        help="Lagerholdskost i % av enhetskost per periode (default: 2)")
     parser.add_argument("--forecast-weeks", type=int, default=12,
                         help="Antall uker fremover med prognose fra historisk salg (default: 12)")
     parser.add_argument("--forecast-max-setup-pct", type=float, default=30.0,
@@ -1691,6 +1981,10 @@ def main():
                         help="Maks løsningstid i sekunder for solverb")
     parser.add_argument("--no-transport", action="store_true",
                         help="Utelat transportvariabler fra modellen")
+    parser.add_argument("--no-min-batch", action="store_true",
+                        help="Skru AV minste batchstørrelse (tillater mikrobatcher)")
+    parser.add_argument("--sequence", action="store_true",
+                        help="Beregn optimal produksjonssekvens (TSP) og inkluder i JSON-output")
     args = parser.parse_args()
 
     # Kjør mot temp test-db eller ekte db

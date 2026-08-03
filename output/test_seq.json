@@ -1,0 +1,106 @@
+{
+  "status": "Optimal",
+  "total_cost": 117130.49,
+  "solve_time_seconds": 0.056,
+  "cost_breakdown": {
+    "produksjon": 113491.69,
+    "setup": 2138.8,
+    "transport": 1500.0,
+    "lagerhold": 0.0
+  },
+  "production_plan": [
+    {
+      "product": "KLEDNING_GRUNNET",
+      "product_desc": "Grunnet kledning",
+      "location": "KOD",
+      "period": 34,
+      "source": "bom-avledet",
+      "quantity": 5000.0,
+      "actual_batch_size": 5000.0,
+      "base_unit_cost": 0.1481,
+      "setup_per_unit": 0.1185,
+      "cost_per_unit": 0.2666,
+      "total_cost": 1333.0,
+      "full_operations_cost": 0.1481,
+      "full_material_cost": 14.563,
+      "full_setup_cost": 0.1975,
+      "full_byproduct_value": 0.0,
+      "full_gross_cost": 14.9086,
+      "full_net_cost": 14.9086
+    },
+    {
+      "product": "KLEDNING_MALT",
+      "product_desc": "Malt kledning",
+      "location": "KV",
+      "period": 34,
+      "source": "demand",
+      "quantity": 5000.0,
+      "actual_batch_size": 5000.0,
+      "base_unit_cost": 0.3596,
+      "setup_per_unit": 0.1798,
+      "cost_per_unit": 0.5394,
+      "total_cost": 2697.1,
+      "full_operations_cost": 0.3596,
+      "full_material_cost": 22.7836,
+      "full_setup_cost": 0.4995,
+      "full_byproduct_value": 0.0,
+      "full_gross_cost": 23.6427,
+      "full_net_cost": 23.6427
+    },
+    {
+      "product": "KLEDNING_UBEHANDLET",
+      "product_desc": "Ubehandlet kledning",
+      "location": "KV",
+      "period": 34,
+      "source": "bom-avledet",
+      "quantity": 5050.0,
+      "actual_batch_size": 5050.0,
+      "base_unit_cost": 0.2588,
+      "setup_per_unit": 0.1282,
+      "cost_per_unit": 0.387,
+      "total_cost": 1954.14,
+      "full_operations_cost": 0.2588,
+      "full_material_cost": 8.925,
+      "full_setup_cost": 0.1618,
+      "full_byproduct_value": 0.0,
+      "full_gross_cost": 9.3456,
+      "full_net_cost": 9.3456
+    }
+  ],
+  "transport_plan": [
+    {
+      "product": "KLEDNING_GRUNNET",
+      "from": "KOD",
+      "to": "KV",
+      "period": 34,
+      "quantity": 5000.0,
+      "cost_per_unit": 0.3,
+      "total_cost": 1500.0
+    }
+  ],
+  "batch_decisions": [
+    {
+      "product": "KLEDNING_GRUNNET",
+      "product_desc": "Grunnet kledning",
+      "location": "KOD",
+      "period": 34,
+      "setup_cost": 592.5
+    },
+    {
+      "product": "KLEDNING_MALT",
+      "product_desc": "Malt kledning",
+      "location": "KV",
+      "period": 34,
+      "setup_cost": 899.1
+    },
+    {
+      "product": "KLEDNING_UBEHANDLET",
+      "product_desc": "Ubehandlet kledning",
+      "location": "KV",
+      "period": 34,
+      "setup_cost": 647.2
+    }
+  ],
+  "inventory_levels": [],
+  "sequence": []
+}
