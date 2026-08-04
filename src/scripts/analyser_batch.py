@@ -46,19 +46,24 @@ def _print_batch_tabell(setup: float, base: float, S: float, hold_pct: float = 2
 
     Viser batchkost (én enkelt batch) og årlig kost (52 uker) slik at
     effekten av ulik `hold_pct` blir synlig på årsbasis. Optimal-batchen
-    markeres med [OPT] foran raden. Ingen ANSI-farger — fungerer i alle
-    terminaler.
+    markeres med [OPT] foran raden.
     """
     print(f"\nBATCH-STØRRELSE VS KOSTNAD (setup={setup:.2f} kr, verdi={base:.4f} kr/LM, "
           f"hold={hold_pct}%/uke, ukessalg~{S:.0f} LM):")
-    print(f"  {'Batch LM':>12} {'Uker dk.':>8} {'Setup/enh':>10} {'Hold/enh':>10} "
+
+    # Legger til 6 tegn på starten av overskriften for å matche prefiks-bredden ("[OPT] ")
+    print(f"      {'Batch LM':>12} {'Uker dk.':>9} {'Setup/enh':>11} {'Hold/enh':>10} "
           f"{'Total/enh':>10} {'Batchkost':>11} {'Årlig kost':>12}")
+    print(" " * 6 + "-" * 80)
+
     batcher = [1000, 2000, 5000, 10000, 20000, 25000, 50000, 75000]
     if optimal_batch and optimal_batch > 0:
         _opt_avrundet = round(optimal_batch, 0)
         if not any(abs(b - _opt_avrundet) < 1 for b in batcher):
             batcher.append(_opt_avrundet)
+            
     batcher = sorted(batcher)
+
     for batch in batcher:
         setup_e = setup / batch
         T = batch / S  # antall uker batchen dekker
@@ -66,8 +71,12 @@ def _print_batch_tabell(setup: float, base: float, S: float, hold_pct: float = 2
         total_e = setup_e + hold_e
         batch_kr = total_e * batch
         aarlig_kr = total_e * S * 52.0  # årlig kost (52 uker)
-        marker = "[OPT]" if optimal_batch and abs(batch - optimal_batch) < 1 else "    "
-        print(f"{marker} {batch:>12,.0f} {T:>8,.1f} {setup_e:>10.4f} {hold_e:>10.4f} "
+
+        # Prefiks må være nøyaktig like lang (5 tegn + 1 mellomrom = 6 tegn)
+        is_opt = optimal_batch and abs(batch - optimal_batch) < 1
+        marker = "[OPT] " if is_opt else "      "
+
+        print(f"{marker}{batch:>12,.0f} {T:>9,.1f} {setup_e:>11.4f} {hold_e:>10.4f} "
               f"{total_e:>10.4f} {batch_kr:>11,.0f} {aarlig_kr:>12,.0f}")
 
 
