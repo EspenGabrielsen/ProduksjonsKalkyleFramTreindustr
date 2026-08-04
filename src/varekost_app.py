@@ -40,7 +40,7 @@ def _():
         expand_simulations_with_transport,
     )
     from generer_pdf_rapport import generer_rapport, registrer_fonter, _hent_logo
-    from generer_excel_rapport import generer_excel_rapport
+    from generer_excel_rapport import generer_excel_rapport, build_batch_analyses
     from data_repo import DataRepo
     from excel_bridge import import_excel_to_sqlite, export_sqlite_to_excel, validate_excel, sync_transport_varer
     from testdata_for_app import seed_test_db, er_test_modus, reset_test_db
@@ -51,6 +51,7 @@ def _():
         SimulationEngine,
         SimulationOverride,
         SqliteData,
+        build_batch_analyses,
         er_test_modus,
         export_sqlite_to_excel,
         generer_excel_rapport,
@@ -695,7 +696,8 @@ def _(mo, os):
 
 @app.cell
 def _(
-    DataRepo, baseline, data, db_download, excel_import_file, excel_import_kommentar,
+    DataRepo, baseline, build_batch_analyses, data, db_download, excel_import_file,
+    excel_import_kommentar,
     export_excel_db_button, export_pdf_button, filter_info, historikk_valg,
     import_excel_to_sqlite, mo, overrides, pd, planned_qty, rm_price_df,
     routing_df, run_button, set_reload, validate_excel, wc_cost_df, bom_scrap_df,
@@ -802,8 +804,12 @@ def _(
 
         if export_excel_button.value:
             try:
+                # Batch-analyse (nåværende vs optimal batch) for Excel-eksport
+                _db_ba = DataRepo()
+                _db_ba.initialize()
+                _batch_analyses = build_batch_analyses(sim_results, db=_db_ba)
                 _output_path = os.path.join(tempfile.gettempdir(), "simuleringsresultater.xlsx")
-                _excel_data = generer_excel_rapport(sim_results, _output_path)
+                _excel_data = generer_excel_rapport(sim_results, _output_path, batch_analyses=_batch_analyses)
                 _eksport_items.append(mo.download(label="📊 Last ned Excel-rapport", filename="simuleringsresultater.xlsx", data=_excel_data))
             except Exception as _e:
                 import traceback as _traceback

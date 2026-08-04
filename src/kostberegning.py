@@ -222,6 +222,69 @@ class ProductCostResult:
     cost_breakdown: list[dict] = field(default_factory=list)
 
 
+def build_parents_map(bom_lines: list) -> dict[str, set[str]]:
+    """Bygg oversikt over foreldre-relasjoner fra BOM.
+
+    For hver BOM-linje (foreldre→komponent) registreres komponentens
+    foreldre. Brukes av aggregate_historic_demand() for å summere
+    etterspørsel nedstrøms.
+
+    Args:
+        bom_lines: Liste med BOMLine-objekter.
+
+    Returns:
+        dict {komponent_item_no: sett med parent_item_no som bruker den}.
+    """
+    parents: dict[str, set[str]] = {}
+    for bl in bom_lines:
+        parents.setdefault(bl.component_item_no, set()).add(bl.parent_item_no)
+    return parents
+
+
+def aggregate_historic_demand(
+    product_id: str,
+    parents_map: dict[str, set[str]],
+    sales_by_prod: dict,
+    visited: Optional[set[str]] = None,
+    cache: Optional[dict[str, float]] = None,
+) -> float:
+    """Summer historisk salg for et produkt + alle foreldre som bruker det.
+
+    Reversert BOM-aggregering (bottom-up): et mellomprodukt (f.eks. JK20118,
+    ubehandlet høvlet) selges kanskje bare 138 LM direkte, men er en
+    komponent i BOM-en til mange sluttprodukter (JK20118EF, JK20118GH osv.)
+    som selger 10 000+ LM til sammen. Man kan ikke male luft — for å
+    produsere de grunnet/malte variantene MÅ JK20118 høvles først.
+    Etterspørselen etter JK20118 er derfor summen av alle barnas etterspørsel.
+
+    Args:
+        product_id: Produktnummer det skal aggregeres for.
+        parents_map: dict {komponent: sett med foreldre} fra build_parents_map().
+        sales_by_prod: dict {item_no: direkte historisk salg}.
+        visited: Sett med besøkte produkter (sirkelbeskyttelse).
+        cache: Valgfri memoization-cache delt mellom kall.
+
+    Returns:
+        Aggregert årlig etterspørsel (egent salg + alt avledet fra foreldre).
+    """
+    if visited is None:
+        visited = set()
+    if cache is not None and product_id in cache:
+        return cache[product_id]
+    if product_id in visited:
+        return sales_by_prod.get(product_id, 0.0)
+    visited = visited | {product_id}
+
+    total = sales_by_prod.get(product_id, 0.0)
+    for parent in parents_map.get(product_id, set()):
+        total += aggregate_historic_demand(
+            parent, parents_map, sales_by_prod, visited, cache
+        )
+    if cache is not None:
+        cache[product_id] = total
+    return total
+
+
 @dataclass
 class ScenarioResult:
     scenario_name: str

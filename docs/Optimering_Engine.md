@@ -135,8 +135,37 @@ Med `--sequence` beregnes optimal rekkefølge per arbeidssenter × uke:
 
 ## Analyseverktøy
 
+`analyser_batch.py` har to moduser for å utfordre/validere batch-størrelser med matematikk:
+
+### Modus A: Fra MILP-resultat (etter å ha kjørt `optimization_engine.py`)
+
 ```
-python src/scripts/analyser_batch.py JD19148
+python src/scripts/analyser_batch.py --milp resultat.json JD19148
 ```
 
-Viser batch-størrelse vs lagerkostnad-tabell for et produkt — verktøyet for å utfordre/validere produksjonslederens batch-størrelser med matematikk.
+- Bruker `actual_batch_size` fra den optimerte produksjonsplanen
+- Setup-kost hentes fra `batch_decisions` i JSON
+- Historisk salg er primær etterspørselskilde; fallback til produksjonsplanens kvantum
+
+### Modus B: Direkte fra SQLite-database (uten MILP)
+
+```
+python src/scripts/analyser_batch.py --db src/produksjonskalkyle.db JD19148
+```
+
+- Beregner enhetskost via `CostCalculator` (operasjonskost − biproduktverdi, samme definisjon som MILP-motoren)
+- Setup-kost per batch fra routing × arbeidssenter-kostsatser
+- Nåværende batch fra routing-tabellen (statisk verdi)
+- Bruker EOQ-formel (`sqrt(2 × S × W / h)`) for optimal batch basert på historisk salg
+- **Uten historisk salg** vises kun nåværende batch — optimal-estimatet utelates
+
+### Felles utskrift
+
+Begge moduser produserer batch-størrelse vs lagerkostnad-tabellen som viser hvordan
+setup/lager/total-kost per enhet varierer med batch-størrelse.
+
+### Excel-rapport (Marimo-appen)
+
+Simuleringsrapporten i `varekost_app.py` inkluderer nå også et **"Batch-analyse"**-ark
+ved Excel-eksport. Arket viser nåværende batch vs optimal batch (EOQ) per produkt,
+basert på routing + historisk salg — uten å kjøre en full MILP-optimering.

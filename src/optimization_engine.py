@@ -347,34 +347,18 @@ class OptimizationEngine:
         # Hvis JD19098-totalt (18 000 LM) er lite, men de maltede variantene
         # står for 100 000+ LM historisk, er det lønnsomt å produsere JD19098
         # i store batcher — fordi de vil bli brukt kort tid etterpå.
-        parents_map: dict[str, set[str]] = {}
-        for bl in self.data.bom_lines:
-            parents_map.setdefault(bl.component_item_no, set()).add(bl.parent_item_no)
+        # Felles hjelpere fra kostberegning.py — én kilde for BOM-aggregering.
+        from kostberegning import aggregate_historic_demand, build_parents_map
 
+        parents_map = build_parents_map(self.data.bom_lines)
         cache_agg: dict[str, float] = {}
-
-        def aggregate_historic(pid: str, visited: Optional[set[str]] = None) -> float:
-            """Sum historisk salg for pid + alle foreldre som bruker den (rekursivt).
-
-            Bruker visited-sett for å unngå uendelig rekursjon hvis BOM-kjeden
-            inneholder sirkler (A → B → A).
-            """
-            if visited is None:
-                visited = set()
-            if pid in cache_agg:
-                return cache_agg[pid]
-            if pid in visited:
-                return totals_by_prod.get(pid, 0.0)  # sirkelbeskyttelse
-            visited = visited | {pid}
-            total = totals_by_prod.get(pid, 0.0)
-            for parent in parents_map.get(pid, set()):
-                total += aggregate_historic(parent, visited)
-            cache_agg[pid] = total
-            return total
 
         # Aggreger historisk salg per produkt (inkl. nedstrøms etterspørsel)
         totals_by_prod_agg = {
-            pid: aggregate_historic(pid) for pid in totals_by_prod
+            pid: aggregate_historic_demand(
+                pid, parents_map, totals_by_prod, cache=cache_agg
+            )
+            for pid in totals_by_prod
         }
 
         # Gjennomsnittlig ukentlig salg per produkt (totalt)

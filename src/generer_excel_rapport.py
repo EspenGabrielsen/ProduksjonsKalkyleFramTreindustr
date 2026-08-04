@@ -8,21 +8,182 @@ Kan også kjøres frittstående med JSON-data.
 Avhengigheter: openpyxl, Pillow (begge er i requirements.txt)
 """
 
+import math
 import os
+from dataclasses import dataclass
+
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image as XLImage
 from generer_pdf_rapport import _hent_logo
+from kostberegning import BOMLine, aggregate_historic_demand, build_parents_map
 
 
-def generer_excel_rapport(sim_results, output_path):
+@dataclass
+class BatchAnalysisResult:
+    """Resultat: Analyse av nåværende batch vs optimal batch (EOQ) for ett produkt.
+
+    Felt med `optimal_`-prefiks forblir 0 hvis det ikke finnes
+    etterspørselsdata (historical_sales) for produktet.
+    """
+    product_no: str = ""
+    product_desc: str = ""
+    current_batch: float = 0.0
+    setup_cost: float = 0.0
+    unit_cost: float = 0.0
+    annual_demand: float = 0.0
+    weekly_demand: float = 0.0
+    optimal_batch: float = 0.0
+    current_setup_per_unit: float = 0.0
+    optimal_setup_per_unit: float = 0.0
+    current_holding_per_unit: float = 0.0
+    optimal_holding_per_unit: float = 0.0
+    current_total_per_unit: float = 0.0
+    optimal_total_per_unit: float = 0.0
+    savings_per_unit: float = 0.0
+    annual_savings: float = 0.0
+    current_weeks_coverage: float = 0.0
+    optimal_weeks_coverage: float = 0.0
+
+
+def build_batch_analyses(sim_results, db=None, hold_pct: float = 2.0):
+    """Bygg batch-analyser for unike produkter fra simuleringsresultater.
+
+    For hvert unikt produkt:
+      - Nåværende batch hentes fra operasjonsdetaljene (maks batch-størrelse)
+      - Setupkost per batch = Σ (setup_min/60 × kost/time) over operasjoner
+      - Enhetskost = operasjonskost − biproduktverdi (samme som MILP base_unit_cost)
+      - Årlig etterspørsel hentes fra `historical_sales` i SQLite (via db)
+
+    Uten etterspørselsdata returneres kun nåværende batch-verdier
+    (optimal-feltene forblir 0).
+
+    Args:
+        sim_results: Liste med SimulationComparison-objekter
+        db: DataRepo-instans (valgfri). Uten db blir annual_demand = 0.
+        hold_pct: Lagerholdskost per uke i % av enhetskost (standard: 2.0)
+
+    Returns:
+        Liste med BatchAnalysisResult-objekter, én per unikt produkt.
+    """
+    analyses = []
+
+    # Ett resultat per unikt produkt (første forekomst vinner)
+    by_product = {}
+    for _c in sim_results:
+        if _c.product_no not in by_product:
+            by_product[_c.product_no] = _c
+
+    # Reversert BOM-aggregering for korrekt etterspørsel på mellomprodukter.
+    # Eksempel: JK20118 (ubehandlet høvlet) selges kanskje bare 138 LM direkte,
+    # men er komponent i BOM-en til JK20118EF/GH/GF/TF osv. — den MÅ produseres
+    # i mengde som summen av alle barnas etterspørsel. Delte hjelpere fra
+    # kostberegning.py — én kilde for BOM-aggregering (samme som MILP-motoren).
+    parents_map = {}
+    direct_sales: dict[str, float] = {}
+    if db is not None:
+        try:
+            _bom_rows = db.conn.execute(
+                "SELECT parent_item_no, component_item_no FROM bom_lines"
+            ).fetchall()
+            # Bygg BOMLine-objekter og bruk den delte build_parents_map-hjelperen
+            # (samme logikk som MILP-motoren — én kilde for BOM-aggregering).
+            _bom_lines = [
+                BOMLine(
+                    parent_item_no=_br["parent_item_no"],
+                    component_item_no=_br["component_item_no"],
+                )
+                for _br in _bom_rows
+            ]
+            parents_map = build_parents_map(_bom_lines)
+
+            _sales_rows = db.conn.execute(
+                "SELECT product_id, quantity FROM historical_sales"
+            ).fetchall()
+            for _sr in _sales_rows:
+                _qty = float(_sr["quantity"] or 0)
+                if _qty > 0:
+                    direct_sales[_sr["product_id"]] = (
+                        direct_sales.get(_sr["product_id"], 0.0) + _qty
+                    )
+        except Exception:
+            parents_map = {}
+            direct_sales = {}
+
+    for _prod_no, _c in by_product.items():
+        # Nåværende batch + setupkost fra operasjonsdetaljene
+        current_batch = 0.0
+        setup_cost = 0.0
+        for _od in (_c.simulated_operation_details or []):
+            if _od.batch_size and _od.batch_size > current_batch:
+                current_batch = _od.batch_size
+            setup_cost += (_od.setup_time_min / 60.0) * _od.cost_per_hour
+
+        if current_batch <= 0:
+            current_batch = 10000.0
+
+        # Samme definisjon som MILP-motorens base_unit_cost:
+        # operasjonskost − biproduktverdi per enhet
+        unit_cost = _c.simulated_operation_cost - _c.simulated_byproduct_value
+
+        # Historisk salg fra SQLite — aggregert oppover i BOM-kjeden slik at
+        # mellomprodukter får summen av alle barnas etterspørsel.
+        annual_demand = 0.0
+        if direct_sales:
+            annual_demand = aggregate_historic_demand(
+                _prod_no, parents_map, direct_sales
+            )
+
+        weekly_demand = annual_demand / 52.0 if annual_demand > 0 else 0.0
+
+        a = BatchAnalysisResult(
+            product_no=_prod_no,
+            product_desc=_c.product_desc,
+            current_batch=current_batch,
+            setup_cost=setup_cost,
+            unit_cost=unit_cost,
+            annual_demand=annual_demand,
+            weekly_demand=weekly_demand,
+        )
+
+        if annual_demand > 0 and setup_cost > 0 and unit_cost > 0:
+            W = weekly_demand
+            h = unit_cost * hold_pct / 100.0
+            optimal_batch = math.sqrt(2.0 * setup_cost * W / h) if h > 0 else 0.0
+
+            a.optimal_batch = optimal_batch
+            a.current_setup_per_unit = setup_cost / current_batch
+            a.current_weeks_coverage = current_batch / W
+            a.current_holding_per_unit = (current_batch * h) / (2.0 * W)
+            a.current_total_per_unit = (
+                a.current_setup_per_unit + a.current_holding_per_unit
+            )
+
+            a.optimal_setup_per_unit = setup_cost / optimal_batch if optimal_batch > 0 else 0.0
+            a.optimal_weeks_coverage = optimal_batch / W if optimal_batch > 0 else 0.0
+            a.optimal_holding_per_unit = (optimal_batch * h) / (2.0 * W) if optimal_batch > 0 else 0.0
+            a.optimal_total_per_unit = (
+                a.optimal_setup_per_unit + a.optimal_holding_per_unit
+            )
+
+            a.savings_per_unit = a.current_total_per_unit - a.optimal_total_per_unit
+            a.annual_savings = a.savings_per_unit * annual_demand
+
+        analyses.append(a)
+
+    return analyses
+
+
+def generer_excel_rapport(sim_results, output_path, batch_analyses=None):
     """
     Generer en Excel-rapport fra simuleringsresultater.
 
     Args:
         sim_results: Liste med SimulationComparison-objekter
         output_path: Sti til output Excel-fil (.xlsx)
+        batch_analyses: Liste med BatchAnalysisResult-objekter (valgfri).
+                        Genererer et eget "Batch-analyse"-ark.
 
     Returns:
         bytes: Innholdet av Excel-filen (for nedlasting)
@@ -239,7 +400,56 @@ def generer_excel_rapport(sim_results, output_path):
 
     _auto_width(_ws4, len(_bp_headers))
 
-    # ── ARK 5: DETALJER PER PRODUKT ─────────────────────────────
+    # ── ARK 5 (valgfritt): BATCH-ANALYSE ────────────────────────
+    if batch_analyses:
+        _ws_b = _wb.create_sheet("Batch-analyse")
+        _ws_b.freeze_panes = 'A2'
+
+        _b_headers = [
+            "Produkt", "Beskrivelse",
+            "Nåv. batch", "Setupkost/batch", "Enhetskost",
+            "Årlig etterspørsel", "Ukentlig etterspørsel",
+            "Optimal batch (EOQ)", "Nåv. setup/enh", "Optimal setup/enh",
+            "Nåv. lager/enh", "Optimal lager/enh",
+            "Nåv. total/enh", "Optimal total/enh",
+            "Besparelse/enh", "Årlig besparelse",
+            "Nåv. uker dekning", "Opt. uker dekning",
+        ]
+        for col_idx, h in enumerate(_b_headers, 1):
+            _ws_b.cell(row=1, column=col_idx, value=h)
+        _style_header_row(_ws_b, 1, len(_b_headers))
+
+        _row_num = 2
+        for _a in batch_analyses:
+            _has_opt = _a.optimal_batch and _a.optimal_batch > 0
+            _data = [
+                _a.product_no, _a.product_desc,
+                _a.current_batch if _a.current_batch else 0,
+                _a.setup_cost,
+                _a.unit_cost,
+                _a.annual_demand if _a.annual_demand else None,
+                _a.weekly_demand if _a.weekly_demand else None,
+                _a.optimal_batch if _has_opt else None,
+                _a.current_setup_per_unit,
+                _a.optimal_setup_per_unit if _has_opt else None,
+                _a.current_holding_per_unit,
+                _a.optimal_holding_per_unit if _has_opt else None,
+                _a.current_total_per_unit,
+                _a.optimal_total_per_unit if _has_opt else None,
+                _a.savings_per_unit if _has_opt else None,
+                _a.annual_savings if _has_opt else None,
+                _a.current_weeks_coverage if _has_opt else None,
+                _a.optimal_weeks_coverage if _has_opt else None,
+            ]
+            for col_idx, val in enumerate(_data, 1):
+                _is_num = col_idx >= 3
+                cell = _style_data_cell(_ws_b, _row_num, col_idx, is_number=_is_num)
+                cell.value = val
+            _row_num += 1
+
+        _auto_width(_ws_b, len(_b_headers))
+
+    # ── ARK 6: DETALJER PER PRODUKT ─────────────────────────────
     _ws5 = _wb.create_sheet("Detaljer")
     _sett_logo(_ws5)
     _ws5.freeze_panes = 'A3'
