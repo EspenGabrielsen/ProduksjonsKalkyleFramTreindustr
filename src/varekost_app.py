@@ -595,6 +595,18 @@ def _(mo):
 
 @app.cell
 def _(mo):
+    hold_pct_input = mo.ui.number(
+        label="Lagerholdskost (%/uke av enhetsverdi)",
+        start=0.0,
+        stop=10.0,
+        step=0.1,
+        value=2.0,
+    )
+    return (hold_pct_input,)
+
+
+@app.cell
+def _(mo):
     run_button = mo.ui.run_button(label="⚡ Start simulering", kind="neutral", full_width=True)
     return (run_button,)
 
@@ -699,6 +711,7 @@ def _(
     DataRepo, baseline, build_batch_analyses, data, db_download, excel_import_file,
     excel_import_kommentar,
     export_excel_db_button, export_pdf_button, filter_info, historikk_valg,
+    hold_pct_input,
     import_excel_to_sqlite, mo, overrides, pd, planned_qty, rm_price_df,
     routing_df, run_button, set_reload, validate_excel, wc_cost_df, bom_scrap_df,
     transport_df, byproduct_df,
@@ -725,6 +738,7 @@ def _(
     if routing_df is not None: _parameter_accordions["📋 Routing (stykkpris/tider)"] = routing_df
     if transport_df is not None: _parameter_accordions["🚛 Transport (kr/m³)"] = transport_df
     if byproduct_df is not None: _parameter_accordions["♻️ Biproduktverdier"] = byproduct_df
+    _parameter_accordions["💰 Lagerholdskost (%/uke)"] = hold_pct_input
     if _parameter_accordions:
         _sim_parts.append(mo.accordion(_parameter_accordions))
 
@@ -807,7 +821,9 @@ def _(
                 # Batch-analyse (nåværende vs optimal batch) for Excel-eksport
                 _db_ba = DataRepo()
                 _db_ba.initialize()
-                _batch_analyses = build_batch_analyses(sim_results, db=_db_ba)
+                _batch_analyses = build_batch_analyses(
+                    sim_results, db=_db_ba, hold_pct=hold_pct_input.value
+                )
                 _output_path = os.path.join(tempfile.gettempdir(), "simuleringsresultater.xlsx")
                 _excel_data = generer_excel_rapport(sim_results, _output_path, batch_analyses=_batch_analyses)
                 _eksport_items.append(mo.download(label="📊 Last ned Excel-rapport", filename="simuleringsresultater.xlsx", data=_excel_data))

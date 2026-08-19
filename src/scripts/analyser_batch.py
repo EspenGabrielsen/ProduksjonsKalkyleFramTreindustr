@@ -56,7 +56,7 @@ def _print_batch_tabell(setup: float, base: float, S: float, hold_pct: float = 2
           f"{'Total/enh':>10} {'Batchkost':>11} {'Årlig kost':>12}")
     print(" " * 6 + "-" * 80)
 
-    batcher = [1000, 2000, 5000, 10000, 20000, 25000, 50000, 75000]
+    batcher = [1_000, 2_000, 5_000, 10_000, 20_000, 30_000, 40_000, 50_000, 70_000, 90_000, 100_000, 150_000]
     if optimal_batch and optimal_batch > 0:
         _opt_avrundet = round(optimal_batch, 0)
         if not any(abs(b - _opt_avrundet) < 1 for b in batcher):
