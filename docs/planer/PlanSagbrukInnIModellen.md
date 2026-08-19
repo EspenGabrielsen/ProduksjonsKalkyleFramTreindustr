@@ -117,3 +117,119 @@ JD16073        SA66100        By-Product    0.150          KG     Reduce Main Co
 2. **Fleksibilitet:** Høvleriet kan fortsette nøyaktig som før, men får i tillegg muligheten til å registrere flere sorteringsgrader (f.eks. 3. sort vrak).
 3. **Renere databasestruktur:** `Stykkliste` handler kun om *Input*, mens `Sekundærprodukter` handler om *Output*.
 4. **Enkelt for brukeren:** Brukeren har alt utbytte på én plass og skiller dem enkelt med `Output Type` i stedet for å forholde seg til to separate systemer.
+
+---
+
+# FASE 1: Ny `Sekundærprodukter`-tabell — Detaljert implementasjonsplan
+
+## Mål
+
+Legge til en ny `sekundaerprodukter`-tabell **ved siden av** eksisterende `byproduct_rules` (ikke erstatte den). Eksisterende logikk forblir 100% urørt — dette er en ren additiv endring som forbereder grunnen for sagbrukets 1:N-utbyttemodell.
+
+---
+
+## 1. Database (`data_repo.py`)
+
+### 1.1 Ny tabell
+
+```sql
+CREATE TABLE IF NOT EXISTS sekundaerprodukter (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_item_no TEXT NOT NULL,
+    output_item_no TEXT NOT NULL,
+    output_type TEXT NOT NULL DEFAULT 'Co-Product',  -- 'Co-Product' | 'By-Product'
+    expected_quantity REAL NOT NULL DEFAULT 0,
+    uom TEXT NOT NULL DEFAULT '',
+    allocation_method TEXT NOT NULL DEFAULT 'Reduce Main Cost',
+    market_value REAL NOT NULL DEFAULT 0,
+    UNIQUE(parent_item_no, output_item_no)
+);
+```
+
+### 1.2 Indekser
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_sek_parent ON sekundaerprodukter(parent_item_no);
+CREATE INDEX IF NOT EXISTS idx_sek_output ON sekundaerprodukter(output_item_no);
+```
+
+### 1.3 CRUD-funksjoner i `DataRepo`
+
+- `upsert_sekundaerprodukter(rows: list[dict], source: str)` — samme mønster som `upsert_byproduct_rules`
+- `get_sekundaerprodukter_for(parent_item_no: str) -> list[dict]`
+
+### 1.4 Change-log
+
+Utvid `log_batch_changes()` til å også logge `sekundaerprodukter`-feltendringer (felt: `expected_quantity`, `market_value`, `allocation_method`, `output_type`).
+
+---
+
+## 2. Domenemodell (`kostberegning.py`)
+
+### 2.1 Ny dataclass
+
+```python
+@dataclass
+class Sekundaerprodukt:
+    parent_item_no: str
+    output_item_no: str
+    output_type: str          # "Co-Product" | "By-Product"
+    expected_quantity: float
+    uom: str
+    allocation_method: str    # "Reduce Main Cost" | "Volume/Value Split" | "Fixed Discount"
+    market_value: float
+```
+
+### 2.2 `ExcelData` / `SqliteData`
+
+- Nytt felt: `sekundaerprodukter: list[Sekundaerprodukt]`
+- Ny indeks: `_sekundaerprodukt_index: dict[str, list[Sekundaerprodukt]]`
+- Ny parser: `_parse_sekundaerprodukter()` (leser fra nytt Excel-ark hvis det finnes)
+- Nytt oppslag: `sekundaerprodukter_for(parent_item_no: str) -> list[Sekundaerprodukt]`
+- `SqliteData._load_sekundaerprodukter()` — leser fra den nye SQLite-tabellen
+
+**VIKTIG:** Eksisterende `byproduct_rules` og `_calc_byproduct_value()` endres ikke. Den nye tabellen er et ekstra oppslag som `CostCalculator` kan bruke i fremtiden.
+
+---
+
+## 3. Excel-import/eksport (`excel_bridge.py`)
+
+### 3.1 Import
+
+- Hvis Excel-filen har et ark navngitt `Sekundaerprodukter` (eller `Secondary Output`), leses det inn og lagres via `upsert_sekundaerprodukter()`
+- Hvis arket ikke finnes, hoppes det over uten feil (additiv)
+- Norsk/engelske ark-navn håndteres via `sheet_i18n.json`
+
+### 3.2 Eksport
+
+- Legg til `Sekundaerprodukter` som nytt ark i `export_sqlite_to_excel()` (etter `By Product Rules`)
+- Kolonner: `Parent Item No`, `Output Item No`, `Output Type`, `Expected Quantity`, `Unit of Measure`, `Allocation Method`, `Market Value`
+
+### 3.3 `sheet_i18n.json`
+
+- Legg til ark-oppføring for `Sekundaerprodukter` (norsk navn + tabColor)
+
+---
+
+## 4. Kostnadsberegning (`kostberegning.py`)
+
+**Ingen endringer i Fase 1.** Eksisterende co-produkt- og biprodukt-logikk (`_calc_co_product_results()`, `_calc_byproduct_value()`) forblir intakt.
+
+Fremtidig fase 2 vil utvide `CostCalculator` til å konsultere `sekundaerprodukter_for()` for nye allokeringsmetoder.
+
+---
+
+## 5. Excel-mal (`oppdater_mal.py`, `lag_testdata_v3.py`)
+
+- Legg til valgfritt nytt ark `Sekundaerprodukter` i malen
+- Eksisterende ark uendret (bakoverkompatibelt)
+
+---
+
+## 6. Verifisering (Fase 1)
+
+1. `python src/data_repo.py --stats` — `sekundaerprodukter`-tabellen skal vises
+2. Import av eksisterende Excel-fil (uten nytt ark) skal ikke feile
+3. Import av Excel-fil **med** `Sekundaerprodukter`-ark skal lagre rader korrekt
+4. `export_sqlite_to_excel()` skal generere arket med korrekt struktur
+5. Baseline-beregning endres ikke (alle kalkyler med eksisterende data gir identiske tall)
