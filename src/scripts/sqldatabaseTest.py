@@ -2,8 +2,10 @@ import os
 import sqlite3
 from pathlib import Path
 
-# Databasen ligger nå i src/ (ved siden av data_repo.py)
-_db_path = Path(__file__).resolve().parents[1] / "produksjonskalkyle.db"
+from data_repo import _get_db_path
+
+# Bruk samme path-resolusjon som applikasjonen
+_db_path = _get_db_path()
 conn = sqlite3.connect(str(_db_path))
 
 #resp = conn.execute("select * from products where item_no = 'JD29198'")

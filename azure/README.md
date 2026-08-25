@@ -11,6 +11,7 @@ Sett følgende under **App Service → Configuration → Application settings**:
 | `WEBSITES_PORT` | `8000` | Port Azure sender trafikk til |
 | `PORT` | `8000` | Brukes av `startup.sh` |
 | `PRODUKSJONSKALKYLE_TEST` | `false` | Sikrer at appen ikke bruker testdatabase |
+| `PRODUKSJONSKALKYLE_DB_PATH` | `/home/data/produksjonskalkyle.db` | Persistent SQLite-path inntil PostgreSQL er på plass |
 | `ALLOWED_TENANT_ID` | `00000000-0000-0000-0000-000000000000` | Ekstra validering i kode mot tillatt tenant |
 | `MARIMO_BASE_URL` | `/` eller `/produksjonskalkyle` | Valgfritt dersom appen ligger bak en base path |
 
@@ -88,3 +89,11 @@ Du kan derfor deploye enten:
 ## 8. Viktig om dagens database
 
 Prosjektet bruker fortsatt SQLite lokalt i koden. For Azure-produksjon bør dette erstattes med PostgreSQL før appen tas i ordinær drift med flere brukere.
+
+Inntil PostgreSQL er på plass, bruk alltid en persistent path som:
+
+```text
+/home/data/produksjonskalkyle.db
+```
+
+Applikasjonen støtter nå dette via `PRODUKSJONSKALKYLE_DB_PATH`.

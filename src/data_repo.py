@@ -168,6 +168,20 @@ def get_current_user() -> Optional[str]:
 DB_FILENAME = "produksjonskalkyle.db"
 
 
+def _default_persistent_db_dir() -> Path:
+    """Finn standard katalog for persistent database.
+
+    Prioritet:
+      1. Azure App Service persistent home (/home eller HOME)
+      2. Ved siden av data_repo.py (lokal utvikling)
+    """
+    home_dir = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    website_instance = os.environ.get("WEBSITE_INSTANCE_ID")
+    if website_instance and home_dir:
+        return Path(home_dir) / "data"
+    return Path(__file__).parent
+
+
 def _get_db_path(db_path: Optional[str] = None) -> str:
     """Finn stien til databasen.
 
@@ -175,7 +189,7 @@ def _get_db_path(db_path: Optional[str] = None) -> str:
       - PRODUKSJONSKALKYLE_TEST=true → midlertidig fil-database i temp-mappe.
         Bruker en EKTE fil (ikke :memory:) slik at DataRepo og SqliteData
         (som har to separate tilkoblinger) deler samme data.
-      - Ellers: ved siden av data_repo.py
+      - Ellers: PRODUKSJONSKALKYLE_DB_PATH eller persistent katalog
 
     Args:
         db_path: Eksplisitt sti (valgfri) — prioriteres før test-modus
@@ -185,7 +199,10 @@ def _get_db_path(db_path: Optional[str] = None) -> str:
     if os.environ.get("PRODUKSJONSKALKYLE_TEST", "").lower() in ("true", "1", "yes"):
         import tempfile
         return os.path.join(tempfile.gettempdir(), "produksjonskalkyle_test.db")
-    return str(Path(__file__).parent / DB_FILENAME)
+    configured_path = os.environ.get("PRODUKSJONSKALKYLE_DB_PATH", "").strip()
+    if configured_path:
+        return configured_path
+    return str(_default_persistent_db_dir() / DB_FILENAME)
 
 
 SCHEMA_SQL = """
@@ -422,6 +439,7 @@ class DataRepo:
         """Åpne forbindelse til SQLite-databasen med WAL-mode."""
         if self._conn is not None:
             return
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self.db_path)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA journal_mode=WAL")
@@ -446,31 +464,15 @@ class DataRepo:
         """Opprett alle tabeller hvis de ikke finnes.
         
         Hvis det finnes en database med gammelt skjema (uten id-kolonne),
-        vil den gamle databasen slettes og en ny opprettes.
+        forsøker vi å opprette nytt skjema uten destruktiv sletting.
         """
         # Sjekk om gammelt skjema finnes (products uten id-kolonne)
         try:
             test = self.conn.execute("SELECT id FROM products LIMIT 1").fetchone()
             # id-kolonne finnes → nytt skjema
         except sqlite3.OperationalError:
-            # Gammelt skjema → steng tilkobling, slett DB-fil, opprett på nytt
-            try:
-                if self._conn:
-                    self._conn.close()
-                    self._conn = None
-                if os.path.exists(self.db_path):
-                    os.remove(self.db_path)
-                    print(f"[*] Gammel database slettet: {self.db_path}")
-            except PermissionError:
-                # Kan hende WAL-filer eller -shm/-wal eksisterer; prøv å fjerne dem også
-                for ext in ('', '-wal', '-shm'):
-                    f = self.db_path + ext
-                    if os.path.exists(f):
-                        try:
-                            os.remove(f)
-                        except PermissionError:
-                            print(f"[!] Kunne ikke slette: {f}")
-            self.connect()
+            # Tom / gammel database. Opprett skjema idempotent, men slett aldri automatisk.
+            pass
 
         self.conn.executescript(SCHEMA_SQL)
         self.conn.commit()
