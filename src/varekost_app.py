@@ -41,7 +41,7 @@ def _():
     )
     from generer_pdf_rapport import generer_rapport, registrer_fonter, _hent_logo
     from generer_excel_rapport import generer_excel_rapport, build_batch_analyses
-    from data_repo import DataRepo
+    from data_repo import DataRepo, set_current_user, user_from_headers
     from excel_bridge import import_excel_to_sqlite, export_sqlite_to_excel, validate_excel, sync_transport_varer
     from testdata_for_app import seed_test_db, er_test_modus, reset_test_db
 
@@ -63,14 +63,25 @@ def _():
         registrer_fonter,
         reset_test_db,
         seed_test_db,
+        set_current_user,
         sync_transport_varer,
         tempfile,
+        user_from_headers,
         validate_excel,
         expand_product_costs_with_transport,
         expand_simulations_with_transport,
     )
 
 
+
+
+@app.cell
+def _(mo, set_current_user, user_from_headers):
+    _request = mo.app_meta().request
+    _headers = _request.headers if _request else {}
+    _sso_user = user_from_headers(_headers)
+    set_current_user(_sso_user)
+    return _request
 
 
 @app.cell

@@ -15,6 +15,7 @@ Alle tabeller har id INTEGER PRIMARY KEY AUTOINCREMENT, med unike constraints
 for å bevare integriteten til de naturlige nøklene.
 """
 
+import base64
 import json
 import os
 import sqlite3
@@ -28,16 +29,82 @@ from typing import Optional
 #  SSO-brukerdeteksjon
 # ──────────────────────────────────────────────────────────────────────
 
+_CURRENT_USER: Optional[str] = None
+
+
+def set_current_user(user: Optional[str]) -> None:
+    """Lagre gjeldende bruker for aktiv Marimo-kernel/økt."""
+    global _CURRENT_USER
+    _CURRENT_USER = user.strip() if isinstance(user, str) and user.strip() else None
+
+
+def _decode_easy_auth_claims(encoded_principal: str) -> dict:
+    """Dekod Azure EasyAuth X-MS-CLIENT-PRINCIPAL til claims-dict."""
+    if not encoded_principal:
+        return {}
+    try:
+        padded = encoded_principal + "=" * (-len(encoded_principal) % 4)
+        payload = base64.b64decode(padded).decode("utf-8")
+        data = json.loads(payload)
+    except Exception:
+        return {}
+
+    claims = data.get("claims", []) if isinstance(data, dict) else []
+    result = {}
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        typ = str(claim.get("typ", "")).strip()
+        val = claim.get("val")
+        if typ and val is not None and typ not in result:
+            result[typ] = str(val).strip()
+    return result
+
+
+def user_from_headers(headers: Optional[dict]) -> Optional[str]:
+    """Forsøk å finne innlogget bruker fra reverse-proxy/EasyAuth-headere."""
+    if not headers:
+        return None
+
+    normalized = {str(k).lower(): str(v) for k, v in headers.items() if v is not None}
+    direct_candidates = [
+        normalized.get("x-ms-client-principal-name"),
+        normalized.get("x-forwarded-user"),
+        normalized.get("remote-user"),
+        normalized.get("oidc-claim-preferred_username"),
+    ]
+    for candidate in direct_candidates:
+        if candidate and candidate.strip():
+            return candidate.strip()
+
+    claims = _decode_easy_auth_claims(normalized.get("x-ms-client-principal", ""))
+    claim_candidates = [
+        claims.get("preferred_username"),
+        claims.get("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn"),
+        claims.get("upn"),
+        claims.get("email"),
+        claims.get("name"),
+    ]
+    for candidate in claim_candidates:
+        if candidate and candidate.strip():
+            return candidate.strip()
+    return None
+
 def get_current_user() -> Optional[str]:
     """Forsøk å identifisere bruker via SSO-proxy-headere/miljøvariabler.
     
     Sjekker følgende i prioritert rekkefølge:
-      1. REMOTE_USER         (CGI-standard / oauth2-proxy)
-      2. X_FORWARDED_USER    (Azure App Proxy, nginx)
-      3. OIDC_CLAIM_preferred_username (Keycloak, Dex)
-      4. HTTP_X_FORWARDED_USER (Marimo behind reverse proxy)
+      1. set_current_user() / aktiv Marimo-økt
+      2. X_MS_CLIENT_PRINCIPAL_NAME / HTTP_X_MS_CLIENT_PRINCIPAL_NAME (Azure EasyAuth)
+      3. REMOTE_USER / X_FORWARDED_USER / HTTP_X_FORWARDED_USER
+      4. OIDC_CLAIM_preferred_username (Keycloak, Dex)
     """
+    if _CURRENT_USER:
+        return _CURRENT_USER
+
     candidates = [
+        os.environ.get("X_MS_CLIENT_PRINCIPAL_NAME"),
+        os.environ.get("HTTP_X_MS_CLIENT_PRINCIPAL_NAME"),
         os.environ.get("REMOTE_USER"),
         os.environ.get("X_FORWARDED_USER"),
         os.environ.get("OIDC_CLAIM_preferred_username"),
