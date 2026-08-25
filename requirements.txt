@@ -3,3 +3,4 @@ openpyxl>=3.1.0
 pandas>=2.0.0
 reportlab>=4.0.0
 PuLP>=2.7.0
+psycopg[binary]>=3.2.0

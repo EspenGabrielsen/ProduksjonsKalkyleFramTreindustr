@@ -168,6 +168,17 @@ def get_current_user() -> Optional[str]:
 DB_FILENAME = "produksjonskalkyle.db"
 
 
+def get_database_backend() -> str:
+    """Returner valgt database-backend.
+
+    Foreløpig er bare SQLite implementert, men DATABASE_URL detekteres for å
+    gjøre overgangen til PostgreSQL eksplisitt og konfigurerbar.
+    """
+    if os.environ.get("DATABASE_URL", "").strip():
+        return "postgresql"
+    return "sqlite"
+
+
 def _default_persistent_db_dir() -> Path:
     """Finn standard katalog for persistent database.
 
@@ -423,6 +434,7 @@ class DataRepo:
     """
 
     def __init__(self, db_path: Optional[str] = None):
+        self.backend = get_database_backend()
         self.db_path = _get_db_path(db_path)
         self._conn: Optional[sqlite3.Connection] = None
 
@@ -436,13 +448,28 @@ class DataRepo:
     # ── Tilkobling ───────────────────────────────────────────────
 
     def connect(self):
-        """Åpne forbindelse til SQLite-databasen med WAL-mode."""
+        """Åpne forbindelse til databasen.
+
+        Foreløpig støttes SQLite operativt. PostgreSQL-backend er deklarert via
+        DATABASE_URL, men selve SQL-migreringen gjenstår.
+        """
         if self._conn is not None:
             return
+        if self.backend != "sqlite":
+            raise NotImplementedError(
+                "PostgreSQL-backend er ikke implementert ennå. "
+                "Fjern DATABASE_URL eller fullfør migreringen i data_repo.py."
+            )
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path)
+        sqlite_timeout = float(os.environ.get("PRODUKSJONSKALKYLE_SQLITE_TIMEOUT", "30"))
+        self._conn = sqlite3.connect(self.db_path, timeout=sqlite_timeout)
         self._conn.row_factory = sqlite3.Row
-        self._conn.execute("PRAGMA journal_mode=WAL")
+        journal_mode = os.environ.get("PRODUKSJONSKALKYLE_SQLITE_JOURNAL_MODE", "").strip().upper()
+        if not journal_mode:
+            journal_mode = "DELETE" if os.environ.get("WEBSITE_INSTANCE_ID") else "WAL"
+        busy_timeout_ms = int(os.environ.get("PRODUKSJONSKALKYLE_SQLITE_BUSY_TIMEOUT_MS", "30000"))
+        self._conn.execute(f"PRAGMA journal_mode={journal_mode}")
+        self._conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
         self._conn.execute("PRAGMA foreign_keys=ON")
 
     def close(self):

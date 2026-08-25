@@ -12,6 +12,9 @@ Sett følgende under **App Service → Configuration → Application settings**:
 | `PORT` | `8000` | Brukes av `startup.sh` |
 | `PRODUKSJONSKALKYLE_TEST` | `false` | Sikrer at appen ikke bruker testdatabase |
 | `PRODUKSJONSKALKYLE_DB_PATH` | `/home/data/produksjonskalkyle.db` | Persistent SQLite-path inntil PostgreSQL er på plass |
+| `PRODUKSJONSKALKYLE_SQLITE_JOURNAL_MODE` | `DELETE` | Anbefalt i Azure App Service for SQLite på persistent disk |
+| `PRODUKSJONSKALKYLE_SQLITE_BUSY_TIMEOUT_MS` | `30000` | Venter ved låsing i stedet for å feile raskt |
+| `PRODUKSJONSKALKYLE_SQLITE_TIMEOUT` | `30` | SQLite connect-timeout i sekunder |
 | `ALLOWED_TENANT_ID` | `00000000-0000-0000-0000-000000000000` | Ekstra validering i kode mot tillatt tenant |
 | `MARIMO_BASE_URL` | `/` eller `/produksjonskalkyle` | Valgfritt dersom appen ligger bak en base path |
 
@@ -97,3 +100,23 @@ Inntil PostgreSQL er på plass, bruk alltid en persistent path som:
 ```
 
 Applikasjonen støtter nå dette via `PRODUKSJONSKALKYLE_DB_PATH`.
+
+For SQLite i Azure anbefales også:
+
+```text
+PRODUKSJONSKALKYLE_SQLITE_JOURNAL_MODE=DELETE
+PRODUKSJONSKALKYLE_SQLITE_BUSY_TIMEOUT_MS=30000
+PRODUKSJONSKALKYLE_SQLITE_TIMEOUT=30
+```
+
+## 9. PostgreSQL-status
+
+Prosjektet har nå avhengigheten `psycopg[binary]` og støtter deteksjon av `DATABASE_URL`, men selve `DataRepo`-laget bruker fortsatt SQLite-spesifikk SQL.
+
+Det betyr:
+
+- `DATABASE_URL` er **planlagt backend-signal**
+- PostgreSQL-migrering er **ikke ferdig implementert ennå**
+- hvis `DATABASE_URL` settes nå, vil appen stoppe tydelig med en feilmelding i stedet for å kjøre halvveis feil
+
+Dette er bevisst, slik at Azure-konfig kan forberedes uten skjulte driftsfeil.
