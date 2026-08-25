@@ -751,13 +751,23 @@ class DataRepo:
 
     def is_empty(self) -> bool:
         """Sjekk om databasen har data (products-tabellen tom)."""
-        cur = self.conn.execute("SELECT COUNT(*) FROM products")
-        return cur.fetchone()[0] == 0
+        cur = self.execute("SELECT COUNT(*) AS count FROM products")
+        row = cur.fetchone()
+        if row is None:
+            return True
+        if isinstance(row, dict):
+            return int(row.get("count", 0)) == 0
+        return row[0] == 0
 
     def get_table_row_count(self, table_name: str) -> int:
         """Hent antall rader i en tabell."""
-        cur = self.conn.execute(f"SELECT COUNT(*) FROM {table_name}")
-        return cur.fetchone()[0]
+        cur = self.execute(f"SELECT COUNT(*) AS count FROM {table_name}")
+        row = cur.fetchone()
+        if row is None:
+            return 0
+        if isinstance(row, dict):
+            return int(row.get("count", 0))
+        return int(row[0])
 
     @property
     def stats(self) -> dict:
@@ -803,8 +813,7 @@ class DataRepo:
         """
         if user is None:
             user = get_current_user()
-
-        self.conn.execute(
+        self.execute(
             """INSERT INTO change_log (user, source, table_name, record_key, field_name, old_value, new_value)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (user, source, table_name, str(record_key), field_name,
@@ -843,8 +852,7 @@ class DataRepo:
                 str(c["old_value"]) if c.get("old_value") is not None else None,
                 str(c["new_value"]) if c.get("new_value") is not None else None,
             ))
-
-        self.conn.executemany(
+        self.executemany(
             """INSERT INTO change_log (user, source, table_name, record_key, field_name, old_value, new_value)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             rows,
@@ -886,7 +894,7 @@ class DataRepo:
         query = f"SELECT * FROM change_log {where} ORDER BY id DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
 
-        return self.conn.execute(query, params).fetchall()
+        return self.execute(query, params).fetchall()
 
     def get_recent_changes(self, limit: int = 20) -> list[sqlite3.Row]:
         """Hent de siste endringene (for dashboard)."""
@@ -1944,14 +1952,14 @@ class DataRepo:
         Returns:
             Liste med dicts: id, filename, uploaded_at, comment
         """
-        rows = self.conn.execute(
+        rows = self.execute(
             """SELECT id, filename, uploaded_at, comment
                FROM uploaded_files
                ORDER BY id DESC
                LIMIT ?""",
             (limit,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [dict(r) if not isinstance(r, dict) else r for r in rows]
 
     def get_upload_blob(self, upload_id: int) -> Optional[bytes]:
         """Hent blob for en spesifikk opplastet fil.
@@ -1962,13 +1970,15 @@ class DataRepo:
         Returns:
             Blob-data (bytes) eller None hvis ikke funnet
         """
-        row = self.conn.execute(
+        row = self.execute(
             "SELECT blob FROM uploaded_files WHERE id = ?",
             (upload_id,),
         ).fetchone()
-        if row and row["blob"]:
-            return row["blob"]
-        return None
+        if row is None:
+            return None
+        if isinstance(row, dict):
+            return row.get("blob")
+        return row[0]
 
     def save_upload(
         self,
