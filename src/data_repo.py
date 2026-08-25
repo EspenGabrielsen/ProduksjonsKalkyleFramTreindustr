@@ -605,6 +605,14 @@ def _split_sql_statements(sql: str) -> list[str]:
     return [stmt.strip() for stmt in sql.split(";") if stmt.strip()]
 
 
+def _first_col(row):
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return next(iter(row.values()), None)
+    return row[0]
+
+
 class DataRepo:
     """Hovedklasse for all databaseinteraksjon.
     
@@ -1287,7 +1295,7 @@ class DataRepo:
         for c in costs:
             row_id = c.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM item_costs WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1327,7 +1335,7 @@ class DataRepo:
                             "cost_type", old_cost_type, new_cost_type,
                             source=source,
                         )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE item_costs SET
                            item_no = ?, cost_type = ?, unit_cost = ?,
                            currency = ?, effective_date = ?
@@ -1350,7 +1358,7 @@ class DataRepo:
         return result_ids
 
     def _insert_item_cost(self, c: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO item_costs (item_no, cost_type, unit_cost, currency, effective_date)
                VALUES (?, ?, ?, ?, ?)
                ON CONFLICT(item_no, cost_type) DO UPDATE SET
@@ -1367,14 +1375,19 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("item_costs", str(new_id), "_created", None,
                         f"{c.get('item_no', '')}: {c.get('cost_type', '')}",
                         source=source)
         return new_id
 
     def delete_item_cost(self, cost_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM item_costs WHERE id = ?", (cost_id,)
         ).fetchone()
         if existing:
@@ -1383,7 +1396,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM item_costs WHERE id = ?", (cost_id,))
+            self.execute("DELETE FROM item_costs WHERE id = ?", (cost_id,))
             self.conn.commit()
 
     # ── BOM Lines ─────────────────────────────────────────────────
@@ -1394,7 +1407,7 @@ class DataRepo:
         for bl in lines:
             row_id = bl.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM bom_lines WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1406,7 +1419,7 @@ class DataRepo:
                                 "bom_lines", str(row_id), field, old, new,
                                 source=source,
                             )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE bom_lines SET
                            parent_item_no = ?, component_item_no = ?,
                            quantity_per = ?, uom = ?, scrap_pct = ?,
@@ -1432,7 +1445,7 @@ class DataRepo:
         return result_ids
 
     def _insert_bom_line(self, bl: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO bom_lines
                (parent_item_no, component_item_no, quantity_per, uom,
                 scrap_pct, co_product_pct, co_product_item_no)
@@ -1453,14 +1466,19 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("bom_lines", str(new_id), "_created", None,
-                        f"{bl.get('parent_item_no', '')}:{bl.get('component_item_no', '')}",
+                        f"{bl.get('parent_item_no', '')} -> {bl.get('component_item_no', '')}",
                         source=source)
         return new_id
 
     def delete_bom_line(self, bom_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM bom_lines WHERE id = ?", (bom_id,)
         ).fetchone()
         if existing:
@@ -1469,7 +1487,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM bom_lines WHERE id = ?", (bom_id,))
+            self.execute("DELETE FROM bom_lines WHERE id = ?", (bom_id,))
             self.conn.commit()
 
     # ── Routing Lines ─────────────────────────────────────────────
@@ -1480,7 +1498,7 @@ class DataRepo:
         for rl in lines:
             row_id = rl.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM routing_lines WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1492,7 +1510,7 @@ class DataRepo:
                                 "routing_lines", str(row_id), field, old, new,
                                 source=source,
                             )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE routing_lines SET
                            item_no = ?, operation_no = ?, operation_code = ?,
                            work_center_code = ?, setup_time_minutes = ?,
@@ -1519,7 +1537,7 @@ class DataRepo:
         return result_ids
 
     def _insert_routing_line(self, rl: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO routing_lines
                (item_no, operation_no, operation_code, work_center_code,
                 setup_time_minutes, run_time_minutes, batch_size,
@@ -1544,14 +1562,19 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("routing_lines", str(new_id), "_created", None,
                         f"{rl.get('item_no', '')}:{rl.get('operation_no', 0)}",
                         source=source)
         return new_id
 
     def delete_routing_line(self, routing_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM routing_lines WHERE id = ?", (routing_id,)
         ).fetchone()
         if existing:
@@ -1560,7 +1583,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM routing_lines WHERE id = ?", (routing_id,))
+            self.execute("DELETE FROM routing_lines WHERE id = ?", (routing_id,))
             self.conn.commit()
 
     # ── By Product Rules ──────────────────────────────────────────
@@ -1571,7 +1594,7 @@ class DataRepo:
         for r in rules:
             row_id = r.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM byproduct_rules WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1589,7 +1612,7 @@ class DataRepo:
                                 "byproduct_rules", str(row_id), field, old, new,
                                 source=source,
                             )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE byproduct_rules SET
                            parent_item_no = ?, by_product_item_no = ?,
                            expected_quantity = ?, uom = ?,
@@ -1614,7 +1637,7 @@ class DataRepo:
         return result_ids
 
     def _insert_byproduct_rule(self, r: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO byproduct_rules
                (parent_item_no, by_product_item_no, expected_quantity, uom,
                 market_value, allocation_method)
@@ -1635,14 +1658,19 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("byproduct_rules", str(new_id), "_created", None,
                         f"{r.get('parent_item_no', '')}:{r.get('by_product_item_no', '')}",
                         source=source)
         return new_id
 
     def delete_byproduct_rule(self, rule_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM byproduct_rules WHERE id = ?", (rule_id,)
         ).fetchone()
         if existing:
@@ -1651,7 +1679,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM byproduct_rules WHERE id = ?", (rule_id,))
+            self.execute("DELETE FROM byproduct_rules WHERE id = ?", (rule_id,))
             self.conn.commit()
 
     # ── Capacity Days ─────────────────────────────────────────────
@@ -1662,7 +1690,7 @@ class DataRepo:
         for d in days:
             row_id = d.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM capacity_days WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1678,7 +1706,7 @@ class DataRepo:
                                 "capacity_days", str(row_id), field, old, new,
                                 source=source,
                             )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE capacity_days SET
                            work_center = ?, date = ?,
                            available_hours = ?, planned_downtime = ?
@@ -1700,7 +1728,7 @@ class DataRepo:
         return result_ids
 
     def _insert_capacity_day(self, d: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO capacity_days (work_center, date, available_hours, planned_downtime)
                VALUES (?, ?, ?, ?)
                ON CONFLICT(work_center, date) DO UPDATE SET
@@ -1715,14 +1743,19 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("capacity_days", str(new_id), "_created", None,
                         f"{d.get('work_center', '')}:{d.get('date', '')}",
                         source=source)
         return new_id
 
     def delete_capacity_day(self, capacity_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM capacity_days WHERE id = ?", (capacity_id,)
         ).fetchone()
         if existing:
@@ -1731,7 +1764,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM capacity_days WHERE id = ?", (capacity_id,))
+            self.execute("DELETE FROM capacity_days WHERE id = ?", (capacity_id,))
             self.conn.commit()
 
     # ── Production Scenarios ──────────────────────────────────────
@@ -1742,7 +1775,7 @@ class DataRepo:
         for sc in scenarios:
             row_id = sc.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM production_scenarios WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1754,7 +1787,7 @@ class DataRepo:
                             "planned_quantity", old_qty, new_qty,
                             source=source,
                         )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE production_scenarios SET
                            scenario_name = ?, product = ?, planned_quantity = ?
                            WHERE id = ?""",
@@ -1774,7 +1807,7 @@ class DataRepo:
         return result_ids
 
     def _insert_scenario(self, sc: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO production_scenarios (scenario_name, product, planned_quantity)
                VALUES (?, ?, ?)
                ON CONFLICT(scenario_name, product) DO UPDATE SET
@@ -1787,14 +1820,19 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("production_scenarios", str(new_id), "_created", None,
                         f"{sc.get('scenario_name', '')}:{sc.get('product', '')}",
                         source=source)
         return new_id
 
     def delete_scenario(self, scenario_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM production_scenarios WHERE id = ?", (scenario_id,)
         ).fetchone()
         if existing:
@@ -1803,7 +1841,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM production_scenarios WHERE id = ?", (scenario_id,))
+            self.execute("DELETE FROM production_scenarios WHERE id = ?", (scenario_id,))
             self.conn.commit()
 
     # ── Demand-import fra DataFrame ─────────────────────────────
@@ -1837,9 +1875,8 @@ class DataRepo:
         import pandas as pd
 
         # Hent alle gyldige product_id fra products-tabellen
-        valid_items = {r[0] for r in self.conn.execute(
-            "SELECT item_no FROM products"
-        ).fetchall()}
+        valid_item_rows = self.execute("SELECT item_no FROM products").fetchall()
+        valid_items = {_first_col(r) for r in valid_item_rows if _first_col(r) is not None}
 
         # Filtrer DataFrame mot gyldige varer
         df_filtered = df[df[item_col].isin(valid_items)]
@@ -1850,7 +1887,7 @@ class DataRepo:
             location_mapping = {"HOVEDLAGER": "KOD"}
 
         # Tøm eksisterende demand-data
-        self.conn.execute("DELETE FROM demand")
+        self.execute("DELETE FROM demand")
 
         # Sett inn nye rader
         rows = []
@@ -1866,12 +1903,23 @@ class DataRepo:
             ))
 
         if rows:
-            self.conn.executemany(
-                """INSERT OR REPLACE INTO demand 
-                   (product_id, period, quantity, location_code, customer_region)
-                   VALUES (?, ?, ?, ?, ?)""",
-                rows,
-            )
+            if self.backend == "postgresql":
+                self.executemany(
+                    """INSERT INTO demand 
+                       (product_id, period, quantity, location_code, customer_region)
+                       VALUES (?, ?, ?, ?, ?)
+                       ON CONFLICT(product_id, period, location_code) DO UPDATE SET
+                           quantity = excluded.quantity,
+                           customer_region = excluded.customer_region""",
+                    rows,
+                )
+            else:
+                self.executemany(
+                    """INSERT OR REPLACE INTO demand 
+                       (product_id, period, quantity, location_code, customer_region)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    rows,
+                )
         self.conn.commit()
         return len(rows), filtered_out
 
@@ -1904,9 +1952,8 @@ class DataRepo:
             (antall_importerte_rader, antall_filtrert_bort)
         """
         # Hent alle gyldige product_id fra products-tabellen
-        valid_items = {r[0] for r in self.conn.execute(
-            "SELECT item_no FROM products"
-        ).fetchall()}
+        valid_item_rows = self.execute("SELECT item_no FROM products").fetchall()
+        valid_items = {_first_col(r) for r in valid_item_rows if _first_col(r) is not None}
 
         # Filtrer DataFrame mot gyldige varer
         df_filtered = df[df[item_col].isin(valid_items)]
@@ -1917,7 +1964,7 @@ class DataRepo:
             location_mapping = {"HOVEDLAGER": "KOD"}
 
         # Tøm eksisterende historical_sales-data
-        self.conn.execute("DELETE FROM historical_sales")
+        self.execute("DELETE FROM historical_sales")
 
         # Sett inn nye rader
         rows = []
@@ -1932,12 +1979,22 @@ class DataRepo:
             ))
 
         if rows:
-            self.conn.executemany(
-                """INSERT OR REPLACE INTO historical_sales 
-                   (product_id, period, quantity, location_code)
-                   VALUES (?, ?, ?, ?)""",
-                rows,
-            )
+            if self.backend == "postgresql":
+                self.executemany(
+                    """INSERT INTO historical_sales 
+                       (product_id, period, quantity, location_code)
+                       VALUES (?, ?, ?, ?)
+                       ON CONFLICT(product_id, period, location_code) DO UPDATE SET
+                           quantity = excluded.quantity""",
+                    rows,
+                )
+            else:
+                self.executemany(
+                    """INSERT OR REPLACE INTO historical_sales 
+                       (product_id, period, quantity, location_code)
+                       VALUES (?, ?, ?, ?)""",
+                    rows,
+                )
         self.conn.commit()
         return len(rows), filtered_out
 

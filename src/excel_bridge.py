@@ -544,7 +544,7 @@ def validate_excel(excel_path: str, db: Optional[DataRepo] = None) -> dict:
 
     if not db.is_empty():
         # Sammenlign produkter
-        existing_products = {r["item_no"] for r in db.conn.execute("SELECT item_no FROM products").fetchall()}
+        existing_products = {r["item_no"] for r in db.execute("SELECT item_no FROM products").fetchall()}
         excel_products = all_item_nos
         nye = excel_products - existing_products
         slettet = existing_products - excel_products
@@ -662,28 +662,9 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
     try:
         _filename = os.path.basename(excel_path)
         _row_count = stats["total_changes"]
-        db.save_upload(_filename, excel_blob, comment=comment, row_count=_row_count)
-    except Exception:
-        pass
-
-    # NB! sync_transport_varer() er LEGACY og er bevisst IKKE kalt her.
-    # Transport vises nå KUN i simuleringen via expand_*_with_transport()
-    # i kostberegning.py — datamodellen (semi-finished) muteres aldri.
-    # Se sync_transport_varer() for legacy-guard.
-
-    if egen_db:
-        db.close()
-
-    return stats
-
-
-# ──────────────────────────────────────────────────────────────────────
-#  Transportvare-synkronisering (fler-høvleri-produksjon)
-# ──────────────────────────────────────────────────────────────────────
-
 def _aktive_factory_locations(db: DataRepo) -> list[str]:
     """Hent alle aktive fabrikk-lokasjoner (location_type = 'Factory')."""
-    rows = db.conn.execute(
+    rows = db.execute(
         "SELECT code FROM locations WHERE location_type = 'Factory' ORDER BY code"
     ).fetchall()
     return [r["code"] for r in rows]
@@ -691,7 +672,7 @@ def _aktive_factory_locations(db: DataRepo) -> list[str]:
 
 def _produksjons_locations(db: DataRepo, item_no: str) -> set[str]:
     """Finn hvilke lokasjoner som produserer en vare (via routing → work_centers)."""
-    rows = db.conn.execute(
+    rows = db.execute(
         """SELECT DISTINCT wc.location_code
            FROM routing_lines rl
            JOIN work_centers wc ON rl.work_center_code = wc.code
@@ -705,7 +686,7 @@ def _ensure_workcenter(db: DataRepo, code: str, description: str, location: str,
                        labor: float, machine: float, overhead: float,
                        source: str = "transport_sync"):
     """Opprett et arbeidssenter hvis det ikke finnes."""
-    existing = db.conn.execute(
+    existing = db.execute(
         "SELECT id FROM work_centers WHERE code = ?", (code,)
     ).fetchone()
     if not existing:
@@ -720,7 +701,7 @@ def _ensure_workcenter(db: DataRepo, code: str, description: str, location: str,
 def _ensure_operation(db: DataRepo, code: str, description: str,
                       default_wc: str, source: str = "transport_sync"):
     """Opprett TRANSPORT-operasjonen hvis den ikke finnes."""
-    existing = db.conn.execute(
+    existing = db.execute(
         "SELECT id FROM operations WHERE code = ?", (code,)
     ).fetchone()
     if not existing:
@@ -739,7 +720,7 @@ def _get_or_create_product(db: DataRepo, item_no: str, description: str,
         (id, var_ny) — id til produktet, og True hvis det ble nyopprettet,
         ellers None hvis opprettelsen mislyktes.
     """
-    existing = db.conn.execute(
+    existing = db.execute(
         "SELECT id FROM products WHERE item_no = ?", (item_no,)
     ).fetchone()
     if existing:
@@ -749,7 +730,7 @@ def _get_or_create_product(db: DataRepo, item_no: str, description: str,
         "item_type": item_type, "product_group": product_group,
         "base_uom": base_uom,
     }], source=source)
-    row = db.conn.execute("SELECT id FROM products WHERE item_no = ?", (item_no,)).fetchone()
+    row = db.execute("SELECT id FROM products WHERE item_no = ?", (item_no,)).fetchone()
     if row is None:
         return None
     return (row["id"], True)
@@ -757,15 +738,15 @@ def _get_or_create_product(db: DataRepo, item_no: str, description: str,
 
 def _delete_product_by_no(db: DataRepo, item_no: str, source: str = "transport_sync"):
     """Slett et produkt basert på varenummer (slett kun hvis det er semi-finished/transport-generert)."""
-    row = db.conn.execute("SELECT id FROM products WHERE item_no = ?", (item_no,)).fetchone()
+    row = db.execute("SELECT id FROM products WHERE item_no = ?", (item_no,)).fetchone()
     if row:
         db.delete_product(row["id"], source=source)
 
 
-def _delete_bom_by_parent(db: DataRepo, parent_item_no: str, component_item_no: str,
-                          source: str = "transport_sync"):
+def _delete_bom_by_parent_component(db: DataRepo, parent_item_no: str, component_item_no: str,
+                                    source: str = "transport_sync"):
     """Slett en BOM-linje basert på parent+component."""
-    row = db.conn.execute(
+    row = db.execute(
         "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no = ?",
         (parent_item_no, component_item_no),
     ).fetchone()
@@ -776,7 +757,7 @@ def _delete_bom_by_parent(db: DataRepo, parent_item_no: str, component_item_no: 
 def _delete_routing_by_item(db: DataRepo, item_no: str, operation_no: int, wc: str,
                             source: str = "transport_sync"):
     """Slett en routing-linje basert på item+op+wc."""
-    row = db.conn.execute(
+    row = db.execute(
         "SELECT id FROM routing_lines WHERE item_no = ? AND operation_no = ? AND work_center_code = ?",
         (item_no, operation_no, wc),
     ).fetchone()
@@ -1073,7 +1054,7 @@ def _import_products(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM products WHERE item_no = ?",
                 (item_no,),
             ).fetchone()
@@ -1096,11 +1077,11 @@ def _import_products(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         is_transport = row.get("Is Transport")
         if is_transport is not None and not pd.isna(is_transport):
             flag = 1 if str(is_transport).strip().lower() in ("1", "ja", "true", "yes") else 0
-            har_rad = db.conn.execute(
+            har_rad = db.execute(
                 "SELECT 1 FROM transport_flagg WHERE item_no = ?", (item_no,)
             ).fetchone()
             if flag == 1 or har_rad:
-                db.conn.execute(
+                db.execute(
                     """INSERT INTO transport_flagg (item_no, is_transport)
                        VALUES (?, ?)
                        ON CONFLICT(item_no) DO UPDATE SET is_transport = excluded.is_transport, updated_at = datetime('now')""",
@@ -1130,7 +1111,7 @@ def _import_locations(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM locations WHERE code = ?",
                 (code,),
             ).fetchone()
