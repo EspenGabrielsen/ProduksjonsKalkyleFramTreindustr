@@ -30,12 +30,19 @@ from typing import Optional
 # ──────────────────────────────────────────────────────────────────────
 
 _CURRENT_USER: Optional[str] = None
+_CURRENT_TENANT_ID: Optional[str] = None
 
 
 def set_current_user(user: Optional[str]) -> None:
     """Lagre gjeldende bruker for aktiv Marimo-kernel/økt."""
     global _CURRENT_USER
     _CURRENT_USER = user.strip() if isinstance(user, str) and user.strip() else None
+
+
+def set_current_tenant_id(tenant_id: Optional[str]) -> None:
+    """Lagre tenant-id for aktiv Marimo-kernel/økt."""
+    global _CURRENT_TENANT_ID
+    _CURRENT_TENANT_ID = tenant_id.strip() if isinstance(tenant_id, str) and tenant_id.strip() else None
 
 
 def _decode_easy_auth_claims(encoded_principal: str) -> dict:
@@ -89,6 +96,44 @@ def user_from_headers(headers: Optional[dict]) -> Optional[str]:
         if candidate and candidate.strip():
             return candidate.strip()
     return None
+
+
+def tenant_id_from_headers(headers: Optional[dict]) -> Optional[str]:
+    """Forsøk å hente tenant-id fra Azure EasyAuth-headere."""
+    if not headers:
+        return None
+
+    normalized = {str(k).lower(): str(v) for k, v in headers.items() if v is not None}
+    claims = _decode_easy_auth_claims(normalized.get("x-ms-client-principal", ""))
+    claim_candidates = [
+        claims.get("tid"),
+        claims.get("http://schemas.microsoft.com/identity/claims/tenantid"),
+    ]
+    for candidate in claim_candidates:
+        if candidate and candidate.strip():
+            return candidate.strip()
+    return None
+
+
+def is_allowed_tenant(tenant_id: Optional[str]) -> bool:
+    """Valider tenant-id mot ALLOWED_TENANT_ID hvis satt.
+
+    Hvis miljøvariabelen ikke er satt, tillates alle tenants som allerede er
+    sluppet gjennom EasyAuth. Dette gjør funksjonen bakoverkompatibel lokalt.
+    """
+    allowed_tenant_id = os.environ.get("ALLOWED_TENANT_ID", "").strip()
+    if not allowed_tenant_id:
+        return True
+    if not tenant_id:
+        return False
+    return tenant_id.strip().lower() == allowed_tenant_id.lower()
+
+
+def get_current_tenant_id() -> Optional[str]:
+    """Hent tenant-id for aktiv økt eller miljøvariabel."""
+    if _CURRENT_TENANT_ID:
+        return _CURRENT_TENANT_ID
+    return os.environ.get("AZURE_TENANT_ID") or os.environ.get("ALLOWED_TENANT_ID")
 
 def get_current_user() -> Optional[str]:
     """Forsøk å identifisere bruker via SSO-proxy-headere/miljøvariabler.
