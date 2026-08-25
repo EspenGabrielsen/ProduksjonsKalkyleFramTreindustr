@@ -917,7 +917,7 @@ class DataRepo:
             row_id = p.get("id")
             if row_id:
                 # UPDATE: match på id
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM products WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -946,7 +946,7 @@ class DataRepo:
                                 source=source,
                             )
 
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE products SET
                            item_no = ?, description = ?, item_type = ?,
                            product_group = ?, base_uom = ?
@@ -972,7 +972,7 @@ class DataRepo:
 
     def _insert_product(self, p: dict, source: str) -> int:
         """INSERT en ny product-rad og returner id."""
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO products (item_no, description, item_type, product_group, base_uom)
                VALUES (?, ?, ?, ?, ?)
                ON CONFLICT(item_no) DO UPDATE SET
@@ -990,7 +990,12 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         # Logg opprettelse
         self.log_change(
             "products", str(new_id), "_created", None,
@@ -1001,7 +1006,7 @@ class DataRepo:
 
     def delete_product(self, product_id: int, source: str = "web_form"):
         """Slett et produkt. Logger full rad i change_log for reversering."""
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM products WHERE id = ?", (product_id,)
         ).fetchone()
         if existing:
@@ -1010,7 +1015,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM products WHERE id = ?", (product_id,))
+            self.execute("DELETE FROM products WHERE id = ?", (product_id,))
             self.conn.commit()
 
     # ── Locations ─────────────────────────────────────────────────
@@ -1021,12 +1026,12 @@ class DataRepo:
         for loc in locations:
             row_id = loc.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM locations WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
                     self._log_location_changes(existing, loc, row_id, source)
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE locations SET code = ?, name = ?, location_type = ?
                            WHERE id = ?""",
                         (loc.get("code", existing["code"]),
@@ -1057,7 +1062,7 @@ class DataRepo:
                 )
 
     def _insert_location(self, loc: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO locations (code, name, location_type)
                VALUES (?, ?, ?)
                ON CONFLICT(code) DO UPDATE SET
@@ -1067,13 +1072,18 @@ class DataRepo:
             (loc.get("code", ""), loc.get("name", ""), loc.get("location_type", "")),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("locations", str(new_id), "_created", None,
                         loc.get("code", ""), source=source)
         return new_id
 
     def delete_location(self, location_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM locations WHERE id = ?", (location_id,)
         ).fetchone()
         if existing:
@@ -1082,7 +1092,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM locations WHERE id = ?", (location_id,))
+            self.execute("DELETE FROM locations WHERE id = ?", (location_id,))
             self.conn.commit()
 
     # ── Work Centers ──────────────────────────────────────────────
@@ -1093,7 +1103,7 @@ class DataRepo:
         for wc in wcs:
             row_id = wc.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM work_centers WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1114,7 +1124,7 @@ class DataRepo:
                                 "work_centers", str(row_id), field, old, new,
                                 source=source,
                             )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE work_centers SET
                            code = ?, description = ?, location_code = ?,
                            labor_cost_hour = ?, machine_cost_hour = ?,
@@ -1142,7 +1152,7 @@ class DataRepo:
         return result_ids
 
     def _insert_work_center(self, wc: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO work_centers
                (code, description, location_code, labor_cost_hour, machine_cost_hour,
                 overhead_cost_hour, capacity_hours_day, effective_capacity_pct)
@@ -1167,13 +1177,18 @@ class DataRepo:
             ),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("work_centers", str(new_id), "_created", None,
                         wc.get("code", ""), source=source)
         return new_id
 
     def delete_work_center(self, wc_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM work_centers WHERE id = ?", (wc_id,)
         ).fetchone()
         if existing:
@@ -1182,7 +1197,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM work_centers WHERE id = ?", (wc_id,))
+            self.execute("DELETE FROM work_centers WHERE id = ?", (wc_id,))
             self.conn.commit()
 
     # ── Operations ────────────────────────────────────────────────
@@ -1193,7 +1208,7 @@ class DataRepo:
         for op in operations:
             row_id = op.get("id")
             if row_id:
-                existing = self.conn.execute(
+                existing = self.execute(
                     "SELECT * FROM operations WHERE id = ?", (row_id,)
                 ).fetchone()
                 if existing:
@@ -1210,7 +1225,7 @@ class DataRepo:
                                 "operations", str(row_id), field, old, new,
                                 source=source,
                             )
-                    self.conn.execute(
+                    self.execute(
                         """UPDATE operations SET
                            code = ?, description = ?, default_work_center = ?, standard_unit = ?
                            WHERE id = ?""",
@@ -1229,7 +1244,7 @@ class DataRepo:
         return result_ids
 
     def _insert_operation(self, op: dict, source: str) -> int:
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO operations (code, description, default_work_center, standard_unit)
                VALUES (?, ?, ?, ?)
                ON CONFLICT(code) DO UPDATE SET
@@ -1241,13 +1256,18 @@ class DataRepo:
              op.get("default_work_center", ""), op.get("standard_unit", "Minutes")),
         )
         row = cur.fetchone()
-        new_id = row["id"] if row else 0
+        if row is None:
+            new_id = 0
+        elif isinstance(row, dict):
+            new_id = row.get("id", 0)
+        else:
+            new_id = row[0]
         self.log_change("operations", str(new_id), "_created", None,
                         op.get("code", ""), source=source)
         return new_id
 
     def delete_operation(self, op_id: int, source: str = "web_form"):
-        existing = self.conn.execute(
+        existing = self.execute(
             "SELECT * FROM operations WHERE id = ?", (op_id,)
         ).fetchone()
         if existing:
@@ -1256,7 +1276,7 @@ class DataRepo:
                 json.dumps(dict(existing), ensure_ascii=False), None,
                 source=source,
             )
-            self.conn.execute("DELETE FROM operations WHERE id = ?", (op_id,))
+            self.execute("DELETE FROM operations WHERE id = ?", (op_id,))
             self.conn.commit()
 
     # ── Item Costs ────────────────────────────────────────────────
@@ -1933,12 +1953,12 @@ class DataRepo:
             "transport_flagg", "transport_ruter",
         ]
         for t in tables:
-            self.conn.execute(f"DELETE FROM {t}")
+            self.execute(f"DELETE FROM {t}")
         self.conn.commit()
 
     def clear_change_log(self):
         """Slett alle oppføringer i change_log."""
-        self.conn.execute("DELETE FROM change_log")
+        self.execute("DELETE FROM change_log")
         self.conn.commit()
 
     # ── Full eksport (for å bygge Excel) ─────────────────────────
@@ -1998,12 +2018,22 @@ class DataRepo:
         Returns:
             ID-en til den nye raden
         """
-        cur = self.conn.execute(
+        cur = self.execute(
             """INSERT INTO uploaded_files (filename, blob, comment, row_count)
                VALUES (?, ?, ?, ?)""",
             (filename, blob, comment, row_count),
         )
         self.conn.commit()
+        if self.backend == "postgresql":
+            row = self.execute(
+                "SELECT id FROM uploaded_files WHERE filename = ? ORDER BY id DESC LIMIT 1",
+                (filename,),
+            ).fetchone()
+            if row is None:
+                return 0
+            if isinstance(row, dict):
+                return int(row.get("id", 0))
+            return int(row[0])
         result = cur.lastrowid
         return result if result is not None else 0
 
@@ -2031,7 +2061,7 @@ class DataRepo:
         }
         result = {}
         for name, query in tables.items():
-            result[name] = self.conn.execute(query).fetchall()
+            result[name] = self.execute(query).fetchall()
         return result
 
 
