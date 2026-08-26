@@ -662,6 +662,21 @@ def import_excel_to_sqlite(excel_path: str, db: Optional[DataRepo] = None,
     try:
         _filename = os.path.basename(excel_path)
         _row_count = stats["total_changes"]
+        db.save_upload(_filename, excel_blob, comment=comment, row_count=_row_count)
+    except Exception as e:
+        stats["errors"].append(f"Kunne ikke lagre opplastet fil i versjonshistorikk: {e}")
+
+    # NB! sync_transport_varer() er LEGACY og er bevisst IKKE kalt her.
+    # Transport vises nå KUN i simuleringen via expand_*_with_transport()
+    # i kostberegning.py — datamodellen (semi-finished) muteres aldri.
+    # Se sync_transport_varer() for legacy-guard.
+
+    if egen_db:
+        db.close()
+
+    return stats
+
+
 def _aktive_factory_locations(db: DataRepo) -> list[str]:
     """Hent alle aktive fabrikk-lokasjoner (location_type = 'Factory')."""
     rows = db.execute(
@@ -1011,7 +1026,7 @@ def _deletions_from_action(rows: list[dict], sheet_name: str, db: DataRepo) -> i
                 params = ()
 
             if params and params[0]:
-                existing = db.conn.execute(
+                existing = db.execute(
                     f"SELECT id FROM {_tbl} WHERE {_where}",
                     params,
                 ).fetchone()
@@ -1146,7 +1161,7 @@ def _import_work_centers(db: DataRepo, rows: list[dict], sheet_name: str) -> int
         # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM work_centers WHERE code = ?",
                 (code,),
             ).fetchone()
@@ -1186,7 +1201,7 @@ def _import_operations(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Slå opp id basert på naturlig nøkkel hvis Rad ID mangler
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM operations WHERE code = ?",
                 (code,),
             ).fetchone()
@@ -1232,7 +1247,7 @@ def _import_item_costs(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM item_costs WHERE item_no = ? AND cost_type = ?",
                 (item_no, cost_type),
             ).fetchone()
@@ -1274,7 +1289,7 @@ def _import_bom(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM bom_lines WHERE parent_item_no = ? AND component_item_no = ?",
                 (parent, component),
             ).fetchone()
@@ -1318,7 +1333,7 @@ def _import_routing(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM routing_lines WHERE item_no = ? AND operation_no = ? AND work_center_code = ?",
                 (item_no, operation_no, wc_code),
             ).fetchone()
