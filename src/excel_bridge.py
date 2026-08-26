@@ -1096,10 +1096,11 @@ def _import_products(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
                 "SELECT 1 FROM transport_flagg WHERE item_no = ?", (item_no,)
             ).fetchone()
             if flag == 1 or har_rad:
+                _updated_expr = "CURRENT_TIMESTAMP" if getattr(db, "backend", "sqlite") == "postgresql" else "datetime('now')"
                 db.execute(
-                    """INSERT INTO transport_flagg (item_no, is_transport)
+                    f"""INSERT INTO transport_flagg (item_no, is_transport)
                        VALUES (?, ?)
-                       ON CONFLICT(item_no) DO UPDATE SET is_transport = excluded.is_transport, updated_at = datetime('now')""",
+                       ON CONFLICT(item_no) DO UPDATE SET is_transport = excluded.is_transport, updated_at = {_updated_expr}""",
                     (item_no, flag),
                 )
 
