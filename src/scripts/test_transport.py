@@ -137,7 +137,7 @@ def _setup_test_db() -> DataRepo:
 
     # Transportruter
     for tr in TRANSPORT_RUTER:
-        db.conn.execute(
+        db.execute(
             """INSERT OR IGNORE INTO transport_ruter
                (from_loc, to_loc, cost_per_m3, distance_km, hours)
                VALUES (?, ?, ?, ?, ?)""",
@@ -153,7 +153,7 @@ def _count(db: DataRepo, table: str, where: str = "", params: tuple = ()) -> int
     q = f"SELECT COUNT(*) as c FROM {table}"
     if where:
         q += f" WHERE {where}"
-    return db.conn.execute(q, params).fetchone()["c"]
+    return db.execute(q, params).fetchone()["c"]
 
 
 def test_1_sett_flagg_enkelt_produkt():
@@ -165,7 +165,7 @@ def test_1_sett_flagg_enkelt_produkt():
     assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 0
 
     # Sett flagg
-    db.conn.execute(
+    db.execute(
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('BL98520', 1)"
     )
     db.conn.commit()
@@ -186,7 +186,7 @@ def test_1_sett_flagg_enkelt_produkt():
     # Hovedproduktet har ingen TRANSPORT-routing
     assert _count(db, "routing_lines", "item_no='BL98520' AND operation_code='TRANSPORT'") == 0
     # Verifiser at run_time-estimat hentes fra hours i transport_ruter-tabellen (1.5 t = 90 min)
-    rt_row = db.conn.execute(
+    rt_row = db.execute(
         "SELECT run_time_minutes FROM routing_lines WHERE item_no='BL98520-KV' AND operation_code='TRANSPORT'"
     ).fetchone()
     assert rt_row["run_time_minutes"] == 90.0, f"Skulle være 90.0 fra hours-estimat, var {rt_row['run_time_minutes']}"
@@ -207,7 +207,7 @@ def test_2_fjern_flagg_restaurerer():
     db = _setup_test_db()
 
     # Sett flagg
-    db.conn.execute(
+    db.execute(
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('BL98520', 1)"
     )
     db.conn.commit()
@@ -215,7 +215,7 @@ def test_2_fjern_flagg_restaurerer():
     assert _count(db, "products", "item_no LIKE 'BL98520-%'") == 2
 
     # Fjern flagg
-    db.conn.execute(
+    db.execute(
         "UPDATE transport_flagg SET is_transport = 0 WHERE item_no = 'BL98520'"
     )
     db.conn.commit()
@@ -239,7 +239,7 @@ def test_3_co_produkt_overlever():
     print("  TEST 3: Co-produkt (JD16073) ... ", end="")
     db = _setup_test_db()
 
-    db.conn.execute(
+    db.execute(
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('JD16073', 1)"
     )
     db.conn.commit()
@@ -265,7 +265,7 @@ def test_4_produksjonskjede():
     # Før: JD16098 finnes som Semi Finished
     assert _count(db, "products", "item_no='JD16098' AND item_type='Semi Finished'") == 1
 
-    db.conn.execute(
+    db.execute(
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('JD16098TF', 1)"
     )
     db.conn.commit()
@@ -292,13 +292,13 @@ def test_5_alle_samtidig():
     print("  TEST 5: Alle tre samtidig ... ", end="")
     db = _setup_test_db()
 
-    db.conn.execute(
+    db.execute(
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('BL98520', 1)"
     )
-    db.conn.execute(
+    db.execute(
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('JD16073', 1)"
     )
-    db.conn.execute(
+    db.execute(
         "INSERT INTO transport_flagg (item_no, is_transport) VALUES ('JD16098TF', 1)"
     )
     db.conn.commit()
