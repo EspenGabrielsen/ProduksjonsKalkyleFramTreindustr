@@ -84,7 +84,7 @@ def build_batch_analyses(sim_results, db=None, hold_pct: float = 2.0):
     direct_sales: dict[str, float] = {}
     if db is not None:
         try:
-            _bom_rows = db.conn.execute(
+            _bom_rows = db.execute(
                 "SELECT parent_item_no, component_item_no FROM bom_lines"
             ).fetchall()
             # Bygg BOMLine-objekter og bruk den delte build_parents_map-hjelperen
@@ -98,7 +98,7 @@ def build_batch_analyses(sim_results, db=None, hold_pct: float = 2.0):
             ]
             parents_map = build_parents_map(_bom_lines)
 
-            _sales_rows = db.conn.execute(
+            _sales_rows = db.execute(
                 "SELECT product_id, quantity FROM historical_sales"
             ).fetchall()
             for _sr in _sales_rows:

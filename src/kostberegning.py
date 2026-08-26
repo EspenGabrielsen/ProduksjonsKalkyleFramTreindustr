@@ -769,7 +769,7 @@ class SqliteData:
         self._build_indexes()
 
     def _load_products(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT item_no, description, item_type, product_group, base_uom FROM products ORDER BY item_no"
         ).fetchall()
         for r in rows:
@@ -782,7 +782,7 @@ class SqliteData:
             ))
 
     def _load_locations(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT code, name, location_type FROM locations ORDER BY code"
         ).fetchall()
         for r in rows:
@@ -793,7 +793,7 @@ class SqliteData:
             ))
 
     def _load_work_centers(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             """SELECT code, description, location_code, labor_cost_hour,
                       machine_cost_hour, overhead_cost_hour, capacity_hours_day,
                       effective_capacity_pct
@@ -812,7 +812,7 @@ class SqliteData:
             ))
 
     def _load_operations(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT code, description, default_work_center, standard_unit FROM operations ORDER BY code"
         ).fetchall()
         for r in rows:
@@ -824,7 +824,7 @@ class SqliteData:
             ))
 
     def _load_item_costs(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT item_no, cost_type, unit_cost, currency, effective_date FROM item_costs ORDER BY item_no"
         ).fetchall()
         for r in rows:
@@ -843,7 +843,7 @@ class SqliteData:
             ))
 
     def _load_bom(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             """SELECT parent_item_no, component_item_no, quantity_per, uom,
                       scrap_pct, co_product_pct, co_product_item_no
                FROM bom_lines ORDER BY parent_item_no, component_item_no"""
@@ -860,7 +860,7 @@ class SqliteData:
             ))
 
     def _load_routing(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             """SELECT item_no, operation_no, operation_code, work_center_code,
                       setup_time_minutes, run_time_minutes, batch_size
                FROM routing_lines ORDER BY item_no, operation_no"""
@@ -877,7 +877,7 @@ class SqliteData:
             ))
 
     def _load_byproduct_rules(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             """SELECT parent_item_no, by_product_item_no, expected_quantity, uom,
                       market_value, allocation_method
                FROM byproduct_rules ORDER BY parent_item_no, by_product_item_no"""
@@ -893,7 +893,7 @@ class SqliteData:
             ))
 
     def _load_capacity(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             """SELECT work_center, date, available_hours, planned_downtime
                FROM capacity_days ORDER BY work_center, date"""
         ).fetchall()
@@ -912,7 +912,7 @@ class SqliteData:
             ))
 
     def _load_scenarios(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT scenario_name, product, planned_quantity FROM production_scenarios ORDER BY scenario_name"
         ).fetchall()
         for r in rows:
@@ -2103,11 +2103,11 @@ def _load_transport_konfig(data, db=None) -> tuple[set[str], dict[tuple[str, str
     if db is None:
         return set(), {}
     try:
-        flagged = {r["item_no"] for r in db.conn.execute(
+        flagged = {r["item_no"] for r in db.execute(
             "SELECT item_no FROM transport_flagg WHERE is_transport=1"
         ).fetchall()}
         ruter: dict[tuple[str, str], tuple[float, float, float]] = {}
-        for r in db.conn.execute(
+        for r in db.execute(
             "SELECT from_loc, to_loc, cost_per_m3, distance_km, hours FROM transport_ruter"
         ).fetchall():
             ruter[(r["from_loc"], r["to_loc"])] = (

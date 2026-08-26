@@ -557,7 +557,7 @@ def _(DataRepo, mo, overrides, pd):
     _db.initialize()
     _tr_rows = []
     try:
-        _tr_rows_db = _db.conn.execute(
+        _tr_rows_db = _db.execute(
             "SELECT from_loc, to_loc, cost_per_m3, distance_km, hours FROM transport_ruter ORDER BY from_loc, to_loc"
         ).fetchall()
     except Exception:

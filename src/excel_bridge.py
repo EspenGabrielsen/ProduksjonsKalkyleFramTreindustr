@@ -814,7 +814,7 @@ def sync_transport_varer(db: DataRepo, source: str = "import",
     stats = {"opprettet": 0, "slettet": 0, "produkter": []}
 
     # Sørg for at tabellen finnes
-    db.conn.execute(
+    db.execute(
         """CREATE TABLE IF NOT EXISTS transport_flagg (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
                item_no TEXT NOT NULL UNIQUE,
@@ -825,7 +825,7 @@ def sync_transport_varer(db: DataRepo, source: str = "import",
     db.conn.commit()
 
     # Les alle flagg-varer
-    flagged = db.conn.execute(
+    flagged = db.execute(
         "SELECT item_no, is_transport FROM transport_flagg"
     ).fetchall()
 
@@ -834,7 +834,7 @@ def sync_transport_varer(db: DataRepo, source: str = "import",
         is_transport = bool(row["is_transport"])
 
         # Hent produktdata for hovedvaren
-        prod = db.conn.execute(
+        prod = db.execute(
             "SELECT * FROM products WHERE item_no = ?", (item_no,)
         ).fetchone()
         if not prod:
@@ -892,7 +892,7 @@ def sync_transport_varer(db: DataRepo, source: str = "import",
                 # TRANSPORT-routing på semi-finished (ikke hovedprodukt)
                 # NB: transport_ruter har nå kun cost_per_m3/distance_km/hours.
                 # Legacy-estimat: hours → run_time minutter, standard setup/batch.
-                rute = db.conn.execute(
+                rute = db.execute(
                     "SELECT * FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
                     (_from_loc, loc)
                 ).fetchone()
@@ -916,7 +916,7 @@ def sync_transport_varer(db: DataRepo, source: str = "import",
             # og deres BOM/routing slettes her.
             deleted_here = 0
             # Finn alle semi-finished for varen
-            semi_items = db.conn.execute(
+            semi_items = db.execute(
                 "SELECT item_no FROM products WHERE item_no LIKE ?",
                 (f"{item_no}-%",)
             ).fetchall()
@@ -924,13 +924,13 @@ def sync_transport_varer(db: DataRepo, source: str = "import",
             for semi in semi_items:
                 semi_no = semi["item_no"]
                 # Slett BOM-linjer der semi-finished er parent
-                rows = db.conn.execute(
+                rows = db.execute(
                     "SELECT id FROM bom_lines WHERE parent_item_no = ?", (semi_no,)
                 ).fetchall()
                 for r in rows:
                     db.delete_bom_line(r["id"], source=source)
                 # Slett routing-linjer for semi-finished
-                rt_rows = db.conn.execute(
+                rt_rows = db.execute(
                     "SELECT id FROM routing_lines WHERE item_no = ?", (semi_no,)
                 ).fetchall()
                 for r in rt_rows:

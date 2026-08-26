@@ -181,7 +181,7 @@ class OptimizationEngine:
 
         gyldig_demand: liste med DemandRecord som kan modelleres.
         """
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT product_id, period, quantity, location_code, customer_region "
             "FROM demand ORDER BY period, product_id"
         ).fetchall()
@@ -289,7 +289,7 @@ class OptimizationEngine:
         Returnerer:
             dict {(product_id, location_code): samlet_volum_siste_52_uker}
         """
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT product_id, period, quantity, location_code "
             "FROM historical_sales ORDER BY period"
         ).fetchall()
@@ -548,7 +548,7 @@ class OptimizationEngine:
         self.bom_structure = []
 
     def _load_transport_ruter(self):
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT from_loc, to_loc, cost_per_m3, distance_km, hours "
             "FROM transport_ruter ORDER BY from_loc, to_loc"
         ).fetchall()
@@ -587,7 +587,7 @@ class OptimizationEngine:
         # Kun TID lagres i tabellen. Kostnad beregnes ALLTID i koden:
         #   changeover_cost = (changeover_minutes / 60) × work_centers.total_cost_hour
         # Dette unngår dobbelt vedlikehold av kostnadsdata.
-        rows = self.db.conn.execute(
+        rows = self.db.execute(
             "SELECT work_center_code, from_family, to_family, changeover_minutes "
             "FROM changeover_matrix ORDER BY work_center_code, from_family, to_family"
         ).fetchall()
@@ -1602,7 +1602,7 @@ def _seed_test_db(db: DataRepo):
 
     # Transportruter
     for frm, to, cost in [("KOD", "KV", 120.0), ("KV", "KOD", 130.0)]:
-        db.conn.execute(
+        db.execute(
             """INSERT OR IGNORE INTO transport_ruter (from_loc, to_loc, cost_per_m3, distance_km, hours)
                VALUES (?, ?, ?, 35.0, 1.5)""",
             (frm, to, cost),
@@ -1610,7 +1610,7 @@ def _seed_test_db(db: DataRepo):
     db.conn.commit()
 
     # Etterspørsel: 5000 LM Malt Kledning, uke 34, levering til KV
-    db.conn.execute(
+    db.execute(
         """INSERT INTO demand (product_id, period, quantity, location_code, customer_region)
            VALUES (?, ?, ?, ?, ?)""",
         ("KLEDNING_MALT", 34, 5000.0, "KV", "Region Øst"),

@@ -31,7 +31,7 @@ def _hent_historisk_salg(prod: str, db_path: str = "src/produksjonskalkyle.db") 
         from data_repo import DataRepo
         db = DataRepo(db_path)
         db.initialize()
-        row = db.conn.execute(
+        row = db.execute(
             "SELECT SUM(quantity) as t FROM historical_sales WHERE product_id=?",
             (prod,)
         ).fetchone()

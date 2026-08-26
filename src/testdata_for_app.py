@@ -144,7 +144,7 @@ def seed_test_db(db: DataRepo) -> bool:
     db.upsert_operations(OPERATIONS, source="seed")
     # Transportruter
     for tr in TRANSPORT_RUTER:
-        db.conn.execute(
+        db.execute(
             """INSERT OR IGNORE INTO transport_ruter
                (from_loc, to_loc, cost_per_m3, distance_km, hours)
                VALUES (?, ?, ?, ?, ?)""",
