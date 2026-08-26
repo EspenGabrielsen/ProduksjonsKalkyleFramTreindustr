@@ -950,13 +950,13 @@ def _ensure_routing_entry(db: DataRepo, item_no: str, op_code: str, wc: str,
                           setup: float, run: float, batch: float,
                           source: str = "transport_sync"):
     """Legg til routing-linje hvis den ikke finnes."""
-    existing = db.conn.execute(
+    existing = db.execute(
         "SELECT id FROM routing_lines WHERE item_no = ? AND operation_code = ? AND work_center_code = ?",
         (item_no, op_code, wc)
     ).fetchone()
     if not existing:
         # Finn neste ledige operation_no
-        max_op = db.conn.execute(
+        max_op = db.execute(
             "SELECT MAX(operation_no) as mx FROM routing_lines WHERE item_no = ?",
             (item_no,)
         ).fetchone()
@@ -974,7 +974,7 @@ def _ensure_routing_entry(db: DataRepo, item_no: str, op_code: str, wc: str,
 
 def prod_batch(db: DataRepo, item_no: str) -> float:
     """Hent typisk batch-størrelse for et produkt."""
-    row = db.conn.execute(
+    row = db.execute(
         "SELECT batch_size FROM routing_lines WHERE item_no = ? ORDER BY operation_no LIMIT 1",
         (item_no,)
     ).fetchone()
@@ -1374,7 +1374,7 @@ def _import_byproduct_rules(db: DataRepo, rows: list[dict], sheet_name: str) -> 
         # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM byproduct_rules WHERE parent_item_no = ? AND by_product_item_no = ?",
                 (parent, byprod),
             ).fetchone()
@@ -1413,7 +1413,7 @@ def _import_capacity(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM capacity_days WHERE work_center = ? AND date = ?",
                 (wc, d),
             ).fetchone()
@@ -1434,12 +1434,12 @@ def _import_transport_ruter(db: DataRepo, rows: list[dict], sheet_name: str) -> 
         action = _get_action(row)
         if action == "DELETE":
             # Slett rute basert på from_loc + to_loc
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
                 (_s(row.get("From Loc", "")), _s(row.get("To Loc", ""))),
             ).fetchone()
             if existing:
-                db.conn.execute("DELETE FROM transport_ruter WHERE id = ?", (existing["id"],))
+                db.execute("DELETE FROM transport_ruter WHERE id = ?", (existing["id"],))
                 db.conn.commit()
                 deletions += 1
             continue
@@ -1449,7 +1449,7 @@ def _import_transport_ruter(db: DataRepo, rows: list[dict], sheet_name: str) -> 
         if not from_loc or not to_loc:
             continue
 
-        existing = db.conn.execute(
+        existing = db.execute(
             "SELECT id FROM transport_ruter WHERE from_loc = ? AND to_loc = ?",
             (from_loc, to_loc),
         ).fetchone()
@@ -1460,7 +1460,7 @@ def _import_transport_ruter(db: DataRepo, rows: list[dict], sheet_name: str) -> 
 
         if existing:
             # Sammenlign for endringslogg
-            old = dict(db.conn.execute(
+            old = dict(db.execute(
                 "SELECT * FROM transport_ruter WHERE id = ?", (existing["id"],)
             ).fetchone())
             if abs(old.get("cost_per_m3", 0) - cost_per_m3) > 0.001:
@@ -1472,12 +1472,12 @@ def _import_transport_ruter(db: DataRepo, rows: list[dict], sheet_name: str) -> 
             if abs(old.get("hours", 0) - hours) > 0.001:
                 db.log_change("transport_ruter", str(existing["id"]), "hours",
                               old.get("hours"), hours, source="import")
-            db.conn.execute(
+            db.execute(
                 """UPDATE transport_ruter SET cost_per_m3 = ?, distance_km = ?, hours = ? WHERE id = ?""",
                 (cost_per_m3, distance, hours, existing["id"]),
             )
         else:
-            db.conn.execute(
+            db.execute(
                 """INSERT INTO transport_ruter (from_loc, to_loc, cost_per_m3, distance_km, hours)
                    VALUES (?, ?, ?, ?, ?)""",
                 (from_loc, to_loc, cost_per_m3, distance, hours),
@@ -1513,7 +1513,7 @@ def _import_scenarios(db: DataRepo, rows: list[dict], sheet_name: str) -> int:
         # Hvis Rad ID mangler, slå opp id basert på naturlig nøkkel
         row_id = _i(row.get("Rad ID"))
         if row_id is None:
-            existing = db.conn.execute(
+            existing = db.execute(
                 "SELECT id FROM production_scenarios WHERE scenario_name = ? AND product = ?",
                 (name, product),
             ).fetchone()
