@@ -22,6 +22,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 from typing import Optional
 
 try:
@@ -567,7 +568,7 @@ CREATE TABLE IF NOT EXISTS changeover_matrix (
     work_center_code TEXT NOT NULL,
     from_family TEXT NOT NULL,
     to_family TEXT NOT NULL,
-    setup_minutes DOUBLE PRECISION NOT NULL DEFAULT 0,
+    changeover_minutes DOUBLE PRECISION NOT NULL DEFAULT 0,
     UNIQUE(work_center_code, from_family, to_family)
 );
 
@@ -792,7 +793,7 @@ class DataRepo:
         for t in tables:
             try:
                 stats[t] = self.get_table_row_count(t)
-            except sqlite3.OperationalError:
+            except Exception:
                 stats[t] = 0
         return stats
 
@@ -873,7 +874,7 @@ class DataRepo:
         record_key: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[sqlite3.Row]:
+    ) -> list[Any]:
         """Hent endringer fra change_log.
         
         Args:
@@ -883,7 +884,7 @@ class DataRepo:
             offset: Paginering
             
         Returns:
-            Liste med sqlite3.Row-objekter
+            Liste med radobjekter fra aktiv backend
         """
         where_clauses = []
         params = []
@@ -904,7 +905,7 @@ class DataRepo:
 
         return self.execute(query, params).fetchall()
 
-    def get_recent_changes(self, limit: int = 20) -> list[sqlite3.Row]:
+    def get_recent_changes(self, limit: int = 20) -> list[Any]:
         """Hent de siste endringene (for dashboard)."""
         return self.get_changes(limit=limit)
 
@@ -1903,23 +1904,15 @@ class DataRepo:
             ))
 
         if rows:
-            if self.backend == "postgresql":
-                self.executemany(
-                    """INSERT INTO demand 
-                       (product_id, period, quantity, location_code, customer_region)
-                       VALUES (?, ?, ?, ?, ?)
-                       ON CONFLICT(product_id, period, location_code) DO UPDATE SET
-                           quantity = excluded.quantity,
-                           customer_region = excluded.customer_region""",
-                    rows,
-                )
-            else:
-                self.executemany(
-                    """INSERT OR REPLACE INTO demand 
-                       (product_id, period, quantity, location_code, customer_region)
-                       VALUES (?, ?, ?, ?, ?)""",
-                    rows,
-                )
+            self.executemany(
+                """INSERT INTO demand 
+                   (product_id, period, quantity, location_code, customer_region)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(product_id, period, location_code) DO UPDATE SET
+                       quantity = excluded.quantity,
+                       customer_region = excluded.customer_region""",
+                rows,
+            )
         self.conn.commit()
         return len(rows), filtered_out
 
@@ -1979,22 +1972,14 @@ class DataRepo:
             ))
 
         if rows:
-            if self.backend == "postgresql":
-                self.executemany(
-                    """INSERT INTO historical_sales 
-                       (product_id, period, quantity, location_code)
-                       VALUES (?, ?, ?, ?)
-                       ON CONFLICT(product_id, period, location_code) DO UPDATE SET
-                           quantity = excluded.quantity""",
-                    rows,
-                )
-            else:
-                self.executemany(
-                    """INSERT OR REPLACE INTO historical_sales 
-                       (product_id, period, quantity, location_code)
-                       VALUES (?, ?, ?, ?)""",
-                    rows,
-                )
+            self.executemany(
+                """INSERT INTO historical_sales 
+                   (product_id, period, quantity, location_code)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(product_id, period, location_code) DO UPDATE SET
+                       quantity = excluded.quantity""",
+                rows,
+            )
         self.conn.commit()
         return len(rows), filtered_out
 
@@ -2094,7 +2079,7 @@ class DataRepo:
         result = cur.lastrowid
         return result if result is not None else 0
 
-    def export_all_data(self) -> dict[str, list[sqlite3.Row]]:
+    def export_all_data(self) -> dict[str, list[Any]]:
         """Eksporter all data fra alle tabeller (inkluderer id).
         
         Returnerer dict med tabellnavn som nøkler.

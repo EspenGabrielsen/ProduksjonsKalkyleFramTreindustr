@@ -813,16 +813,8 @@ def sync_transport_varer(db: DataRepo, source: str = "import",
 
     stats = {"opprettet": 0, "slettet": 0, "produkter": []}
 
-    # Sørg for at tabellen finnes
-    db.execute(
-        """CREATE TABLE IF NOT EXISTS transport_flagg (
-               id INTEGER PRIMARY KEY AUTOINCREMENT,
-               item_no TEXT NOT NULL UNIQUE,
-               is_transport INTEGER NOT NULL DEFAULT 0,
-               updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-        )"""
-    )
-    db.conn.commit()
+    # Tabellen opprettes av DataRepo.initialize(). Denne funksjonen er legacy,
+    # så vi unngår SQLite-spesifikk ad hoc-DDL her.
 
     # Les alle flagg-varer
     flagged = db.execute(

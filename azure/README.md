@@ -1,6 +1,12 @@
 # Azure App Service-oppsett for ProduksjonsKalkyle
 
-Dette prosjektet kan kjøres på Azure App Service med Microsoft Entra ID (EasyAuth) slik at kun brukere i egen tenant får tilgang.
+Dette prosjektet er ment å kjøres på Azure App Service med Microsoft Entra ID som innlogging og PostgreSQL som produksjonsdatabase.
+
+SQLite kan brukes lokalt og som midlertidig fallback under utvikling, men anbefalt produksjonsspor er:
+
+- **Azure App Service** for applikasjonen
+- **Azure Database for PostgreSQL Flexible Server** for datamodellen
+- **Microsoft Entra ID / EasyAuth** for autentisering
 
 ## 1. Obligatoriske app settings
 
@@ -11,18 +17,14 @@ Sett følgende under **App Service → Configuration → Application settings**:
 | `WEBSITES_PORT` | `8000` | Port Azure sender trafikk til |
 | `PORT` | `8000` | Brukes av `startup.sh` |
 | `PRODUKSJONSKALKYLE_TEST` | `false` | Sikrer at appen ikke bruker testdatabase |
-| `PRODUKSJONSKALKYLE_DB_PATH` | `/home/data/produksjonskalkyle.db` | Persistent SQLite-path inntil PostgreSQL er på plass |
-| `PRODUKSJONSKALKYLE_SQLITE_JOURNAL_MODE` | `DELETE` | Anbefalt i Azure App Service for SQLite på persistent disk |
-| `PRODUKSJONSKALKYLE_SQLITE_BUSY_TIMEOUT_MS` | `30000` | Venter ved låsing i stedet for å feile raskt |
-| `PRODUKSJONSKALKYLE_SQLITE_TIMEOUT` | `30` | SQLite connect-timeout i sekunder |
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/db?sslmode=require` | PostgreSQL-tilkobling |
 | `ALLOWED_TENANT_ID` | `00000000-0000-0000-0000-000000000000` | Ekstra validering i kode mot tillatt tenant |
 | `MARIMO_BASE_URL` | `/` eller `/produksjonskalkyle` | Valgfritt dersom appen ligger bak en base path |
 
-Når PostgreSQL/Blob Storage tas i bruk, legg også til:
+Hvis opplastede filer senere flyttes ut av databasen, legg også til:
 
 | Navn | Formål |
 |------|--------|
-| `DATABASE_URL` | PostgreSQL-tilkobling |
 | `AZURE_STORAGE_CONNECTION_STRING` | Tilkobling til Blob Storage |
 | `AZURE_STORAGE_CONTAINER` | Container for opplastede Excel-filer |
 
@@ -68,7 +70,7 @@ Hvis bare enkelte brukere eller grupper skal få tilgang:
 3. Sett **Assignment required = Yes**
 4. Tildel riktige brukere/grupper
 
-## 6. App Service innstillinger
+## 6. App Service-innstillinger
 
 Anbefalte innstillinger:
 
@@ -78,7 +80,7 @@ Anbefalte innstillinger:
 
 ## 7. Docker-deploy
 
-Dette repoet inneholder nå:
+Dette repoet inneholder:
 
 - `Dockerfile`
 - `startup.sh`
@@ -89,34 +91,39 @@ Du kan derfor deploye enten:
 1. som vanlig Python App Service med Oryx + `startup.sh`, eller
 2. som container-basert App Service via `Dockerfile`
 
-## 8. Viktig om dagens database
+## 8. Databasevalg
 
-Prosjektet bruker fortsatt SQLite lokalt i koden. For Azure-produksjon bør dette erstattes med PostgreSQL før appen tas i ordinær drift med flere brukere.
+Applikasjonen velger database-backend slik:
 
-Inntil PostgreSQL er på plass, bruk alltid en persistent path som:
+- hvis `DATABASE_URL` er satt: PostgreSQL
+- ellers: SQLite
 
-```text
-/home/data/produksjonskalkyle.db
-```
+For Azure-produksjon er PostgreSQL anbefalt og planlagt som primær backend.
 
-Applikasjonen støtter nå dette via `PRODUKSJONSKALKYLE_DB_PATH`.
+## 9. Nåværende status for PostgreSQL-sporet
 
-For SQLite i Azure anbefales også:
+Repoet har allerede:
 
-```text
-PRODUKSJONSKALKYLE_SQLITE_JOURNAL_MODE=DELETE
-PRODUKSJONSKALKYLE_SQLITE_BUSY_TIMEOUT_MS=30000
-PRODUKSJONSKALKYLE_SQLITE_TIMEOUT=30
-```
+- `psycopg[binary]` i `requirements.txt`
+- støtte for `DATABASE_URL`
+- PostgreSQL-tilkobling i `DataRepo`
+- PostgreSQL-skjema i `src/data_repo.py`
 
-## 9. PostgreSQL-status
+Det gjenstår fortsatt arbeid før PostgreSQL-sporet kan regnes som ferdig:
 
-Prosjektet har nå avhengigheten `psycopg[binary]` og støtter deteksjon av `DATABASE_URL`, men selve `DataRepo`-laget bruker fortsatt SQLite-spesifikk SQL.
+- rydde SQLite-spesifikke rester i `src/data_repo.py`
+- rydde SQLite-spesifikke rester i `src/excel_bridge.py`
+- kjøre ende-til-ende validering mot ekte PostgreSQL
+- dokumentere og gjennomføre migrering fra eksisterende SQLite-data
 
-Det betyr:
+Se også:
 
-- `DATABASE_URL` er **planlagt backend-signal**
-- PostgreSQL-migrering er **ikke ferdig implementert ennå**
-- hvis `DATABASE_URL` settes nå, vil appen stoppe tydelig med en feilmelding i stedet for å kjøre halvveis feil
+- `docs/Azure_GoLive.md`
+- `docs/PostgreSQL_Ferdigstillelse.md`
+- `docs/API_Strategi.md`
 
-Dette er bevisst, slik at Azure-konfig kan forberedes uten skjulte driftsfeil.
+## 10. Integrasjoner og API
+
+Det anbefales at andre systemer på sikt henter **beregningsresultater** via API, fremfor å lese rå BOM/routing-tabeller direkte.
+
+PostgreSQL er derfor valgt som anbefalt produksjonsdatabase ikke først og fremst på grunn av datamengde, men fordi løsningen skal være en ryddig Azure-tjeneste og kunne videreutvikles med API og integrasjoner.

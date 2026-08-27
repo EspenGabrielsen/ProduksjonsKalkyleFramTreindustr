@@ -712,9 +712,12 @@ class ExcelData:
 #  3B. SQLite-LASTER (parallell med ExcelData)
 # ──────────────────────────────────────────────────────────────────────
 
-class SqliteData:
-    """Laster data fra SQLite i stedet for Excel.
-    
+class DatabaseData:
+    """Laster data fra valgt database-backend i stedet for Excel.
+
+    Bruker DataRepo som backend-abstraksjon. Hvis `DATABASE_URL` er satt,
+    leses data fra PostgreSQL; ellers brukes SQLite.
+
     Har samme interface som ExcelData, slik at CostCalculator og
     SimulationEngine kan bruke begge kilder uten endringer.
     """
@@ -755,7 +758,7 @@ class SqliteData:
         self._load_all()
 
     def _load_all(self):
-        """Les alle data fra SQLite."""
+        """Les alle data fra aktiv database-backend."""
         self._load_products()
         self._load_locations()
         self._load_work_centers()
@@ -1005,12 +1008,16 @@ class SqliteData:
         return self._scenario_index.get(name)
 
 
+# Bakoverkompatibilitet: behold gammelt navn inntil resten av kodebasen er ryddet.
+SqliteData = DatabaseData
+
+
 # ──────────────────────────────────────────────────────────────────────
 #  4. KOSTNADSBEREGNER
 # ──────────────────────────────────────────────────────────────────────
 
 class CostCalculator:
-    """Beregner kost per produkt basert på data fra ExcelData.
+    """Beregner kost per produkt basert på data fra ExcelData eller DatabaseData.
     
     Stotter dynamisk cost roll-up: hvis en komponent i BOM er et
     ferdigvare/halvfabrikat som allerede er beregnet, brukes den
