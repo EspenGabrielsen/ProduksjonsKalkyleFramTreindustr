@@ -18,40 +18,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Patch PostgreSQL executemany
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
+        run: python src/scripts/_patch_postgres_executemany.py
 
-          path = Path("src/data_repo.py")
-          text = path.read_text(encoding="utf-8")
-          start = text.index("    def executemany(self, query: str, params_seq):")
-          end = text.index("    def executescript(self, sql: str):", start)
-
-          replacement = '''    def executemany(self, query: str, params_seq):
-              """Backend-bevisst executemany med enkel placeholder-konvertering."""
-              sql = _convert_sql_placeholders(query, self.backend)
-              if self.backend == "sqlite":
-                  return self.conn.executemany(sql, params_seq)
-              with self.conn.cursor() as cur:
-                  cur.executemany(sql, params_seq)
-                  return cur.rowcount
-
-'''
-          path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
-          PY
-
-      - name: Remove one-shot workflow
-        run: rm .github/workflows/apply-postgres-executemany-fix.yml
+      - name: Remove temporary patch files
+        run: rm src/scripts/_patch_postgres_executemany.py .github/workflows/apply-postgres-executemany-fix.yml
 
       - name: Compile changed module
         run: python -m py_compile src/data_repo.py
 
       - name: Commit fix
-        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/data_repo.py .github/workflows/apply-postgres-executemany-fix.yml
+          git add -A
           git commit -m "fix(postgres): execute bulk statements with cursor"
           git push origin HEAD:azure-readiness
