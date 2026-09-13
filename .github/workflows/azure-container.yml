@@ -1,0 +1,25 @@
+name: Azure container build
+
+on:
+  push:
+    branches:
+      - azure-readiness
+  pull_request:
+    branches:
+      - EspenTest
+      - main
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build App Service image
+        run: docker build --tag produksjonskalkyle:${{ github.sha }} .
+
+      - name: Verify Python runtime in image
+        run: docker run --rm --entrypoint python produksjonskalkyle:${{ github.sha }} --version
