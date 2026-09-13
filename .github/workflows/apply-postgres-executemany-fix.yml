@@ -25,12 +25,10 @@ jobs:
 
           path = Path("src/data_repo.py")
           text = path.read_text(encoding="utf-8")
-          old = '''    def executemany(self, query: str, params_seq):
-              """Backend-bevisst executemany med enkel placeholder-konvertering."""
-              sql = _convert_sql_placeholders(query, self.backend)
-              return self.conn.executemany(sql, params_seq)
-          '''
-          new = '''    def executemany(self, query: str, params_seq):
+          start = text.index("    def executemany(self, query: str, params_seq):")
+          end = text.index("    def executescript(self, sql: str):", start)
+
+          replacement = '''    def executemany(self, query: str, params_seq):
               """Backend-bevisst executemany med enkel placeholder-konvertering."""
               sql = _convert_sql_placeholders(query, self.backend)
               if self.backend == "sqlite":
@@ -38,10 +36,9 @@ jobs:
               with self.conn.cursor() as cur:
                   cur.executemany(sql, params_seq)
                   return cur.rowcount
-          '''
-          if old not in text:
-              raise SystemExit("Fant ikke forventet executemany-blokk")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+'''
+          path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
           PY
 
       - name: Remove one-shot workflow
