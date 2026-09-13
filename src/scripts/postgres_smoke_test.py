@@ -47,6 +47,7 @@ def main() -> int:
 
     db = DataRepo()
     smoke_id: int | None = None
+    data: DatabaseData | None = None
 
     try:
         if db.backend != "postgresql":
@@ -97,9 +98,15 @@ def main() -> int:
         print("[OK] PostgreSQL smoke test fullført")
         return 0
     finally:
+        # Dersom testen feilet midt i en PostgreSQL-transaksjon må vi rulle
+        # tilbake før cleanup, ellers maskerer InFailedSqlTransaction rotfeilen.
         try:
+            if db._conn is not None:
+                db.conn.rollback()
             _cleanup(db, smoke_id)
         finally:
+            if data is not None:
+                data.db.close()
             db.close()
 
 
