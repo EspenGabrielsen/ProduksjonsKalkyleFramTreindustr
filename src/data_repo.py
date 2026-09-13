@@ -714,17 +714,25 @@ class DataRepo:
         Hvis det finnes en database med gammelt skjema (uten id-kolonne),
         forsøker vi å opprette nytt skjema uten destruktiv sletting.
         """
-        # Sjekk om gammelt skjema finnes (products uten id-kolonne)
-        try:
-            test = self.execute("SELECT id FROM products LIMIT 1").fetchone()
-            # id-kolonne finnes → nytt skjema
-        except Exception:
-            # Tom / gammel database. Opprett skjema idempotent, men slett aldri automatisk.
-            pass
+        # SQLite kan bruke en prøvespørring uten at en feil forgifter neste
+        # statement. PostgreSQL markerer derimot hele transaksjonen som aborted
+        # etter en mislykket SELECT. På en helt tom PostgreSQL-database går vi
+        # derfor direkte til det idempotente CREATE TABLE-skjemaet.
+        if self.backend == "sqlite":
+            try:
+                self.execute("SELECT id FROM products LIMIT 1").fetchone()
+            except sqlite3.OperationalError:
+                # Tom / gammel database. Opprett skjema idempotent, men slett aldri automatisk.
+                pass
 
         schema_sql = POSTGRES_SCHEMA_SQL if self.backend == "postgresql" else SCHEMA_SQL
-        self.executescript(schema_sql)
-        self.conn.commit()
+        try:
+            self.executescript(schema_sql)
+            self.conn.commit()
+        except Exception:
+            # Ikke etterlat PostgreSQL-forbindelsen i aborted state etter SQL-feil.
+            self.conn.rollback()
+            raise
 
         # Migrering: oppgrader transport_ruter til ny struktur (cost_per_m3).
         # Gammel struktur hadde run_time_minutes/setup_time_minutes/batch_size.
