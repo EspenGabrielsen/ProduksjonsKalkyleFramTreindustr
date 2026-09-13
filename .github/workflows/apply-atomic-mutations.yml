@@ -1,0 +1,35 @@
+name: Apply atomic DataRepo mutations
+
+on:
+  push:
+    branches:
+      - azure-readiness
+    paths:
+      - .github/workflows/apply-atomic-mutations.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-datarepo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Patch DataRepo transaction handling
+        run: python src/scripts/_patch_atomic_mutations.py
+
+      - name: Remove temporary patch files
+        run: rm src/scripts/_patch_atomic_mutations.py .github/workflows/apply-atomic-mutations.yml
+
+      - name: Compile changed module
+        run: python -m py_compile src/data_repo.py
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(data): make CRUD and audit changes atomic"
+          git push origin HEAD:azure-readiness
