@@ -11,7 +11,7 @@ on:
 
 jobs:
   postgres-smoke:
-    # Kjør mot en helt tom PostgreSQL-instans for å validere fresh-deploy-scenariet.
+    # Valider fresh deploy, Excel-bro og SQLite -> PostgreSQL-migrering mot PostgreSQL 16.
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
