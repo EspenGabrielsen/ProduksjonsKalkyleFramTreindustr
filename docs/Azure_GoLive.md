@@ -8,12 +8,15 @@ Anbefalt oppsett:
 
 - **Azure App Service** for web-applikasjonen
 - **Azure Database for PostgreSQL Flexible Server** for datamodellen
-- **Microsoft Entra ID** for autentisering
+- **Microsoft Entra ID / App Service Authentication** for brukerinnlogging
+- **Managed Identity / Microsoft Entra-autentisering** som foretrukket produksjonsspor mellom App Service og PostgreSQL
 - eventuelt **Azure Blob Storage** senere hvis opplastede filer skal flyttes ut av databasen
+
+PostgreSQL og App Service-containeren valideres nå automatisk i GitHub Actions på `azure-readiness`.
 
 ## 2. Hva som deployes
 
-Applikasjonen kjøres som container eller som Python-app med startup-kommando. Repoet inneholder:
+Applikasjonen kjøres som container. Repoet inneholder:
 
 - `Dockerfile`
 - `startup.sh`
@@ -25,6 +28,8 @@ Startkommandoen i praksis er:
 marimo run src/varekost_app.py --host 0.0.0.0 --port 8000 --headless
 ```
 
+GitHub Actions bygger det faktiske Docker-imaget på hver endring i Azure-branchen. App Service skal konfigureres med `WEBSITES_PORT=8000` fordi containeren lytter på port 8000.
+
 ## 3. Azure-ressurser
 
 Minimum:
@@ -33,110 +38,126 @@ Minimum:
 2. **App Service Plan**
 3. **Web App / App Service**
 4. **Azure Database for PostgreSQL Flexible Server**
-5. **Entra App Registration / Authentication-oppsett**
+5. **Entra App Registration / App Service Authentication-oppsett**
+6. **Managed Identity** på App Service dersom passordløs databaseautentisering brukes
 
 Senere ved behov:
 
-6. **Application Insights**
-7. **Storage Account / Blob Container**
+7. **Application Insights**
+8. **Storage Account / Blob Container**
+9. **Azure Container Registry** dersom containerdeploy skal gå via eget registry
 
 ## 4. App Settings
 
-Sett følgende i **App Service → Configuration → Application settings**:
+Følgende innstillinger er relevante:
 
 | Navn | Formål |
 |------|--------|
-| `WEBSITES_PORT` | Port Azure sender trafikk til |
-| `PORT` | Port brukt av `startup.sh` |
+| `WEBSITES_PORT` | Port Azure sender HTTP-trafikk til; settes til `8000` |
+| `PORT` | Port brukt av `startup.sh`; settes til `8000` |
 | `PRODUKSJONSKALKYLE_TEST` | Skal være `false` i produksjon |
-| `DATABASE_URL` | PostgreSQL-tilkobling |
-| `ALLOWED_TENANT_ID` | Tillatt tenant-id |
+| `DATABASE_URL` | Brukes av dagens PostgreSQL-tilkobling og i testmiljø |
+| `ALLOWED_TENANT_ID` | Tillatt Entra tenant-id |
 | `MARIMO_BASE_URL` | Valgfri dersom appen ligger bak base path |
 
-Eksempel:
+I første Azure-pilot kan `DATABASE_URL` brukes for å verifisere funksjonaliteten. Før endelig produksjonssetting bør Managed Identity/Entra vurderes som hovedspor slik at et permanent databasepassord ikke må lagres som app-setting.
 
-```text
-WEBSITES_PORT=8000
-PORT=8000
-PRODUKSJONSKALKYLE_TEST=false
-DATABASE_URL=postgresql://user:password@host:5432/dbname?sslmode=require
-ALLOWED_TENANT_ID=00000000-0000-0000-0000-000000000000
-MARIMO_BASE_URL=/
-```
-
-## 5. Authentication
+## 5. Authentication for sluttbrukere
 
 I **App Service → Authentication**:
 
-1. Legg til **Microsoft** som identity provider
-2. Bruk en **single-tenant** app registration
-3. Sett **Require authentication**
-4. Sett redirect/login for uautentiserte kall
+1. Legg til **Microsoft** som identity provider.
+2. Bruk single-tenant-oppsett for FramTre-miljøet.
+3. Krev autentisering før tilgang til applikasjonen.
+4. Behold applikasjonens tenant-validering via `ALLOWED_TENANT_ID` som ekstra kontroll.
 
-I Entra ID:
+Før go-live må det i tillegg avgjøres hvilke Entra-grupper/roller som skal kunne:
 
-- **Supported account types** = kun egen organisasjon
+- lese og simulere
+- importere Excel
+- endre stamdata
+- administrere historikk og andre sensitive funksjoner
 
-I applikasjonen valideres tenant også via `ALLOWED_TENANT_ID`.
+Tenant-tilhørighet alene skal ikke automatisk bety administratortilgang.
 
 ## 6. PostgreSQL-oppsett
 
-Anbefalinger:
+Anbefalt produksjonsspor:
 
-- bruk **Azure Database for PostgreSQL Flexible Server**
-- krev TLS (`sslmode=require` eller strengere)
-- opprett egen database for løsningen
-- opprett minst én applikasjonsbruker
-- vurder egen read-only-bruker senere for rapportering/API-konsumenter
+- Azure Database for PostgreSQL Flexible Server
+- egen database for ProduksjonsKalkyle
+- TLS på databaseforbindelsen
+- Microsoft Entra-autentisering aktivert
+- App Service Managed Identity gitt en PostgreSQL-rolle med minst mulige nødvendige rettigheter
+- separat administratorrolle for databaseadministrasjon
 
-## 7. Første produksjonssetting
+I CI brukes lokal PostgreSQL 16 med `sslmode=disable`. Dette gjelder kun den midlertidige GitHub Actions-containeren og skal ikke kopieres til produksjonsoppsettet.
+
+## 7. Databaseberedskap
+
+Datalaget har nå:
+
+- PostgreSQL-støtte via `DataRepo`
+- schema-baseline `CURRENT_SCHEMA_VERSION = 1`
+- `schema_version` i databasen
+- eksplisitt stopp ved inkompatibel schema-versjon
+- atomiske CRUD- og audit-transaksjoner
+- testet Excel-import og -eksport
+- testet migreringsscript fra SQLite til PostgreSQL
+- migrering av `change_log` og `uploaded_files` inkludert blob-data
+- radtallsvalidering etter ren migrering
+
+Permanent database-CI:
+
+```text
+.github/workflows/postgres-compatibility.yml
+```
+
+## 8. Første Azure-pilot
 
 Anbefalt rekkefølge:
 
-1. Opprett PostgreSQL-server og database
-2. Sett `DATABASE_URL` i App Service
-3. Deploy appen
-4. Kjør database-initialisering
-5. Migrer eksisterende SQLite-data til PostgreSQL
-6. Verifiser nøkkeltabeller
-7. Verifiser beregninger for et utvalg produkter
-8. Slå på tilgang for sluttbrukere
+1. Opprett PostgreSQL Flexible Server og en tom testdatabase.
+2. Konfigurer nettverk/TLS og databaseautentisering.
+3. Opprett App Service og aktiver Entra-innlogging.
+4. Deploy containeren fra `azure-readiness` eller en senere godkjent branch.
+5. Verifiser `schema_version=1` og at appen bruker PostgreSQL-backend.
+6. Kjør smoke-test mot Azure-databasen.
+7. Migrer en kopi av eksisterende SQLite-data.
+8. Sammenlign radtall og et utvalg viktige dataobjekter.
+9. Verifiser kjente produksjonskalkyler mot dagens forventede resultat.
+10. Test flere samtidige brukere, reconnect og Excel-import.
 
-## 8. Verifisering etter deploy
+Ingen produksjonsdata skal flyttes før pilotløpet er godkjent.
 
-Verifiser minst følgende:
+## 9. CI/CD
 
-### Innlogging
-- brukere blir sendt til Entra login
-- kun brukere i riktig tenant slipper inn
+Repoet har nå CI som:
 
-### Database
-- appen starter med PostgreSQL-backend
-- tabeller opprettes korrekt
-- import fra Excel fungerer
-- historikk / endringslogg fungerer
+- bygger App Service-containeren
+- kompilerer Python-koden
+- starter en midlertidig PostgreSQL 16-instans
+- tester databaseinitialisering og schema-versjon
+- tester Excel begge veier
+- tester SQLite -> PostgreSQL-migrering
+- tester atomiske transaksjoner på PostgreSQL og SQLite
 
-### Beregning
-- beregning for kjente produkter gir forventet resultat
-- simulering fungerer
-- eksport til PDF/Excel fungerer
+Det som mangler er CD-delen: faktisk push av containerimage og deploy til en konkret Azure App Service. Den workflowen bør først legges inn når Azure-ressurs, registry/deploymetode og miljønavn er bestemt.
 
-## 9. Go-live kriterier
+## 10. Go-live kriterier
 
 Løsningen bør ikke regnes som produksjonsklar før:
 
-- PostgreSQL-sporet er testet ende-til-ende
-- datamigrering er dokumentert og verifisert
-- Azure auth er validert
-- minst ett sett med faglige referanseberegninger er bekreftet
+- Azure PostgreSQL og App Service er opprettet og testet
+- databaseautentisering og nettverk/TLS er verifisert
+- Entra-grupper/roller er avklart og testet
+- migrering av reelle data er gjennomført i et testmiljø og kontrollert
+- faglige referansekalkyler gir forventet resultat
+- flerbrukerdrift er testet i App Service
+- deployløpet fra GitHub til Azure er kontrollert
 
-## 10. Drift etter go-live
+## 11. Drift etter go-live
 
-Siden modellen endres sjelden og kontrollert, anbefales denne arbeidsformen:
+Skjemaendringer skal heretter behandles som eksplisitte databaseversjoner. Dagens baseline er versjon 1. Når datamodellen endres, skal kode og database-migrering følge samme versjonsendring og testes i CI før produksjonsdeploy.
 
-1. ta backup før månedlige modellendringer
-2. gjennomfør endring/import i kontrollert vindu
-3. verifiser beregninger
-4. dokumenter endringer
-
-Dette passer godt med applikasjonens karakter som fagmodell og beregningsmotor, ikke høyfrekvent transaksjonssystem.
+Før større modell- eller datamigreringer skal det tas databasebackup og gjennomføres verifisering av sentrale kalkyler etter endringen.
