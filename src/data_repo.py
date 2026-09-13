@@ -20,6 +20,7 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
+from functools import wraps
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
@@ -614,6 +615,26 @@ def _first_col(row):
     return row[0]
 
 
+def _atomic_mutation(method):
+    """Kjør en mutasjon og tilhørende audit-logg som én transaksjon."""
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        outermost = self._transaction_depth == 0
+        self._transaction_depth += 1
+        try:
+            result = method(self, *args, **kwargs)
+        except Exception:
+            self._transaction_depth -= 1
+            if outermost and self._conn is not None:
+                self.conn.rollback()
+            raise
+        self._transaction_depth -= 1
+        if outermost:
+            self.conn.commit()
+        return result
+    return wrapped
+
+
 class DataRepo:
     """Hovedklasse for all databaseinteraksjon.
     
@@ -632,6 +653,7 @@ class DataRepo:
         self.backend = get_database_backend()
         self.db_path = _get_db_path(db_path)
         self._conn = None
+        self._transaction_depth = 0
 
     def __enter__(self):
         self.connect()
@@ -674,6 +696,11 @@ class DataRepo:
         self._conn.execute(f"PRAGMA journal_mode={journal_mode}")
         self._conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
         self._conn.execute("PRAGMA foreign_keys=ON")
+
+    def _commit(self):
+        """Commit umiddelbart utenfor mutasjon, ellers utsett til ytterste mutasjon."""
+        if self._transaction_depth == 0:
+            self.conn.commit()
 
     def execute(self, query: str, params: Optional[tuple | list] = None):
         """Backend-bevisst execute med enkel placeholder-konvertering."""
@@ -732,7 +759,7 @@ class DataRepo:
         schema_sql = POSTGRES_SCHEMA_SQL if self.backend == "postgresql" else SCHEMA_SQL
         try:
             self.executescript(schema_sql)
-            self.conn.commit()
+            self._commit()
         except Exception:
             # Ikke etterlat PostgreSQL-forbindelsen i aborted state etter SQL-feil.
             self.conn.rollback()
@@ -759,7 +786,7 @@ class DataRepo:
                             UNIQUE(from_loc, to_loc)
                         )
                     """)
-                    self.conn.commit()
+                    self._commit()
                     print("[*] transport_ruter migrert til ny struktur (cost_per_m3)")
             except sqlite3.OperationalError:
                 pass  # tabellen finnes ikke (forste kjoring) - SCHEMA_SQL har allerede opprettet den
@@ -841,7 +868,7 @@ class DataRepo:
              str(old_value) if old_value is not None else None,
              str(new_value) if new_value is not None else None),
         )
-        self.conn.commit()
+        self._commit()
 
     def log_batch_changes(
         self,
@@ -878,7 +905,7 @@ class DataRepo:
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             rows,
         )
-        self.conn.commit()
+        self._commit()
 
     def get_changes(
         self,
@@ -923,6 +950,7 @@ class DataRepo:
 
     # ── CRUD-hjelpere ────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_products(self, products: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn produkter. Logger endringer.
         
@@ -988,7 +1016,7 @@ class DataRepo:
             else:
                 # CREATE: ny rad
                 result_ids.append(self._insert_product(p, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_product(self, p: dict, source: str) -> int:
@@ -1025,6 +1053,7 @@ class DataRepo:
         )
         return new_id
 
+    @_atomic_mutation
     def delete_product(self, product_id: int, source: str = "web_form"):
         """Slett et produkt. Logger full rad i change_log for reversering."""
         existing = self.execute(
@@ -1037,10 +1066,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM products WHERE id = ?", (product_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Locations ─────────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_locations(self, locations: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn lokasjoner."""
         result_ids = []
@@ -1065,7 +1095,7 @@ class DataRepo:
                     result_ids.append(self._insert_location(loc, source))
             else:
                 result_ids.append(self._insert_location(loc, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _log_location_changes(self, existing, loc: dict, row_id: int, source: str):
@@ -1103,6 +1133,7 @@ class DataRepo:
                         loc.get("code", ""), source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_location(self, location_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM locations WHERE id = ?", (location_id,)
@@ -1114,10 +1145,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM locations WHERE id = ?", (location_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Work Centers ──────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_work_centers(self, wcs: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn arbeidssentre. Logger endringer."""
         result_ids = []
@@ -1169,7 +1201,7 @@ class DataRepo:
                     result_ids.append(self._insert_work_center(wc, source))
             else:
                 result_ids.append(self._insert_work_center(wc, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_work_center(self, wc: dict, source: str) -> int:
@@ -1208,6 +1240,7 @@ class DataRepo:
                         wc.get("code", ""), source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_work_center(self, wc_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM work_centers WHERE id = ?", (wc_id,)
@@ -1219,10 +1252,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM work_centers WHERE id = ?", (wc_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Operations ────────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_operations(self, operations: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn operasjoner."""
         result_ids = []
@@ -1261,7 +1295,7 @@ class DataRepo:
                     result_ids.append(self._insert_operation(op, source))
             else:
                 result_ids.append(self._insert_operation(op, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_operation(self, op: dict, source: str) -> int:
@@ -1287,6 +1321,7 @@ class DataRepo:
                         op.get("code", ""), source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_operation(self, op_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM operations WHERE id = ?", (op_id,)
@@ -1298,10 +1333,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM operations WHERE id = ?", (op_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Item Costs ────────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_item_costs(self, costs: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn kostpriser. Logger endringer."""
         result_ids = []
@@ -1367,7 +1403,7 @@ class DataRepo:
                     result_ids.append(self._insert_item_cost(c, source))
             else:
                 result_ids.append(self._insert_item_cost(c, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_item_cost(self, c: dict, source: str) -> int:
@@ -1399,6 +1435,7 @@ class DataRepo:
                         source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_item_cost(self, cost_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM item_costs WHERE id = ?", (cost_id,)
@@ -1410,10 +1447,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM item_costs WHERE id = ?", (cost_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── BOM Lines ─────────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_bom_lines(self, lines: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn BOM-linjer. Logger endringer."""
         result_ids = []
@@ -1454,7 +1492,7 @@ class DataRepo:
                     result_ids.append(self._insert_bom_line(bl, source))
             else:
                 result_ids.append(self._insert_bom_line(bl, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_bom_line(self, bl: dict, source: str) -> int:
@@ -1490,6 +1528,7 @@ class DataRepo:
                         source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_bom_line(self, bom_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM bom_lines WHERE id = ?", (bom_id,)
@@ -1501,10 +1540,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM bom_lines WHERE id = ?", (bom_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Routing Lines ─────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_routing_lines(self, lines: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn routing-linjer. Logger endringer."""
         result_ids = []
@@ -1546,7 +1586,7 @@ class DataRepo:
                     result_ids.append(self._insert_routing_line(rl, source))
             else:
                 result_ids.append(self._insert_routing_line(rl, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_routing_line(self, rl: dict, source: str) -> int:
@@ -1586,6 +1626,7 @@ class DataRepo:
                         source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_routing_line(self, routing_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM routing_lines WHERE id = ?", (routing_id,)
@@ -1597,10 +1638,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM routing_lines WHERE id = ?", (routing_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── By Product Rules ──────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_byproduct_rules(self, rules: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn byproduct rules."""
         result_ids = []
@@ -1646,7 +1688,7 @@ class DataRepo:
                     result_ids.append(self._insert_byproduct_rule(r, source))
             else:
                 result_ids.append(self._insert_byproduct_rule(r, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_byproduct_rule(self, r: dict, source: str) -> int:
@@ -1682,6 +1724,7 @@ class DataRepo:
                         source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_byproduct_rule(self, rule_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM byproduct_rules WHERE id = ?", (rule_id,)
@@ -1693,10 +1736,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM byproduct_rules WHERE id = ?", (rule_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Capacity Days ─────────────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_capacity_days(self, days: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn capacity days."""
         result_ids = []
@@ -1737,7 +1781,7 @@ class DataRepo:
                     result_ids.append(self._insert_capacity_day(d, source))
             else:
                 result_ids.append(self._insert_capacity_day(d, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_capacity_day(self, d: dict, source: str) -> int:
@@ -1767,6 +1811,7 @@ class DataRepo:
                         source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_capacity_day(self, capacity_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM capacity_days WHERE id = ?", (capacity_id,)
@@ -1778,10 +1823,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM capacity_days WHERE id = ?", (capacity_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Production Scenarios ──────────────────────────────────────
 
+    @_atomic_mutation
     def upsert_scenarios(self, scenarios: list[dict], source: str = "web_form") -> list[int]:
         """Oppdater eller sett inn production scenarios."""
         result_ids = []
@@ -1816,7 +1862,7 @@ class DataRepo:
                     result_ids.append(self._insert_scenario(sc, source))
             else:
                 result_ids.append(self._insert_scenario(sc, source))
-        self.conn.commit()
+        self._commit()
         return result_ids
 
     def _insert_scenario(self, sc: dict, source: str) -> int:
@@ -1844,6 +1890,7 @@ class DataRepo:
                         source=source)
         return new_id
 
+    @_atomic_mutation
     def delete_scenario(self, scenario_id: int, source: str = "web_form"):
         existing = self.execute(
             "SELECT * FROM production_scenarios WHERE id = ?", (scenario_id,)
@@ -1855,10 +1902,11 @@ class DataRepo:
                 source=source,
             )
             self.execute("DELETE FROM production_scenarios WHERE id = ?", (scenario_id,))
-            self.conn.commit()
+            self._commit()
 
     # ── Demand-import fra DataFrame ─────────────────────────────
 
+    @_atomic_mutation
     def upsert_demand_from_df(
         self,
         df,
@@ -1925,11 +1973,12 @@ class DataRepo:
                        customer_region = excluded.customer_region""",
                 rows,
             )
-        self.conn.commit()
+        self._commit()
         return len(rows), filtered_out
 
     # ── Historisk salg-import fra DataFrame ─────────────────────
 
+    @_atomic_mutation
     def upsert_historical_sales_from_df(
         self,
         df,
@@ -1992,7 +2041,7 @@ class DataRepo:
                        quantity = excluded.quantity""",
                 rows,
             )
-        self.conn.commit()
+        self._commit()
         return len(rows), filtered_out
 
     # ── Tømming og tilbakestilling ──────────────────────────────
@@ -2008,12 +2057,12 @@ class DataRepo:
         ]
         for t in tables:
             self.execute(f"DELETE FROM {t}")
-        self.conn.commit()
+        self._commit()
 
     def clear_change_log(self):
         """Slett alle oppføringer i change_log."""
         self.execute("DELETE FROM change_log")
-        self.conn.commit()
+        self._commit()
 
     # ── Full eksport (for å bygge Excel) ─────────────────────────
 
@@ -2077,7 +2126,7 @@ class DataRepo:
                VALUES (?, ?, ?, ?)""",
             (filename, blob, comment, row_count),
         )
-        self.conn.commit()
+        self._commit()
         if self.backend == "postgresql":
             row = self.execute(
                 "SELECT id FROM uploaded_files WHERE filename = ? ORDER BY id DESC LIMIT 1",
