@@ -52,3 +52,6 @@ jobs:
 
       - name: Run PostgreSQL smoke test
         run: python src/scripts/postgres_smoke_test.py
+
+      - name: Run SQLite to PostgreSQL migration test
+        run: python src/scripts/postgres_migration_test.py
