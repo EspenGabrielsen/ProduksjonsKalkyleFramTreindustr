@@ -23,3 +23,35 @@ jobs:
 
       - name: Verify Python runtime in image
         run: docker run --rm --entrypoint python produksjonskalkyle:${{ github.sha }} --version
+
+      - name: Start container and verify Marimo HTTP response
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d \
+            --name produksjonskalkyle-smoke \
+            -e PRODUKSJONSKALKYLE_TEST=true \
+            -e PORT=8000 \
+            -p 18000:8000 \
+            produksjonskalkyle:${{ github.sha }}
+
+          cleanup() {
+            docker logs produksjonskalkyle-smoke || true
+            docker rm -f produksjonskalkyle-smoke >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error http://127.0.0.1:18000/ >/dev/null; then
+              echo "[OK] Marimo svarer på port 8000"
+              exit 0
+            fi
+            if ! docker inspect -f '{{.State.Running}}' produksjonskalkyle-smoke | grep -q true; then
+              echo "[ERROR] Containeren stoppet før webserveren svarte"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "[ERROR] Marimo svarte ikke innen smoke-testvinduet"
+          exit 1
