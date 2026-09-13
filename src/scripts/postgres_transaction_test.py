@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Verifiser at dataendring og change_log er én atomisk transaksjon.
 
-Testen fremprovoserer en UNIQUE-feil under produktoppdatering. Etter feilen skal
-hverken produktet eller audit-loggen vise den mislykkede endringen.
+Testen kjører mot valgt DataRepo-backend og fremprovoserer en UNIQUE-feil under
+produktoppdatering. Etter feilen skal hverken produktet eller audit-loggen vise
+den mislykkede endringen.
+
+PostgreSQL velges når DATABASE_URL er satt. Uten DATABASE_URL brukes SQLite;
+sett PRODUKSJONSKALKYLE_TEST=true i CI for en isolert midlertidig database.
 """
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -37,12 +40,9 @@ def _cleanup(db: DataRepo) -> None:
 
 
 def main() -> int:
-    if not os.environ.get("DATABASE_URL", "").strip():
-        print("[ERROR] DATABASE_URL er ikke satt")
-        return 1
-
     db = DataRepo()
     try:
+        print(f"[INFO] Atomicity backend: {db.backend}")
         db.initialize()
         _cleanup(db)
 
@@ -73,8 +73,8 @@ def main() -> int:
                 source="transaction_test_failed_update",
             )
         except Exception:
-            # Metoden selv skal rulle tilbake. Denne rollbacken gjør testen robust
-            # også mot eldre kode slik at vi kan inspisere resultatet etterpå.
+            # Den atomiske mutasjonen skal allerede ha rullet tilbake. En ekstra
+            # rollback er harmløs og gjør inspeksjonen robust mot eldre kode.
             db.conn.rollback()
         else:
             print("[ERROR] Forventet UNIQUE-feil, men oppdateringen lyktes")
@@ -99,7 +99,7 @@ def main() -> int:
             )
             return 5
 
-        print("[OK] Data og audit-logg rulles tilbake atomisk")
+        print(f"[OK] Data og audit-logg rulles tilbake atomisk på {db.backend}")
         return 0
     finally:
         try:
