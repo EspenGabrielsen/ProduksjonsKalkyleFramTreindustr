@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Migrer data fra SQLite til PostgreSQL.
+"""Migrer data fra SQLite til PostgreSQL på en kontrollert måte.
 
 Bruk:
     $env:DATABASE_URL="postgresql://user:pass@host:5432/db?sslmode=require"
     python src/scripts/migrate_sqlite_to_postgres.py --sqlite-path src/produksjonskalkyle.db
 
-Forutsetter at:
-- kilde er SQLite-fil
-- mål er PostgreSQL via DATABASE_URL
+Standardoppførsel:
+- SQLite-kilden åpnes uten schema-migreringer, slik at kildefilen ikke endres.
+- PostgreSQL-målet tømmes før migrering.
+- Stamdata, demand, transportdata, endringslogg og opplastede filer migreres.
+- Kilde- og måltellinger sammenlignes og migreringen feiler ved avvik.
+- Ved feil tømmes målet igjen for å unngå å etterlate en delvis migrering.
+
+--keep-target-data er ment for spesielle merge-scenarier. Da tømmes ikke målet,
+og streng radtallsvalidering deaktiveres fordi eksisterende måldata kan være legitime.
 """
 
 from __future__ import annotations
@@ -25,14 +31,56 @@ if str(_src) not in sys.path:
 from data_repo import DataRepo
 
 
+MIGRATED_TABLES = [
+    "products",
+    "locations",
+    "work_centers",
+    "operations",
+    "item_costs",
+    "bom_lines",
+    "routing_lines",
+    "byproduct_rules",
+    "capacity_days",
+    "production_scenarios",
+    "demand",
+    "historical_sales",
+    "changeover_matrix",
+    "transport_flagg",
+    "transport_ruter",
+    "change_log",
+    "uploaded_files",
+]
+
+
 def _rows_to_dicts(rows) -> list[dict]:
-    result = []
-    for row in rows:
-        if isinstance(row, dict):
-            result.append(dict(row))
-        else:
-            result.append(dict(row))
-    return result
+    return [dict(row) for row in rows]
+
+
+def _read_source_rows(source: DataRepo) -> dict[str, list]:
+    """Les alle data som skal flyttes, også historikktabellene.
+
+    DataRepo.export_all_data() brukes av Excel-eksport og inneholder med vilje
+    ikke blob-/audit-historikken. Migreringsscriptet må derfor hente disse to
+    tabellene eksplisitt.
+    """
+    rows = source.export_all_data()
+    rows["change_log"] = source.execute(
+        'SELECT timestamp, "user", source, table_name, record_key, '
+        'field_name, old_value, new_value FROM change_log ORDER BY id'
+    ).fetchall()
+    rows["uploaded_files"] = source.execute(
+        "SELECT filename, uploaded_at, blob, comment, row_count "
+        "FROM uploaded_files ORDER BY id"
+    ).fetchall()
+    return rows
+
+
+def _clear_target(target: DataRepo) -> None:
+    """Tøm alle data som migreringsscriptet eier."""
+    target.clear_all_data()
+    target.clear_change_log()
+    target.execute("DELETE FROM uploaded_files")
+    target.conn.commit()
 
 
 def _migrate_main_tables(source_rows: dict[str, list], target: DataRepo) -> None:
@@ -53,10 +101,7 @@ def _migrate_transport_flagg(source_rows: dict[str, list], target: DataRepo) -> 
     if not rows:
         return
     params = [
-        (
-            r.get("item_no", ""),
-            int(r.get("is_transport", 0) or 0),
-        )
+        (r.get("item_no", ""), int(r.get("is_transport", 0) or 0))
         for r in rows
     ]
     target.executemany(
@@ -167,6 +212,31 @@ def _migrate_changeover_matrix(source_rows: dict[str, list], target: DataRepo) -
     target.conn.commit()
 
 
+def _migrate_change_log(source_rows: dict[str, list], target: DataRepo) -> None:
+    rows = _rows_to_dicts(source_rows.get("change_log", []))
+    if not rows:
+        return
+    params = [
+        (
+            r.get("timestamp"),
+            r.get("user"),
+            r.get("source", "web_form"),
+            r.get("table_name", ""),
+            r.get("record_key", ""),
+            r.get("field_name", ""),
+            r.get("old_value"),
+            r.get("new_value"),
+        )
+        for r in rows
+    ]
+    target.executemany(
+        'INSERT INTO change_log (timestamp, "user", source, table_name, record_key, '
+        'field_name, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        params,
+    )
+    target.conn.commit()
+
+
 def _migrate_uploaded_files(source_rows: dict[str, list], target: DataRepo) -> None:
     rows = _rows_to_dicts(source_rows.get("uploaded_files", []))
     if not rows:
@@ -174,6 +244,7 @@ def _migrate_uploaded_files(source_rows: dict[str, list], target: DataRepo) -> N
     params = [
         (
             r.get("filename", ""),
+            r.get("uploaded_at"),
             r.get("blob"),
             r.get("comment", ""),
             int(r.get("row_count", 0) or 0),
@@ -181,8 +252,8 @@ def _migrate_uploaded_files(source_rows: dict[str, list], target: DataRepo) -> N
         for r in rows
     ]
     target.executemany(
-        """INSERT INTO uploaded_files (filename, blob, comment, row_count)
-           VALUES (?, ?, ?, ?)""",
+        """INSERT INTO uploaded_files (filename, uploaded_at, blob, comment, row_count)
+           VALUES (?, ?, ?, ?, ?)""",
         params,
     )
     target.conn.commit()
@@ -192,10 +263,27 @@ def _counts(repo: DataRepo) -> dict[str, int]:
     return repo.stats
 
 
+def _validate_counts(source_stats: dict[str, int], target_stats: dict[str, int]) -> list[str]:
+    """Returner menneskelesbare avvik mellom kilde og mål."""
+    mismatches: list[str] = []
+    for table in MIGRATED_TABLES:
+        source_count = int(source_stats.get(table, 0))
+        target_count = int(target_stats.get(table, 0))
+        if source_count != target_count:
+            mismatches.append(
+                f"{table}: kilde={source_count}, mål={target_count}"
+            )
+    return mismatches
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Migrer ProduksjonsKalkyle-data fra SQLite til PostgreSQL")
     parser.add_argument("--sqlite-path", required=True, help="Sti til SQLite-kildedatabase")
-    parser.add_argument("--keep-target-data", action="store_true", help="Ikke tøm måldatabasen før migrering")
+    parser.add_argument(
+        "--keep-target-data",
+        action="store_true",
+        help="Ikke tøm måldatabasen før migrering (deaktiverer eksakt radtallsvalidering)",
+    )
     args = parser.parse_args()
 
     database_url = os.environ.get("DATABASE_URL", "").strip()
@@ -209,20 +297,26 @@ def main() -> int:
         return 2
 
     old_database_url = os.environ.get("DATABASE_URL")
+    source: DataRepo | None = None
+    target: DataRepo | None = None
+    source_stats: dict[str, int] = {}
+    target_stats: dict[str, int] = {}
+
     try:
+        # Kilden skal aldri endres av migreringsscriptet. Derfor connect(), ikke initialize().
         os.environ.pop("DATABASE_URL", None)
         source = DataRepo(str(sqlite_path))
-        source.initialize()
-        source_rows = source.export_all_data()
+        source.connect()
+        source_rows = _read_source_rows(source)
         source_stats = _counts(source)
         source.close()
+        source = None
 
         os.environ["DATABASE_URL"] = database_url
         target = DataRepo()
         target.initialize()
         if not args.keep_target_data:
-            target.clear_all_data()
-            target.clear_change_log()
+            _clear_target(target)
 
         _migrate_main_tables(source_rows, target)
         _migrate_transport_flagg(source_rows, target)
@@ -230,17 +324,48 @@ def main() -> int:
         _migrate_demand(source_rows, target)
         _migrate_historical_sales(source_rows, target)
         _migrate_changeover_matrix(source_rows, target)
+
+        # CRUD-metodene over logger selve migreringen. Ved en ren migrering vil vi
+        # bevare den opprinnelige revisjonshistorikken i stedet for migreringsstøy.
+        if not args.keep_target_data:
+            target.clear_change_log()
+        _migrate_change_log(source_rows, target)
         _migrate_uploaded_files(source_rows, target)
 
         target_stats = _counts(target)
-        target.close()
+
+        if args.keep_target_data:
+            print("[WARN] --keep-target-data: eksakt radtallsvalidering er hoppet over.")
+        else:
+            mismatches = _validate_counts(source_stats, target_stats)
+            if mismatches:
+                print("[ERROR] Migreringen ga radtallsavvik:")
+                for mismatch in mismatches:
+                    print(f"  - {mismatch}")
+                _clear_target(target)
+                return 3
+
+    except Exception as exc:
+        print(f"[ERROR] Migrering feilet: {exc}")
+        if target is not None and not args.keep_target_data:
+            try:
+                target.conn.rollback()
+                _clear_target(target)
+                print("[INFO] Måldatabasen er tømt etter feilen.")
+            except Exception as cleanup_exc:
+                print(f"[WARN] Klarte ikke å rydde måldatabasen: {cleanup_exc}")
+        return 4
     finally:
+        if source is not None:
+            source.close()
+        if target is not None:
+            target.close()
         if old_database_url is None:
             os.environ.pop("DATABASE_URL", None)
         else:
             os.environ["DATABASE_URL"] = old_database_url
 
-    print("[OK] Migrering fullført")
+    print("[OK] Migrering fullført og validert")
     print("[INFO] Kilde-statistikk:")
     for key, value in source_stats.items():
         print(f"  {key}: {value}")
