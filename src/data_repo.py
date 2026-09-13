@@ -683,7 +683,11 @@ class DataRepo:
     def executemany(self, query: str, params_seq):
         """Backend-bevisst executemany med enkel placeholder-konvertering."""
         sql = _convert_sql_placeholders(query, self.backend)
-        return self.conn.executemany(sql, params_seq)
+        if self.backend == "sqlite":
+            return self.conn.executemany(sql, params_seq)
+        with self.conn.cursor() as cur:
+            cur.executemany(sql, params_seq)
+            return cur.rowcount
 
     def executescript(self, sql: str):
         """Kjør schema/migrerings-SQL på tvers av backend."""
