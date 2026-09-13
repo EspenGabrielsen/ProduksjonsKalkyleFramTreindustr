@@ -29,28 +29,28 @@ jobs:
           start = text.index("        # Sjekk om gammelt skjema finnes", init_pos)
           end = text.index("        # Migrering: oppgrader transport_ruter", start)
 
-          replacement = '''        # SQLite kan bruke en prøvespørring uten at en feil forgifter neste
-          # statement. PostgreSQL markerer derimot hele transaksjonen som aborted
-          # etter en mislykket SELECT. På en helt tom PostgreSQL-database går vi
-          # derfor direkte til det idempotente CREATE TABLE-skjemaet.
-          if self.backend == "sqlite":
-              try:
-                  self.execute("SELECT id FROM products LIMIT 1").fetchone()
-              except sqlite3.OperationalError:
-                  # Tom / gammel database. Opprett skjema idempotent, men slett aldri automatisk.
-                  pass
-
-          schema_sql = POSTGRES_SCHEMA_SQL if self.backend == "postgresql" else SCHEMA_SQL
-          try:
-              self.executescript(schema_sql)
-              self.conn.commit()
-          except Exception:
-              # PostgreSQL krever rollback før forbindelsen kan brukes videre
-              # etter en SQL-feil. Ikke etterlat en connection i aborted state.
-              self.conn.rollback()
-              raise
-
-'''
+          replacement = "".join([
+              "        # SQLite kan bruke en prøvespørring uten at en feil forgifter neste\n",
+              "        # statement. PostgreSQL markerer derimot hele transaksjonen som aborted\n",
+              "        # etter en mislykket SELECT. På en helt tom PostgreSQL-database går vi\n",
+              "        # derfor direkte til det idempotente CREATE TABLE-skjemaet.\n",
+              "        if self.backend == \"sqlite\":\n",
+              "            try:\n",
+              "                self.execute(\"SELECT id FROM products LIMIT 1\").fetchone()\n",
+              "            except sqlite3.OperationalError:\n",
+              "                # Tom / gammel database. Opprett skjema idempotent, men slett aldri automatisk.\n",
+              "                pass\n",
+              "\n",
+              "        schema_sql = POSTGRES_SCHEMA_SQL if self.backend == \"postgresql\" else SCHEMA_SQL\n",
+              "        try:\n",
+              "            self.executescript(schema_sql)\n",
+              "            self.conn.commit()\n",
+              "        except Exception:\n",
+              "            # Ikke etterlat PostgreSQL-forbindelsen i aborted state etter SQL-feil.\n",
+              "            self.conn.rollback()\n",
+              "            raise\n",
+              "\n",
+          ])
 
           path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
           PY
