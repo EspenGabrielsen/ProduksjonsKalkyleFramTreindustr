@@ -831,7 +831,7 @@ class DataRepo:
         if user is None:
             user = get_current_user()
         self.execute(
-            """INSERT INTO change_log (user, source, table_name, record_key, field_name, old_value, new_value)
+            """INSERT INTO change_log ("user", source, table_name, record_key, field_name, old_value, new_value)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (user, source, table_name, str(record_key), field_name,
              str(old_value) if old_value is not None else None,
@@ -870,7 +870,7 @@ class DataRepo:
                 str(c["new_value"]) if c.get("new_value") is not None else None,
             ))
         self.executemany(
-            """INSERT INTO change_log (user, source, table_name, record_key, field_name, old_value, new_value)
+            """INSERT INTO change_log ("user", source, table_name, record_key, field_name, old_value, new_value)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             rows,
         )
