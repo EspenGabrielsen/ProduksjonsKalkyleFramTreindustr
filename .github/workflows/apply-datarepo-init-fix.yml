@@ -25,24 +25,14 @@ jobs:
 
           path = Path("src/data_repo.py")
           text = path.read_text(encoding="utf-8")
+          init_pos = text.index("    def initialize(self):")
+          start = text.index("        # Sjekk om gammelt skjema finnes", init_pos)
+          end = text.index("        # Migrering: oppgrader transport_ruter", start)
 
-          old = '''        # Sjekk om gammelt skjema finnes (products uten id-kolonne)
-          try:
-              test = self.execute("SELECT id FROM products LIMIT 1").fetchone()
-              # id-kolonne finnes → nytt skjema
-          except Exception:
-              # Tom / gammel database. Opprett skjema idempotent, men slett aldri automatisk.
-              pass
-
-          schema_sql = POSTGRES_SCHEMA_SQL if self.backend == "postgresql" else SCHEMA_SQL
-          self.executescript(schema_sql)
-          self.conn.commit()
-          '''
-
-          new = '''        # SQLite kan bruke en prøvespørring uten at en feil forgifter neste
+          replacement = '''        # SQLite kan bruke en prøvespørring uten at en feil forgifter neste
           # statement. PostgreSQL markerer derimot hele transaksjonen som aborted
-          # etter en mislykket SELECT. På en helt tom PostgreSQL-database skal vi
-          # derfor gå direkte til det idempotente CREATE TABLE-skjemaet.
+          # etter en mislykket SELECT. På en helt tom PostgreSQL-database går vi
+          # derfor direkte til det idempotente CREATE TABLE-skjemaet.
           if self.backend == "sqlite":
               try:
                   self.execute("SELECT id FROM products LIMIT 1").fetchone()
@@ -55,21 +45,21 @@ jobs:
               self.executescript(schema_sql)
               self.conn.commit()
           except Exception:
-              # PostgreSQL krever eksplisitt rollback før forbindelsen kan brukes
-              # videre etter en SQL-feil. Dette gjør også initialiseringsfeil tydelige
-              # for kallende kode i stedet for å etterlate en ødelagt connection.
+              # PostgreSQL krever rollback før forbindelsen kan brukes videre
+              # etter en SQL-feil. Ikke etterlat en connection i aborted state.
               self.conn.rollback()
               raise
-          '''
 
-          if old not in text:
-              raise SystemExit("Forventet initialize-blokk ble ikke funnet; avbryter uten endring")
+'''
 
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          path.write_text(text[:start] + replacement + text[end:], encoding="utf-8")
           PY
 
       - name: Remove one-shot workflow
         run: rm .github/workflows/apply-datarepo-init-fix.yml
+
+      - name: Compile changed module
+        run: python -m py_compile src/data_repo.py
 
       - name: Commit fix
         shell: bash
